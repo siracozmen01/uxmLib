@@ -19,13 +19,9 @@ class SkullDataTest {
 
     @Test
     void rejectsBlankNameAndTexture() {
+        // Null inputs are ruled out at compile time by NullAway (@NullMarked), so only the runtime
+        // value checks (blank name / texture) are exercised here.
         assertThatThrownBy(() -> SkullData.ofName(" ")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> SkullData.ofTexture("")).isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
-    void rejectsNulls() {
-        assertThatThrownBy(() -> SkullData.ofUuid(null)).isInstanceOf(NullPointerException.class);
-        assertThatThrownBy(() -> SkullData.ofName(null)).isInstanceOf(NullPointerException.class);
     }
 }
