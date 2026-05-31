@@ -2,7 +2,8 @@
 # language / platform
 java        = "21"
 paper       = "1.21.11-R0.1-SNAPSHOT"
-adventure   = "4.17.0"
+# Match the Adventure version Paper 1.21.11 bundles at runtime, so compileOnly == runtime.
+adventure   = "4.21.0"
 
 # runtime libs (infra only — not Minecraft competitors; the MC-facing API is ours)
 configurate = "4.1.2"
