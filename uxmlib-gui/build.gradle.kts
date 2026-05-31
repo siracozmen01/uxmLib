@@ -8,4 +8,9 @@ dependencies {
     api(project(":uxmlib-item"))
     compileOnly(libs.paper.api)
     compileOnly(libs.bundles.adventure)
+
+    // MockBukkit drives the real Paper API in tests; production declares Paper/Adventure compileOnly.
+    testImplementation(libs.mockbukkit)
+    testImplementation(libs.paper.api)
+    testImplementation(libs.bundles.adventure)
 }
