@@ -1,0 +1,8 @@
+name: uxmlib
+version: '${version}'
+main: com.uxplima.uxmlib.plugin.UxmLibPlugin
+api-version: '1.21'
+description: Shared toolkit library for Paper 1.21+ plugins (GUI, items, commands, config, storage, integrations).
+authors:
+  - siracozmen
+website: https://github.com/siracozmen01/uxmLib
