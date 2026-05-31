@@ -2,17 +2,49 @@ package com.uxplima.uxmlib.storage;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Objects;
+
+import javax.sql.DataSource;
+
+import com.zaxxer.hikari.HikariDataSource;
 
 /**
- * A pooled data source handle. The HikariCP-backed implementation and the cache seam land with the
- * storage module's first feature pass; this contract names the borrow-a-connection and close seams.
+ * A pooled database handle over HikariCP. Build one with {@link #builder()}; borrow connections with
+ * {@link #connection()} (close them to return them to the pool) and shut the pool down with
+ * {@link #close()}. The {@link DataSource} is exposed for callers that need to hand it to other
+ * libraries. Created handles are independent; closing one does not affect another.
  */
-public interface Database extends AutoCloseable {
+public final class Database implements AutoCloseable {
 
-    /** Borrow a pooled connection; the caller closes it to return it to the pool. */
-    Connection connection() throws SQLException;
+    private final HikariDataSource dataSource;
 
-    /** Shut the pool down. Narrowed from {@link AutoCloseable} so it carries no checked exception. */
+    Database(HikariDataSource dataSource) {
+        this.dataSource = Objects.requireNonNull(dataSource, "dataSource");
+    }
+
+    /** Start configuring a database; SQLite is the default backend. */
+    public static DatabaseBuilder builder() {
+        return new DatabaseBuilder();
+    }
+
+    /** Borrow a pooled connection. The caller closes it to return it to the pool. */
+    public Connection connection() throws SQLException {
+        return dataSource.getConnection();
+    }
+
+    /** The underlying pooled {@link DataSource}. */
+    public DataSource dataSource() {
+        return dataSource;
+    }
+
+    /** Whether the pool has been shut down. */
+    public boolean isClosed() {
+        return dataSource.isClosed();
+    }
+
+    /** Shut the pool down, closing all idle connections. */
     @Override
-    void close();
+    public void close() {
+        dataSource.close();
+    }
 }
