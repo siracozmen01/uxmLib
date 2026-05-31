@@ -3,12 +3,13 @@ package com.uxplima.uxmlib.command;
 import java.util.Objects;
 import java.util.function.Predicate;
 
+import io.papermc.paper.command.brigadier.CommandSourceStack;
+import io.papermc.paper.command.brigadier.Commands;
+
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
-import io.papermc.paper.command.brigadier.Commands;
 
 /**
  * Node-builder factories bound to {@link CommandSourceStack}. Paper's {@code Commands.literal} /

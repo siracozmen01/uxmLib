@@ -6,9 +6,9 @@ import java.util.Optional;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-import net.kyori.adventure.text.Component;
-
 import io.papermc.paper.command.brigadier.CommandSourceStack;
+
+import net.kyori.adventure.text.Component;
 
 /**
  * A small read view over a {@link CommandSourceStack}: who ran the command and how to reply to them.

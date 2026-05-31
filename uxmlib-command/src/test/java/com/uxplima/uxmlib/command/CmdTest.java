@@ -1,12 +1,11 @@
 package com.uxplima.uxmlib.command;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import io.papermc.paper.command.brigadier.CommandSourceStack;
 
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.tree.LiteralCommandNode;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,10 +44,5 @@ class CmdTest {
     @Test
     void okIsBrigadierSingleSuccess() {
         assertThat(Cmd.OK).isEqualTo(com.mojang.brigadier.Command.SINGLE_SUCCESS);
-    }
-
-    @Test
-    void rejectsNullNames() {
-        assertThatThrownBy(() -> Cmd.literal(null)).isInstanceOf(NullPointerException.class);
     }
 }

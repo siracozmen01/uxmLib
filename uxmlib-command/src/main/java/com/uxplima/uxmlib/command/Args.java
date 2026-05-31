@@ -2,12 +2,13 @@ package com.uxplima.uxmlib.command;
 
 import java.util.Objects;
 
+import io.papermc.paper.command.brigadier.CommandSourceStack;
+
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
-import io.papermc.paper.command.brigadier.CommandSourceStack;
 
 /**
  * Reads parsed arguments out of a {@link CommandContext} by name, one call per primitive type, so a

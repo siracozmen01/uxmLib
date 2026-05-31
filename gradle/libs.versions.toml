@@ -10,6 +10,7 @@ configurate = "4.1.2"
 hikari      = "6.2.1"
 caffeine    = "3.1.8"
 jspecify    = "1.0.0"
+brigadier   = "1.3.10"   # com.mojang:brigadier — bundled by Paper at runtime; compileOnly only
 
 # soft-depend integrations (compileOnly; reached only past a plugin-present guard)
 luckperms      = "5.5"
@@ -36,6 +37,7 @@ adventure-api     = { module = "net.kyori:adventure-api",                     ve
 adventure-mini    = { module = "net.kyori:adventure-text-minimessage",        version.ref = "adventure" }
 adventure-plain   = { module = "net.kyori:adventure-text-serializer-plain",   version.ref = "adventure" }
 configurate-hocon = { module = "org.spongepowered:configurate-hocon",   version.ref = "configurate" }
+brigadier         = { module = "com.mojang:brigadier",                  version.ref = "brigadier" }
 hikari            = { module = "com.zaxxer:HikariCP",                   version.ref = "hikari" }
 caffeine          = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine" }
 jspecify          = { module = "org.jspecify:jspecify",                 version.ref = "jspecify" }

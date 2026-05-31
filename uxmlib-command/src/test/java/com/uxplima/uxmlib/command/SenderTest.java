@@ -8,9 +8,10 @@ import static org.mockito.Mockito.when;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+import io.papermc.paper.command.brigadier.CommandSourceStack;
+
 import net.kyori.adventure.text.Component;
 
-import io.papermc.paper.command.brigadier.CommandSourceStack;
 import org.junit.jupiter.api.Test;
 
 class SenderTest {

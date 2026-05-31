@@ -5,11 +5,12 @@ import java.util.Objects;
 
 import org.bukkit.plugin.java.JavaPlugin;
 
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.tree.LiteralCommandNode;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
+
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.tree.LiteralCommandNode;
 
 /**
  * Registers Brigadier commands through Paper's {@code LifecycleEvents.COMMANDS} event, hiding the
@@ -28,20 +29,18 @@ public final class CommandRegistrar {
 
     /** Register a built command node with a description and aliases. */
     public static void register(
-            JavaPlugin plugin,
-            LiteralCommandNode<CommandSourceStack> node,
-            String description,
-            List<String> aliases) {
+            JavaPlugin plugin, LiteralCommandNode<CommandSourceStack> node, String description, List<String> aliases) {
         Objects.requireNonNull(plugin, "plugin");
         Objects.requireNonNull(node, "node");
         Objects.requireNonNull(description, "description");
         Objects.requireNonNull(aliases, "aliases");
         List<String> aliasCopy = List.copyOf(aliases);
-        plugin.getLifecycleManager()
-                .registerEventHandler(LifecycleEvents.COMMANDS, event -> {
-                    Commands commands = event.registrar();
-                    commands.register(node, description, aliasCopy);
-                });
+        plugin.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
+            // registrar() is an unannotated generic return, which NullAway treats as @Nullable; it is
+            // always present inside a COMMANDS handler.
+            Commands commands = Objects.requireNonNull(event.registrar(), "registrar");
+            commands.register(node, description, aliasCopy);
+        });
     }
 
     /** Register a command builder (built for you) with a description and varargs aliases. */
