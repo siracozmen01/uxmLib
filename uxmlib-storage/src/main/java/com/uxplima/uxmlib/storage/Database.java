@@ -11,4 +11,8 @@ public interface Database extends AutoCloseable {
 
     /** Borrow a pooled connection; the caller closes it to return it to the pool. */
     Connection connection() throws SQLException;
+
+    /** Shut the pool down. Narrowed from {@link AutoCloseable} so it carries no checked exception. */
+    @Override
+    void close();
 }
