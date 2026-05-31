@@ -28,11 +28,12 @@ class ItemSerializationTest {
 
     @Test
     void roundTripsTypeAndAmountThroughBytes() {
-        ItemStack original = ItemBuilder.of(Material.DIAMOND_SWORD).amount(3).build();
+        // A stackable material so amount > 1 is valid (a sword max-stacks at 1).
+        ItemStack original = ItemBuilder.of(Material.DIAMOND).amount(3).build();
 
         ItemStack restored = ItemSerialization.fromBytes(ItemSerialization.toBytes(original));
 
-        assertThat(restored.getType()).isEqualTo(Material.DIAMOND_SWORD);
+        assertThat(restored.getType()).isEqualTo(Material.DIAMOND);
         assertThat(restored.getAmount()).isEqualTo(3);
     }
 
