@@ -14,6 +14,11 @@ dependencies {
     api(project(":uxmlib-storage"))
     api(project(":uxmlib-integration"))
     compileOnly(libs.paper.api)
+
+    // Architecture guards analyse every module's bytecode (all are api deps, so they're on the test
+    // classpath); paper-api is needed so ArchUnit can resolve the Bukkit types the rules reference.
+    testImplementation(libs.archunit.junit)
+    testImplementation(libs.paper.api)
 }
 
 tasks.processResources {
