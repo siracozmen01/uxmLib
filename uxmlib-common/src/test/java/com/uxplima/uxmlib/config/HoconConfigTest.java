@@ -35,9 +35,9 @@ class HoconConfigTest {
     @Test
     void mapsASubtreeOntoARecord(@TempDir Path dir) throws Exception {
         Path file = dir.resolve("config.conf");
-        // Configurate's default object mapper matches record component names verbatim, so the key is
-        // "poolSize", not "pool-size".
-        Files.writeString(file, "storage { backend = \"mysql\", poolSize = 16 }\n");
+        // Configurate's default object mapper maps the camelCase record component "poolSize" to the
+        // kebab-case HOCON key "pool-size".
+        Files.writeString(file, "storage { backend = \"mysql\", pool-size = 16 }\n");
 
         HoconConfig config = HoconConfig.load(file);
         Storage storage = config.getNode("storage", Storage.class, new Storage("sqlite", 8));
