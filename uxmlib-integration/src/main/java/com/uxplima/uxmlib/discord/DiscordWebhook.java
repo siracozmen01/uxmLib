@@ -40,9 +40,31 @@ public final class DiscordWebhook {
         return http.sendAsync(request, HttpResponse.BodyHandlers.discarding()).thenApply(HttpResponse::statusCode);
     }
 
+    /** Post an embed. Never blocks; the future yields the Discord HTTP status code (a 204 means delivered). */
+    public CompletableFuture<Integer> sendEmbed(DiscordEmbed embed) {
+        Objects.requireNonNull(embed, "embed");
+        HttpRequest request = HttpRequest.newBuilder(endpoint)
+                .header("Content-Type", "application/json")
+                .timeout(Duration.ofSeconds(15))
+                .POST(HttpRequest.BodyPublishers.ofString(embedBody(embed), StandardCharsets.UTF_8))
+                .build();
+        return http.sendAsync(request, HttpResponse.BodyHandlers.discarding()).thenApply(HttpResponse::statusCode);
+    }
+
     /** The JSON request body for a plain-content message. Package-private so the encoding is testable. */
     static String contentBody(String content) {
         return "{\"content\":" + jsonString(content) + "}";
+    }
+
+    /** The JSON request body for an embed. Package-private so the encoding is testable. */
+    static String embedBody(DiscordEmbed embed) {
+        StringBuilder embedJson = new StringBuilder("{\"title\":")
+                .append(jsonString(embed.title()))
+                .append(",\"description\":")
+                .append(jsonString(embed.description()));
+        embed.colorValue().ifPresent(color -> embedJson.append(",\"color\":").append(color.intValue()));
+        embedJson.append('}');
+        return "{\"embeds\":[" + embedJson + "]}";
     }
 
     static String jsonString(String raw) {

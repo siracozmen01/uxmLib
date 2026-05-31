@@ -4,11 +4,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import org.bukkit.Color;
 import org.bukkit.Location;
+import org.bukkit.block.data.BlockData;
+import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.Display;
+import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.TextDisplay;
+import org.bukkit.inventory.ItemStack;
 
 import net.kyori.adventure.text.Component;
+
+import org.jspecify.annotations.Nullable;
 
 /**
  * Builds and spawns native-Display holograms. Configure lines and appearance with {@link #builder()},
@@ -21,9 +28,28 @@ public final class Holograms {
 
     private Holograms() {}
 
-    /** Start configuring a hologram. */
+    /** Start configuring a text hologram. */
     public static Builder builder() {
         return new Builder();
+    }
+
+    /**
+     * Spawn a floating item display at {@code location}. Must run on that location's region thread; the
+     * returned {@link ItemDisplay} is the live entity (remove it with {@link org.bukkit.entity.Entity#remove()}).
+     */
+    public static ItemDisplay spawnItem(Location location, ItemStack item) {
+        Objects.requireNonNull(location, "location");
+        Objects.requireNonNull(item, "item");
+        Objects.requireNonNull(location.getWorld(), "location world");
+        return location.getWorld().spawn(location, ItemDisplay.class, entity -> entity.setItemStack(item));
+    }
+
+    /** Spawn a floating block display at {@code location}. Must run on that location's region thread. */
+    public static BlockDisplay spawnBlock(Location location, BlockData block) {
+        Objects.requireNonNull(location, "location");
+        Objects.requireNonNull(block, "block");
+        Objects.requireNonNull(location.getWorld(), "location world");
+        return location.getWorld().spawn(location, BlockDisplay.class, entity -> entity.setBlock(block));
     }
 
     /** Fluent builder for a hologram's content and appearance. */
@@ -31,6 +57,7 @@ public final class Holograms {
         private final List<Component> lines = new ArrayList<>();
         private Display.Billboard billboard = Display.Billboard.CENTER;
         private boolean seeThrough;
+        private @Nullable Color glow;
 
         private Builder() {}
 
@@ -52,6 +79,12 @@ public final class Holograms {
             return this;
         }
 
+        /** Give the text a glowing outline in {@code color}. */
+        public Builder glow(Color color) {
+            this.glow = Objects.requireNonNull(color, "color");
+            return this;
+        }
+
         /** The immutable specification, for inspection or reuse. Requires at least one line. */
         public HologramSpec spec() {
             return new HologramSpec(lines, billboard, seeThrough);
@@ -62,10 +95,15 @@ public final class Holograms {
             Objects.requireNonNull(location, "location");
             HologramSpec spec = spec();
             Objects.requireNonNull(location.getWorld(), "location world");
+            Color glowColor = glow;
             TextDisplay display = location.getWorld().spawn(location, TextDisplay.class, entity -> {
                 entity.text(spec.asText());
                 entity.setBillboard(spec.billboard());
                 entity.setSeeThrough(spec.seeThrough());
+                if (glowColor != null) {
+                    entity.setGlowing(true);
+                    entity.setGlowColorOverride(glowColor);
+                }
             });
             return new DisplayHologram(display);
         }

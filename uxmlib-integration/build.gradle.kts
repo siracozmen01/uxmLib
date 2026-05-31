@@ -13,7 +13,9 @@ dependencies {
     compileOnly(libs.placeholderapi)
 
     // Tests exercise the absent-plugin path (MockBukkit) and the pure JSON/spec logic (plain JUnit).
+    // LuckPerms is on the test runtime so the hook class loads (and reports absent) without a real plugin.
     testImplementation(libs.mockbukkit)
     testImplementation(libs.paper.api)
     testImplementation(libs.bundles.adventure)
+    testImplementation(libs.luckperms.api)
 }
