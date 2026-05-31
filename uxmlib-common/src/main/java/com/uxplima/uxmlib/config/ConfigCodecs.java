@@ -1,6 +1,7 @@
 package com.uxplima.uxmlib.config;
 
 import java.util.Locale;
+import java.util.Objects;
 import java.util.function.Predicate;
 
 import org.bukkit.Color;
@@ -9,6 +10,7 @@ import org.bukkit.NamespacedKey;
 
 import org.spongepowered.configurate.serialize.ScalarSerializer;
 import org.spongepowered.configurate.serialize.SerializationException;
+import org.spongepowered.configurate.serialize.TypeSerializer;
 import org.spongepowered.configurate.serialize.TypeSerializerCollection;
 
 /**
@@ -17,10 +19,11 @@ import org.spongepowered.configurate.serialize.TypeSerializerCollection;
  * parsing. Apply them with {@link HoconConfig#load(java.nio.file.Path, TypeSerializerCollection)} using
  * {@link #bukkit()}.
  *
- * <p>{@link ScalarSerializer#of} takes a serialize function {@code (value, typeTest) -> serializedForm}
- * and a deserialize function {@code raw -> value}. The serialize lambda's parameters are typed
- * explicitly because, with both lambdas present, javac otherwise infers the value parameter as
- * {@code Object}; the type-test predicate is unused since each value renders to a single string.
+ * <p>The factory is {@link TypeSerializer#of} (it returns a {@link ScalarSerializer}); it takes a
+ * serialize function {@code (value, typeTest) -> serializedForm} and a deserialize function
+ * {@code raw -> value}. The serialize lambda's parameters are typed explicitly because, with both
+ * lambdas present, javac otherwise infers the value parameter as {@code Object}; the type-test predicate
+ * is unused since each value renders to a single string.
  */
 public final class ConfigCodecs {
 
@@ -37,10 +40,12 @@ public final class ConfigCodecs {
     }
 
     private static ScalarSerializer<Material> materialSerializer() {
-        return ScalarSerializer.of(
+        // TypeSerializer.of is unannotated for nullability, so requireNonNull tells NullAway the
+        // non-null factory result the API guarantees.
+        return Objects.requireNonNull(TypeSerializer.of(
                 Material.class,
                 (Material material, Predicate<Class<?>> typeTest) -> material.name(),
-                raw -> parseMaterial(raw.toString()));
+                raw -> parseMaterial(raw.toString())));
     }
 
     private static Material parseMaterial(String raw) throws SerializationException {
@@ -52,10 +57,10 @@ public final class ConfigCodecs {
     }
 
     private static ScalarSerializer<NamespacedKey> namespacedKeySerializer() {
-        return ScalarSerializer.of(
+        return Objects.requireNonNull(TypeSerializer.of(
                 NamespacedKey.class,
                 (NamespacedKey key, Predicate<Class<?>> typeTest) -> key.asString(),
-                raw -> parseKey(raw.toString()));
+                raw -> parseKey(raw.toString())));
     }
 
     private static NamespacedKey parseKey(String raw) throws SerializationException {
@@ -68,10 +73,10 @@ public final class ConfigCodecs {
 
     private static ScalarSerializer<Color> colorSerializer() {
         // Stored as a #RRGGBB hex string.
-        return ScalarSerializer.of(
+        return Objects.requireNonNull(TypeSerializer.of(
                 Color.class,
                 (Color color, Predicate<Class<?>> typeTest) -> String.format(Locale.ROOT, "#%06X", color.asRGB()),
-                raw -> parseColor(raw.toString()));
+                raw -> parseColor(raw.toString())));
     }
 
     private static Color parseColor(String raw) throws SerializationException {
