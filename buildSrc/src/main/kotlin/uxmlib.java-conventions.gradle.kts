@@ -40,6 +40,9 @@ tasks.withType<JavaCompile>().configureEach {
             "-Xlint:all",
             "-Xlint:-processing",
             "-Xlint:-serial",
+            // The "options" category covers benign toolchain notes (e.g. "system modules path not set in
+            // conjunction with -source") that must never fail a -Werror build; real warnings stay fatal.
+            "-Xlint:-options",
             "-Werror",
             "-parameters",
         ),
