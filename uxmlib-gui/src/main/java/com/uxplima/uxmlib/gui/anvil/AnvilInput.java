@@ -20,6 +20,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.view.AnvilView;
 import org.bukkit.plugin.Plugin;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * Captures a line of text from a player through a vanilla anvil — no NMS, no packets. Open one with a
  * prompt item (its display name is the hint shown in the left slot); the player types into the rename
