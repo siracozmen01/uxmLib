@@ -1,0 +1,7 @@
+# JitPack build configuration. JitPack builds a tag on first request and serves the artifacts.
+# Build on a JDK 21 toolchain (the library targets Java 21), and publish every module to the local
+# Maven repo with the requested tag as the version, so consumers resolve com.github.siracozmen01.uxmLib:<module>:<tag>.
+jdk:
+  - openjdk21
+install:
+  - ./gradlew publishToMavenLocal -PprojectVersion=$VERSION --no-daemon
