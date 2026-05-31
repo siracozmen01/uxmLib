@@ -11,4 +11,9 @@ dependencies {
     compileOnly(libs.luckperms.api)
     compileOnly(libs.vault.api)
     compileOnly(libs.placeholderapi)
+
+    // Tests exercise the absent-plugin path (MockBukkit) and the pure JSON/spec logic (plain JUnit).
+    testImplementation(libs.mockbukkit)
+    testImplementation(libs.paper.api)
+    testImplementation(libs.bundles.adventure)
 }

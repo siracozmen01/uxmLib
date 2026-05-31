@@ -31,7 +31,7 @@ public final class DiscordWebhook {
      */
     public CompletableFuture<Integer> sendContent(String content) {
         Objects.requireNonNull(content, "content");
-        String body = "{\"content\":" + jsonString(content) + "}";
+        String body = contentBody(content);
         HttpRequest request = HttpRequest.newBuilder(endpoint)
                 .header("Content-Type", "application/json")
                 .timeout(Duration.ofSeconds(15))
@@ -40,7 +40,12 @@ public final class DiscordWebhook {
         return http.sendAsync(request, HttpResponse.BodyHandlers.discarding()).thenApply(HttpResponse::statusCode);
     }
 
-    private static String jsonString(String raw) {
+    /** The JSON request body for a plain-content message. Package-private so the encoding is testable. */
+    static String contentBody(String content) {
+        return "{\"content\":" + jsonString(content) + "}";
+    }
+
+    static String jsonString(String raw) {
         StringBuilder out = new StringBuilder(raw.length() + 2);
         out.append('"');
         for (int i = 0; i < raw.length(); i++) {
