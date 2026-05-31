@@ -1,6 +1,7 @@
 package com.uxplima.uxmlib.config;
 
 import java.util.Locale;
+import java.util.function.Predicate;
 
 import org.bukkit.Color;
 import org.bukkit.Material;
@@ -17,8 +18,9 @@ import org.spongepowered.configurate.serialize.TypeSerializerCollection;
  * {@link #bukkit()}.
  *
  * <p>{@link ScalarSerializer#of} takes a serialize function {@code (value, typeTest) -> serializedForm}
- * and a deserialize function {@code raw -> value}; the type-test predicate is unused here because every
- * value renders to a single string.
+ * and a deserialize function {@code raw -> value}. The serialize lambda's parameters are typed
+ * explicitly because, with both lambdas present, javac otherwise infers the value parameter as
+ * {@code Object}; the type-test predicate is unused since each value renders to a single string.
  */
 public final class ConfigCodecs {
 
@@ -36,7 +38,9 @@ public final class ConfigCodecs {
 
     private static ScalarSerializer<Material> materialSerializer() {
         return ScalarSerializer.of(
-                Material.class, (material, typeTest) -> material.name(), raw -> parseMaterial(raw.toString()));
+                Material.class,
+                (Material material, Predicate<Class<?>> typeTest) -> material.name(),
+                raw -> parseMaterial(raw.toString()));
     }
 
     private static Material parseMaterial(String raw) throws SerializationException {
@@ -49,7 +53,9 @@ public final class ConfigCodecs {
 
     private static ScalarSerializer<NamespacedKey> namespacedKeySerializer() {
         return ScalarSerializer.of(
-                NamespacedKey.class, (key, typeTest) -> key.asString(), raw -> parseKey(raw.toString()));
+                NamespacedKey.class,
+                (NamespacedKey key, Predicate<Class<?>> typeTest) -> key.asString(),
+                raw -> parseKey(raw.toString()));
     }
 
     private static NamespacedKey parseKey(String raw) throws SerializationException {
@@ -64,7 +70,7 @@ public final class ConfigCodecs {
         // Stored as a #RRGGBB hex string.
         return ScalarSerializer.of(
                 Color.class,
-                (color, typeTest) -> String.format(Locale.ROOT, "#%06X", color.asRGB()),
+                (Color color, Predicate<Class<?>> typeTest) -> String.format(Locale.ROOT, "#%06X", color.asRGB()),
                 raw -> parseColor(raw.toString()));
     }
 
