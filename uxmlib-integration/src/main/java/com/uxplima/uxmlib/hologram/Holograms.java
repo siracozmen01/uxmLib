@@ -139,28 +139,4 @@ public final class Holograms {
         });
         return new DisplayHologram(display);
     }
-
-    /** A {@link Hologram} backed by a live {@link TextDisplay}. */
-    private static final class DisplayHologram implements Hologram {
-        private final TextDisplay display;
-
-        private DisplayHologram(TextDisplay display) {
-            this.display = display;
-        }
-
-        @Override
-        public void setText(Component text) {
-            display.text(Objects.requireNonNull(text, "text"));
-        }
-
-        @Override
-        public void remove() {
-            display.remove();
-        }
-
-        @Override
-        public TextDisplay entity() {
-            return display;
-        }
-    }
 }

@@ -19,6 +19,23 @@ class HologramManagerTest {
         public void setText(Component text) {}
 
         @Override
+        public void moveTo(org.bukkit.Location to, int interpolationTicks) {}
+
+        @Override
+        public void restrictToViewers() {}
+
+        @Override
+        public void show(org.bukkit.plugin.Plugin plugin, org.bukkit.entity.Player viewer) {}
+
+        @Override
+        public void hide(org.bukkit.plugin.Plugin plugin, org.bukkit.entity.Player viewer) {}
+
+        @Override
+        public boolean isVisibleTo(org.bukkit.entity.Player viewer) {
+            return false;
+        }
+
+        @Override
         public void remove() {
             removed++;
         }

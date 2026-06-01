@@ -55,4 +55,21 @@ public final class HologramManager {
         }
         tracked.clear();
     }
+
+    /**
+     * Remove every uxmLib-marked {@link org.bukkit.entity.Display} in {@code world} that this manager is
+     * not tracking — the holograms a previous run left behind after a crash (text displays persist). Run
+     * this once shortly after enable, on the region/global thread. Returns how many were swept.
+     */
+    public int sweepOrphans(org.bukkit.World world) {
+        Objects.requireNonNull(world, "world");
+        int swept = 0;
+        for (org.bukkit.entity.Display display : world.getEntitiesByClass(org.bukkit.entity.Display.class)) {
+            if (Markers.isHologram(display)) {
+                display.remove();
+                swept++;
+            }
+        }
+        return swept;
+    }
 }
