@@ -1,6 +1,7 @@
 package com.uxplima.uxmlib.config;
 
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -9,6 +10,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReference;
 
+import com.uxplima.uxmlib.scheduler.Scheduler;
+import com.uxplima.uxmlib.scheduler.TaskHandle;
+import org.jspecify.annotations.Nullable;
 import org.spongepowered.configurate.CommentedConfigurationNode;
 import org.spongepowered.configurate.ConfigurateException;
 import org.spongepowered.configurate.ConfigurationNode;
@@ -17,25 +21,24 @@ import org.spongepowered.configurate.serialize.SerializationException;
 import org.spongepowered.configurate.serialize.TypeSerializerCollection;
 
 /**
- * A HOCON-backed configuration. The file is parsed once on {@link #load(Path)} and held in an
- * {@link AtomicReference}; {@link #reload()} re-reads it and swaps the reference whole, so a reader sees
- * either the entire old tree or the entire new one — never a half-applied config.
- *
- * <p>Dotted paths ({@code "storage.host"}) address nested nodes for the typed scalar reads. Whole
- * subtrees map onto {@code @ConfigSerializable} types via {@link #get(Class)} / {@link #getNode(String,
- * Class, Object)}, so config can be modelled as records and classes rather than scattered string lookups.
- * A missing file yields an empty tree, so every scalar read returns its fallback.
+ * A HOCON-backed configuration. Parsed once on {@link #load(Path)} into an {@link AtomicReference} swapped
+ * whole on {@link #reload()}, so a reader sees the entire old tree or the entire new one — never half.
+ * Dotted paths address nested nodes; subtrees map onto {@code @ConfigSerializable} types via
+ * {@link #get(Class)} / {@link #getNode(String, Class, Object)}. A missing file loads empty.
  */
 public final class HoconConfig {
 
     private static final System.Logger LOG = System.getLogger(HoconConfig.class.getName());
 
+    private final Path file;
     private final HoconConfigurationLoader loader;
     private final AtomicReference<CommentedConfigurationNode> root;
     private final List<ConfigProperty<?>> properties = new CopyOnWriteArrayList<>();
     private final List<Runnable> reloadListeners = new CopyOnWriteArrayList<>();
+    private @Nullable TaskHandle watchTask;
 
-    private HoconConfig(HoconConfigurationLoader loader, CommentedConfigurationNode root) {
+    private HoconConfig(Path file, HoconConfigurationLoader loader, CommentedConfigurationNode root) {
+        this.file = file;
         this.loader = loader;
         this.root = new AtomicReference<>(root);
     }
@@ -44,24 +47,20 @@ public final class HoconConfig {
     public static HoconConfig load(Path file) {
         Objects.requireNonNull(file, "file");
         HoconConfigurationLoader loader = loader(file, null);
-        return new HoconConfig(loader, read(loader));
+        return new HoconConfig(file, loader, read(loader));
     }
 
-    /**
-     * Load {@code file} with extra type serializers (see {@link ConfigCodecs#bukkit()}), so subtree and
-     * scalar reads can map onto the registered Bukkit value types.
-     */
+    /** Load {@code file} with extra type serializers (see {@link ConfigCodecs#bukkit()}) for value mapping. */
     public static HoconConfig load(Path file, TypeSerializerCollection serializers) {
         Objects.requireNonNull(file, "file");
         Objects.requireNonNull(serializers, "serializers");
         HoconConfigurationLoader loader = loader(file, serializers);
-        return new HoconConfig(loader, read(loader));
+        return new HoconConfig(file, loader, read(loader));
     }
 
     /**
-     * Seed {@code file} from the bundled classpath resource {@code defaultResource} if it is absent (the
-     * authored, comment-rich template), then load it. The on-disk file is never clobbered once it exists,
-     * so user edits survive every upgrade. Comments round-trip through edits and saves.
+     * Seed {@code file} from the bundled classpath resource if absent (the authored, comment-rich
+     * template), then load it. An existing file is never clobbered, so user edits survive every upgrade.
      */
     public static HoconConfig loadOrExtract(Path file, String defaultResource, ClassLoader classLoader) {
         Objects.requireNonNull(file, "file");
@@ -69,8 +68,7 @@ public final class HoconConfig {
         return load(file);
     }
 
-    private static HoconConfigurationLoader loader(
-            Path file, @org.jspecify.annotations.Nullable TypeSerializerCollection serializers) {
+    private static HoconConfigurationLoader loader(Path file, @Nullable TypeSerializerCollection serializers) {
         HoconConfigurationLoader.Builder builder =
                 HoconConfigurationLoader.builder().path(file).emitComments(true);
         if (serializers != null) {
@@ -79,10 +77,7 @@ public final class HoconConfig {
         return builder.build();
     }
 
-    /**
-     * Re-read the file and swap the in-memory tree atomically, then refresh every bound
-     * {@link ConfigProperty} (firing change listeners) and run every {@link #onReload} listener.
-     */
+    /** Re-read the file, swap the tree atomically, refresh bound properties, and run reload listeners. */
     public void reload() {
         root.set(read(loader));
         // Isolate each property and listener: one that throws is logged and skipped, so a single bad
@@ -109,42 +104,45 @@ public final class HoconConfig {
     }
 
     /**
-     * Upgrade the config across schema versions: replay only the {@code migration} steps newer than the
-     * file's recorded {@code config-version}, then rewrite the version key and save once if anything
-     * changed. An already-current file is left untouched. Returns the version the config is now at.
+     * Auto-reload this config when its file changes on disk, polling every {@code period} through
+     * {@code scheduler} (Folia-safe, debounced one poll). {@link #unwatch()} stops it; re-calling replaces.
      */
-    public synchronized int migrate(ConfigMigration migration) {
-        Objects.requireNonNull(migration, "migration");
-        CommentedConfigurationNode live = currentRoot();
-        int from = migration.versionOf(live);
-        int to = migration.apply(live);
-        if (to != from) {
-            save();
+    public synchronized void watch(Scheduler scheduler, Duration period) {
+        Objects.requireNonNull(scheduler, "scheduler");
+        Objects.requireNonNull(period, "period");
+        unwatch();
+        watchTask = ConfigWatcher.start(scheduler, file, period, this::reload);
+    }
+
+    /** Stop auto-reloading (a no-op if not watching). */
+    public synchronized void unwatch() {
+        if (watchTask != null) {
+            watchTask.cancel();
+            watchTask = null;
         }
-        return to;
     }
 
     /**
-     * Deep-merge a bundled default tree into the live config: keys absent from the user's file are added,
-     * but a value the user already set is never overwritten. If anything was added the file is saved once
-     * (so newly-shipped options appear on upgrade without the user deleting their file); an unchanged
-     * config is left byte-for-byte untouched. Returns whether anything was written.
+     * Upgrade across schema versions: replay only {@code migration} steps newer than the file's recorded
+     * {@code config-version}, rewrite the version, and save once if it changed. Returns the new version.
+     */
+    public synchronized int migrate(ConfigMigration migration) {
+        Objects.requireNonNull(migration, "migration");
+        return ConfigUpgrade.migrate(currentRoot(), migration, this::save);
+    }
+
+    /**
+     * Deep-merge a default tree into the live config — adding absent keys, never overwriting a user value
+     * — and save once if anything was added. Returns whether anything was written.
      */
     public synchronized boolean mergeDefaults(ConfigurationNode defaults) {
         Objects.requireNonNull(defaults, "defaults");
-        CommentedConfigurationNode live = currentRoot();
-        int before = ConfigDefaults.nodeCount(live);
-        live.mergeFrom(defaults);
-        if (ConfigDefaults.nodeCount(live) != before) {
-            save();
-            return true;
-        }
-        return false;
+        return ConfigUpgrade.mergeDefaults(currentRoot(), defaults, this::save);
     }
 
-    /** Deep-merge defaults parsed from a bundled classpath resource. Returns whether anything was written. */
-    public boolean mergeDefaults(String defaultResource, ClassLoader classLoader) {
-        return mergeDefaults(ConfigDefaults.parseResource(defaultResource, classLoader));
+    /** Deep-merge defaults from a bundled classpath resource. Returns whether anything was written. */
+    public boolean mergeDefaults(String resource, ClassLoader classLoader) {
+        return mergeDefaults(ConfigDefaults.parseResource(resource, classLoader));
     }
 
     /** Set the comment shown above {@code path} on the next save, without overwriting a user's own comment. */
@@ -215,8 +213,7 @@ public final class HoconConfig {
     /** The string at {@code path}, or {@code fallback} when absent. */
     public String getString(String path, String fallback) {
         Objects.requireNonNull(fallback, "fallback");
-        String value = node(path).getString(fallback);
-        return value != null ? value : fallback;
+        return Objects.requireNonNullElse(node(path).getString(fallback), fallback);
     }
 
     /** The string at {@code path}, empty when absent. */
