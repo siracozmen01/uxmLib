@@ -1,10 +1,11 @@
-package com.uxplima.uxmlib.hook;
+package com.uxplima.uxmlib.hook.permission;
 
 import java.util.Objects;
 import java.util.Optional;
 
 import org.bukkit.entity.Player;
 
+import com.uxplima.uxmlib.hook.Hooks;
 import net.luckperms.api.LuckPerms;
 import net.luckperms.api.LuckPermsProvider;
 import net.luckperms.api.cacheddata.CachedMetaData;

@@ -2,6 +2,7 @@ package com.uxplima.uxmlib.hook;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.uxplima.uxmlib.hook.economy.VaultEconomy;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

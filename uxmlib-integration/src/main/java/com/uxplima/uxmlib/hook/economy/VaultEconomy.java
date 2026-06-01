@@ -1,4 +1,4 @@
-package com.uxplima.uxmlib.hook;
+package com.uxplima.uxmlib.hook.economy;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -7,6 +7,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.plugin.RegisteredServiceProvider;
 
+import com.uxplima.uxmlib.hook.Hooks;
 import net.milkbowl.vault.economy.Economy;
 
 /**

@@ -1,4 +1,4 @@
-package com.uxplima.uxmlib.hook;
+package com.uxplima.uxmlib.hook.economy;
 
 import org.bukkit.OfflinePlayer;
 

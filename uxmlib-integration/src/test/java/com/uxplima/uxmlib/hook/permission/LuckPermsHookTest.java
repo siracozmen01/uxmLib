@@ -1,4 +1,4 @@
-package com.uxplima.uxmlib.hook;
+package com.uxplima.uxmlib.hook.permission;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
