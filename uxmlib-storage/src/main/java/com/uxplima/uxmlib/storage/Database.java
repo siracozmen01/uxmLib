@@ -76,6 +76,21 @@ public final class Database implements AutoCloseable {
         return dataSource.isClosed();
     }
 
+    /**
+     * Whether the database actually answers — borrows a connection and runs {@code SELECT 1}, returning
+     * false on any failure. Unlike {@link #isClosed()} (which only reports pool shutdown) this reports
+     * reachability, for an operator "doctor" check.
+     */
+    public boolean ping() {
+        try (Connection conn = dataSource.getConnection();
+                java.sql.Statement statement = conn.createStatement();
+                java.sql.ResultSet rows = statement.executeQuery("SELECT 1")) {
+            return rows.next();
+        } catch (SQLException unreachable) {
+            return false;
+        }
+    }
+
     /** Shut the pool down, closing all idle connections. Safe to call more than once. */
     @Override
     public void close() {

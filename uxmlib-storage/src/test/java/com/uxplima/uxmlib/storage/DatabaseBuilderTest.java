@@ -36,6 +36,14 @@ class DatabaseBuilderTest {
     }
 
     @Test
+    void pingReportsReachability() {
+        Database db = Database.builder().sqliteInMemory().build();
+        assertThat(db.ping()).isTrue(); // answers SELECT 1
+        db.close();
+        assertThat(db.ping()).isFalse(); // pool shut down -> unreachable
+    }
+
+    @Test
     void failsWhenNoBackendIsConfigured() {
         assertThatThrownBy(() -> Database.builder().build()).isInstanceOf(IllegalStateException.class);
     }
