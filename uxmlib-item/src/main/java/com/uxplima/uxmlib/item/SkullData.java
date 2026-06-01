@@ -18,7 +18,12 @@ public sealed interface SkullData permits SkullData.ByUuid, SkullData.ByName, Sk
         }
     }
 
-    /** A head owned by the account with this name (resolved when applied). */
+    /**
+     * A head owned by the account with this name. Applying it resolves the name through
+     * {@code Bukkit.getOfflinePlayer(String)}, which is a <strong>blocking</strong> lookup — prefer
+     * {@link ByUuid} or {@link ByTexture} on the main thread, and use this only off-thread or for names
+     * already cached by the server.
+     */
     record ByName(String name) implements SkullData {
         public ByName {
             Objects.requireNonNull(name, "name");

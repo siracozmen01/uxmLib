@@ -1,6 +1,7 @@
 package com.uxplima.uxmlib.item;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
@@ -46,5 +47,17 @@ class ItemSerializationTest {
 
         assertThat(restored.getType()).isEqualTo(Material.PAPER);
         assertThat(restored.getAmount()).isEqualTo(7);
+    }
+
+    @Test
+    void rejectsInvalidBase64WithAClearError() {
+        assertThatThrownBy(() -> ItemSerialization.fromBase64("this is not base64 !!!"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void rejectsBytesThatAreNotASerializedItem() {
+        assertThatThrownBy(() -> ItemSerialization.fromBytes(new byte[] {1, 2, 3, 4}))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

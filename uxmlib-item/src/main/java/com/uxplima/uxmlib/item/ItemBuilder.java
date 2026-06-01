@@ -121,6 +121,14 @@ public final class ItemBuilder {
         return editMeta(meta -> meta.setUnbreakable(unbreakable));
     }
 
+    /**
+     * Give the item the enchanted shimmer without an actual enchantment, via the native 1.21 glint
+     * override — no dummy enchant, no need to hide it with a flag.
+     */
+    public ItemBuilder glow(boolean glow) {
+        return editMeta(meta -> meta.setEnchantmentGlintOverride(glow));
+    }
+
     /** Set the damage (durability used), for items that support it; a no-op on items that do not. */
     public ItemBuilder damage(int damage) {
         if (damage < 0) {
@@ -208,10 +216,16 @@ public final class ItemBuilder {
         return editTypedMeta(EnchantmentStorageMeta.class, meta -> meta.addStoredEnchant(enchantment, level, true));
     }
 
-    /** Mutate the raw {@link ItemMeta} directly; the result is written back to the stack. */
+    /**
+     * Mutate the raw {@link ItemMeta} directly; the result is written back to the stack. A no-op if the
+     * item has no meta (only {@link Material#AIR}, which {@link #of} already rejects).
+     */
     public ItemBuilder editMeta(Consumer<ItemMeta> editor) {
         Objects.requireNonNull(editor, "editor");
         ItemMeta meta = stack.getItemMeta();
+        if (meta == null) {
+            return this;
+        }
         editor.accept(meta);
         stack.setItemMeta(meta);
         return this;

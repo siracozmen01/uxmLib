@@ -20,10 +20,18 @@ public final class ItemSerialization {
         return item.serializeAsBytes();
     }
 
-    /** Reconstruct an item from bytes produced by {@link #toBytes}. */
+    /**
+     * Reconstruct an item from bytes produced by {@link #toBytes}.
+     *
+     * @throws IllegalArgumentException if the bytes are not a valid serialized item
+     */
     public static ItemStack fromBytes(byte[] bytes) {
         Objects.requireNonNull(bytes, "bytes");
-        return ItemStack.deserializeBytes(bytes);
+        try {
+            return ItemStack.deserializeBytes(bytes);
+        } catch (RuntimeException invalid) {
+            throw new IllegalArgumentException("not a valid serialized item", invalid);
+        }
     }
 
     /** Serialize an item to a Base64 string. */
@@ -31,9 +39,19 @@ public final class ItemSerialization {
         return Base64.getEncoder().encodeToString(toBytes(item));
     }
 
-    /** Reconstruct an item from a Base64 string produced by {@link #toBase64}. */
+    /**
+     * Reconstruct an item from a Base64 string produced by {@link #toBase64}.
+     *
+     * @throws IllegalArgumentException if the string is not valid Base64 or not a serialized item
+     */
     public static ItemStack fromBase64(String base64) {
         Objects.requireNonNull(base64, "base64");
-        return fromBytes(Base64.getDecoder().decode(base64));
+        byte[] bytes;
+        try {
+            bytes = Base64.getDecoder().decode(base64);
+        } catch (IllegalArgumentException invalid) {
+            throw new IllegalArgumentException("not valid Base64", invalid);
+        }
+        return fromBytes(bytes);
     }
 }

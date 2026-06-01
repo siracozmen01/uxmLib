@@ -105,6 +105,15 @@ class ItemBuilderTest {
     }
 
     @Test
+    void glowSetsTheGlintOverrideWithoutAnEnchant() {
+        ItemStack item = ItemBuilder.of(Material.STONE).glow(true).build();
+
+        assertThat(item.getItemMeta().hasEnchantmentGlintOverride()).isTrue();
+        assertThat(item.getItemMeta().getEnchantmentGlintOverride()).isTrue();
+        assertThat(item.getItemMeta().hasEnchants()).isFalse();
+    }
+
+    @Test
     void buildReturnsIndependentCopies() {
         ItemBuilder builder = ItemBuilder.of(Material.STONE).amount(1);
         ItemStack first = builder.build();
