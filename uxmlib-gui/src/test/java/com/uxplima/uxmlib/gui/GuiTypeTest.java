@@ -48,4 +48,16 @@ class GuiTypeTest {
                         () -> gui.set(5, GuiItem.display(new ItemStack(Material.STONE))))
                 .isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    void additionalContainerTypesAreUsable() {
+        // Each new type maps to a native InventoryType with a sane positive size and builds a menu.
+        for (GuiType type : new GuiType[] {
+            GuiType.GRINDSTONE, GuiType.STONECUTTER, GuiType.CARTOGRAPHY, GuiType.SMITHING, GuiType.LOOM
+        }) {
+            assertThat(type.size()).isGreaterThan(0);
+            SimpleGui gui = Guis.typed(type).build();
+            assertThat(gui.size()).isEqualTo(type.size());
+        }
+    }
 }

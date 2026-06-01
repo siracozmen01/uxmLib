@@ -69,4 +69,11 @@ final class GuiRender {
             }
         }
     }
+
+    /** Close {@code inventory} for {@code viewer}, if they are viewing it. */
+    static void close(@Nullable Inventory inventory, HumanEntity viewer) {
+        if (inventory != null && inventory.getViewers().contains(viewer)) {
+            viewer.closeInventory();
+        }
+    }
 }

@@ -77,6 +77,27 @@ class GuiTest {
     }
 
     @Test
+    void clickAndOpenSoundsBuildAndOpenWithoutError() {
+        net.kyori.adventure.sound.Sound click = net.kyori.adventure.sound.Sound.sound(
+                org.bukkit.Sound.UI_BUTTON_CLICK, net.kyori.adventure.sound.Sound.Source.MASTER, 1f, 1f);
+        SimpleGui gui = Guis.gui().rows(1).clickSound(click).openSound(click).build();
+        gui.set(0, GuiItem.button(new ItemStack(Material.STONE), e -> {}));
+
+        var player = MockBukkit.getMock().addPlayer();
+        gui.open(player); // open sound path
+        var view = java.util.Objects.requireNonNull(player.openInventory(gui.getInventory()));
+        var event = new org.bukkit.event.inventory.InventoryClickEvent(
+                view,
+                org.bukkit.event.inventory.InventoryType.SlotType.CONTAINER,
+                0,
+                org.bukkit.event.inventory.ClickType.LEFT,
+                org.bukkit.event.inventory.InventoryAction.PICKUP_ALL);
+        gui.handleClick(event); // click sound path
+
+        assertThat(event.isCancelled()).isTrue();
+    }
+
+    @Test
     void applyHookRunsOnTheBuiltMenu() {
         ItemStack icon = new ItemStack(Material.DIAMOND);
         SimpleGui gui =

@@ -28,8 +28,8 @@ final class GuiClick {
         return modifier != null && allowed.contains(modifier);
     }
 
-    /** Apply the cancel policy and dispatch the click to the right handler. */
-    static void route(
+    /** Apply the cancel policy and dispatch the click; returns true if a menu item slot was clicked. */
+    static boolean route(
             Gui gui,
             @Nullable Inventory inventory,
             Map<Integer, GuiItem> items,
@@ -45,20 +45,21 @@ final class GuiClick {
             if (outsideClick != null) {
                 outsideClick.accept(event);
             }
-            return;
+            return false;
         }
         if (!clicked.equals(inventory)) {
-            return;
+            return false;
         }
         GuiItem item = items.get(event.getSlot());
         if (item != null) {
             if (event.getWhoClicked() instanceof Player player) {
                 item.action(new RenderContext(player, gui, event.getSlot())).accept(event);
             }
-            return;
+            return true;
         }
         if (defaultClick != null) {
             defaultClick.accept(event);
         }
+        return false;
     }
 }

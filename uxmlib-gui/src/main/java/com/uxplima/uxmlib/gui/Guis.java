@@ -8,6 +8,7 @@ import java.util.Objects;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 
+import net.kyori.adventure.sound.Sound;
 import net.kyori.adventure.text.Component;
 
 /**
@@ -124,11 +125,28 @@ public final class Guis {
             return self();
         }
 
+        @org.jspecify.annotations.Nullable Sound clickSound;
+
+        @org.jspecify.annotations.Nullable Sound openSound;
+
+        /** Play {@code sound} to a viewer when they click a menu item. */
+        public B clickSound(Sound sound) {
+            this.clickSound = Objects.requireNonNull(sound, "sound");
+            return self();
+        }
+
+        /** Play {@code sound} to a viewer when the menu opens. */
+        public B openSound(Sound sound) {
+            this.openSound = Objects.requireNonNull(sound, "sound");
+            return self();
+        }
+
         final <G extends AbstractGui> G finish(G gui) {
             for (InteractionModifier modifier : allowed) {
                 gui.allow(modifier);
             }
             gui.autoRefresh(autoRefresh);
+            gui.sounds(new GuiSound(clickSound, openSound));
             for (java.util.function.Consumer<Gui> action : postBuild) {
                 action.accept(gui);
             }

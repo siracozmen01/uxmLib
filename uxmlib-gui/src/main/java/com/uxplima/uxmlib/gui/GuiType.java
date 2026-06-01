@@ -22,7 +22,31 @@ public enum GuiType {
     WORKBENCH(InventoryType.WORKBENCH),
 
     /** A brewing stand. */
-    BREWING(InventoryType.BREWING);
+    BREWING(InventoryType.BREWING),
+
+    /** A grindstone (two inputs + result). Output processing is neutralized by the default cancel policy. */
+    GRINDSTONE(InventoryType.GRINDSTONE),
+
+    /** A stonecutter (input + result). */
+    STONECUTTER(InventoryType.STONECUTTER),
+
+    /** A cartography table (map + paper + result). */
+    CARTOGRAPHY(InventoryType.CARTOGRAPHY),
+
+    /** A smithing table (template + base + addition + result). */
+    SMITHING(InventoryType.SMITHING),
+
+    /** A loom (banner + dye + pattern + result). */
+    LOOM(InventoryType.LOOM),
+
+    /** A 3-slot furnace (smelt + fuel + result), as a display surface. */
+    FURNACE(InventoryType.FURNACE),
+
+    /** A beacon (one payment slot). */
+    BEACON(InventoryType.BEACON),
+
+    /** An enchanting table (item + lapis). */
+    ENCHANTING(InventoryType.ENCHANTING);
 
     private final InventoryType inventoryType;
 

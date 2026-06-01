@@ -38,6 +38,7 @@ abstract class AbstractGui implements Gui {
     private final Set<InteractionModifier> allowed = EnumSet.noneOf(InteractionModifier.class);
     private long ticks;
     private @Nullable Duration autoRefresh;
+    private GuiSound sounds = GuiSound.NONE;
 
     AbstractGui(Component title, int rows) {
         this.title = Objects.requireNonNull(title, "title");
@@ -167,6 +168,7 @@ abstract class AbstractGui implements Gui {
     @Override
     public void handleOpen(InventoryOpenEvent event) {
         GuiRegistry.onOpen(this);
+        sounds.playOpen(event.getPlayer());
         Consumer<InventoryOpenEvent> handler = openHandler;
         if (handler != null) {
             handler.accept(event);
@@ -197,10 +199,7 @@ abstract class AbstractGui implements Gui {
 
     @Override
     public void close(HumanEntity viewer) {
-        Objects.requireNonNull(viewer, "viewer");
-        if (inventory != null && inventory.getViewers().contains(viewer)) {
-            viewer.closeInventory();
-        }
+        GuiRender.close(inventory, Objects.requireNonNull(viewer, "viewer"));
     }
 
     @Override
@@ -223,7 +222,16 @@ abstract class AbstractGui implements Gui {
 
     @Override
     public void handleClick(InventoryClickEvent event) {
-        GuiClick.route(this, inventory, items, allowed, defaultClickHandler, outsideClickHandler, event);
+        boolean hitItem =
+                GuiClick.route(this, inventory, items, allowed, defaultClickHandler, outsideClickHandler, event);
+        if (hitItem) {
+            sounds.playClick(event.getWhoClicked());
+        }
+    }
+
+    /** Set the click/open feedback sounds for this menu. */
+    final void sounds(GuiSound newSounds) {
+        this.sounds = Objects.requireNonNull(newSounds, "sounds");
     }
 
     @Override
