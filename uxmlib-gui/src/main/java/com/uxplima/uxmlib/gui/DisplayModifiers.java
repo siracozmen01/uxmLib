@@ -2,7 +2,6 @@ package com.uxplima.uxmlib.gui;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Function;
 
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
@@ -71,11 +70,5 @@ public final class DisplayModifiers {
             String resolved = Placeholders.apply(context.viewer(), plain);
             return ItemBuilder.from(base).name(Component.text(resolved)).build();
         };
-    }
-
-    /** Applies an arbitrary per-viewer transform — e.g. resolve a localized name from the viewer's locale. */
-    public static DisplayModifier mapping(Function<RenderContext, ItemStack> transform) {
-        Objects.requireNonNull(transform, "transform");
-        return (context, base) -> transform.apply(context);
     }
 }

@@ -10,6 +10,7 @@ import java.util.function.Consumer;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.HumanEntity;
+import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
@@ -38,7 +39,11 @@ abstract class AbstractGui implements Gui {
     private final Set<InteractionModifier> allowed = EnumSet.noneOf(InteractionModifier.class);
     private long ticks;
     private @Nullable Duration autoRefresh;
+    private long refreshEveryTicks = 1L;
     private GuiSound sounds = GuiSound.NONE;
+    // Set while updateTitle rebuilds the inventory, so the internal close/reopen does not look like a real
+    // close or open to the user's handlers, sounds, or the tick registry.
+    private boolean reopening;
 
     AbstractGui(Component title, int rows) {
         this.title = Objects.requireNonNull(title, "title");
@@ -168,6 +173,9 @@ abstract class AbstractGui implements Gui {
     @Override
     public void handleOpen(InventoryOpenEvent event) {
         GuiRegistry.onOpen(this);
+        if (reopening) {
+            return; // an internal title-change reopen, not a user-visible open
+        }
         sounds.playOpen(event.getPlayer());
         Consumer<InventoryOpenEvent> handler = openHandler;
         if (handler != null) {
@@ -216,8 +224,14 @@ abstract class AbstractGui implements Gui {
             return; // not built yet; the new title will be used when it is created
         }
         // Bukkit fixes a title at creation, so rebuild the inventory and reopen it for current viewers.
+        // Guard the close/reopen so it doesn't fire the user's open/close handlers or the open sound.
         this.inventory = null;
-        GuiRender.reopen(old, getInventory());
+        this.reopening = true;
+        try {
+            GuiRender.reopen(old, getInventory());
+        } finally {
+            this.reopening = false;
+        }
     }
 
     @Override
@@ -236,6 +250,9 @@ abstract class AbstractGui implements Gui {
 
     @Override
     public void handleClose(InventoryCloseEvent event) {
+        if (reopening) {
+            return; // the close half of an internal title-change reopen
+        }
         // Stop ticking once the last viewer leaves (getViewers still includes the closing player here,
         // so one-or-fewer means this close empties the menu).
         if (inventory != null && inventory.getViewers().size() <= 1) {
@@ -279,7 +296,11 @@ abstract class AbstractGui implements Gui {
         return ticks;
     }
 
-    /** Re-resolve every item for the current viewer and rewrite the open inventory in place. */
+    /**
+     * Re-resolve every item for the current viewer and rewrite the open inventory in place. Note: a menu
+     * with dynamic/stateful/animated content is single-viewer — open one instance per player (a navigator
+     * does this for you). With a shared inventory only the static items are correct for every viewer.
+     */
     @Override
     public void refresh() {
         Inventory inv = inventory;
@@ -288,15 +309,27 @@ abstract class AbstractGui implements Gui {
         }
     }
 
-    /** Advance the menu's animation clock by one tick and re-render. Called by the GUI registry. */
+    /**
+     * Advance the animation clock and, on the configured interval, re-render only the changeable items.
+     * Static slots are left untouched, and an unchanged icon is not rewritten, so the tick path does the
+     * least work it can.
+     */
     final void tick() {
         ticks++;
-        refresh();
+        Inventory inv = inventory;
+        if (inv == null || ticks % refreshEveryTicks != 0) {
+            return;
+        }
+        Player viewer = GuiRender.firstViewer(inv);
+        if (viewer != null) {
+            GuiRender.renderDynamic(inv, this, items, viewer);
+        }
     }
 
-    /** Set how often this menu auto-refreshes while open; {@code null} disables it. */
+    /** Set how often this menu re-renders while open ({@code null} = every tick, for animations). */
     final void autoRefresh(@Nullable Duration interval) {
         this.autoRefresh = interval;
+        this.refreshEveryTicks = interval == null ? 1L : Math.max(1L, interval.toMillis() / 50L);
     }
 
     private void checkSlot(int slot) {

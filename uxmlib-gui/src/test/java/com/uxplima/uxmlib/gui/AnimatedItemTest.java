@@ -80,4 +80,41 @@ class AnimatedItemTest {
         assertThatThrownBy(() -> GuiItem.animated(List.of(), Duration.ofMillis(50)))
                 .isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    void autoRefreshIntervalIsHonoured() {
+        // A 200ms interval = every 4 ticks; ticks 1-3 must not re-render, tick 4 must.
+        SimpleGui gui = Guis.gui().rows(1).autoRefresh(Duration.ofMillis(200)).build();
+        int[] renders = {0};
+        // A dynamic item that counts how often it is resolved.
+        gui.set(0, GuiItem.dynamic(ctx -> {
+            renders[0]++;
+            return new ItemStack(Material.STONE);
+        }));
+        Player player = MockBukkit.getMock().addPlayer();
+        gui.open(player); // initial render resolves once
+        int afterOpen = renders[0];
+
+        gui.tick(); // tick 1 -> gated out
+        gui.tick(); // tick 2 -> gated out
+        gui.tick(); // tick 3 -> gated out
+        assertThat(renders[0]).isEqualTo(afterOpen); // no extra resolves yet
+        gui.tick(); // tick 4 -> renders
+        assertThat(renders[0]).isGreaterThan(afterOpen);
+    }
+
+    @Test
+    void tickDoesNotRewriteStaticSlots() {
+        SimpleGui gui = Guis.gui().rows(1).build();
+        ItemStack stoneStack = new ItemStack(Material.STONE);
+        gui.set(0, GuiItem.display(stoneStack));
+        gui.set(1, GuiItem.animated(frames(), Duration.ofMillis(50)));
+        Player player = MockBukkit.getMock().addPlayer();
+        gui.open(player);
+
+        ItemStack beforeStatic = gui.getInventory().getItem(0);
+        gui.tick();
+        // The static slot's stack is left as-is (renderDynamic skips Static items).
+        assertThat(gui.getInventory().getItem(0)).isEqualTo(beforeStatic);
+    }
 }

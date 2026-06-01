@@ -16,6 +16,13 @@ import net.kyori.adventure.text.Component;
  * <p>Clicks are cancelled by default to stop items being pulled out; the slot's {@link GuiAction} then
  * runs and may re-allow the event. Build menus with {@link Guis} and remember to install the listener
  * once with {@link Guis#install}.
+ *
+ * <p><b>Viewer model.</b> A menu of only {@link GuiItem.Static} items may be opened for any number of
+ * players at once — they share one inventory and all see the same thing, which is correct. A menu with
+ * {@link GuiItem.Dynamic}, {@link GuiItem.Stateful}, or {@link GuiItem.Animated} items is
+ * <b>single-viewer</b>: it resolves each item for one viewer, so open a fresh instance per player (a
+ * {@link GuiNavigator} already does this). Sharing one such instance across players shows them all the
+ * first viewer's render.
  */
 public interface Gui extends InventoryHolder {
 

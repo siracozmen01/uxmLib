@@ -96,6 +96,20 @@ class GuiNavigatorTest {
     }
 
     @Test
+    @SuppressWarnings("removal") // the only PlayerQuitEvent constructor available to synthesize the event
+    void quitEvictsThePlayerStack() {
+        GuiNavigator nav = new GuiNavigator();
+        SimpleGui root = Guis.gui().rows(1).build();
+        org.bukkit.entity.Player player = MockBukkit.getMock().addPlayer();
+        nav.open(player, root);
+        assertThat(nav.current(player)).isSameAs(root);
+
+        nav.onQuit(new org.bukkit.event.player.PlayerQuitEvent(player, net.kyori.adventure.text.Component.empty()));
+
+        assertThat(nav.current(player)).isNull(); // stack forgotten on quit
+    }
+
+    @Test
     void closeAllClosesEveryViewer() {
         SimpleGui gui = Guis.gui().rows(1).build();
         Player player = MockBukkit.getMock().addPlayer();

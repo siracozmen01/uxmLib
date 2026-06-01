@@ -8,16 +8,34 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.plugin.Plugin;
 
 /**
  * A per-player screen history, so menus can push new screens and pop back to the previous one. Because
  * each screen is a retained {@link Gui} instance, popping reopens it exactly as the player left it — its
  * page, scroll offset, and per-viewer state are intact. Build multi-screen flows by pushing with
- * {@link #open} and wiring a {@link GuiItem#back(GuiNavigator)} button to {@link #back}.
+ * {@link #open} and wiring a {@link GuiItem#back} button to {@link #back}.
+ *
+ * <p>Register it once with {@link #install(Plugin)} so a player's stack is evicted when they disconnect;
+ * otherwise call {@link #clear} yourself to avoid retaining stacks for players who have left.
  */
-public final class GuiNavigator {
+public final class GuiNavigator implements Listener {
 
     private final Map<UUID, Deque<Gui>> stacks = new ConcurrentHashMap<>();
+
+    /** Register a quit listener so a disconnecting player's stack is evicted automatically. */
+    public void install(Plugin plugin) {
+        Objects.requireNonNull(plugin, "plugin");
+        plugin.getServer().getPluginManager().registerEvents(this, plugin);
+    }
+
+    @EventHandler
+    void onQuit(PlayerQuitEvent event) {
+        stacks.remove(event.getPlayer().getUniqueId());
+    }
 
     /** Push {@code gui} onto {@code viewer}'s stack and open it. */
     public void open(Player viewer, Gui gui) {

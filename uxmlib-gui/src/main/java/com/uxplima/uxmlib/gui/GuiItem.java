@@ -21,6 +21,10 @@ import org.bukkit.inventory.ItemStack;
  *
  * <p>Most callers use the factories ({@link #button}, {@link #display}, {@link #dynamic}); the menu
  * resolves a kind with {@link #icon(RenderContext)} and {@link #action(RenderContext)} during render.
+ *
+ * <p>A {@link Static} item shows the same icon to everyone and a menu of only static items can be shared
+ * by many viewers. {@link Dynamic}, {@link Stateful}, and {@link Animated} resolve per viewer, so a menu
+ * containing them is single-viewer — open one instance per player (see {@link Gui}).
  */
 public sealed interface GuiItem permits GuiItem.Static, GuiItem.Dynamic, GuiItem.Stateful, GuiItem.Animated {
 

@@ -77,6 +77,24 @@ class GuiTest {
     }
 
     @Test
+    void updateTitleDoesNotFireOpenOrCloseHandlers() {
+        SimpleGui gui = Guis.gui().title(Component.text("Old")).rows(1).build();
+        int[] opens = {0};
+        int[] closes = {0};
+        gui.onOpen(e -> opens[0]++);
+        gui.onClose(e -> closes[0]++);
+
+        var player = MockBukkit.getMock().addPlayer();
+        gui.open(player);
+        int opensAfterRealOpen = opens[0];
+
+        gui.updateTitle(Component.text("New")); // internal reopen must be invisible to handlers
+
+        assertThat(opens[0]).isEqualTo(opensAfterRealOpen);
+        assertThat(closes[0]).isZero();
+    }
+
+    @Test
     void clickAndOpenSoundsBuildAndOpenWithoutError() {
         net.kyori.adventure.sound.Sound click = net.kyori.adventure.sound.Sound.sound(
                 org.bukkit.Sound.UI_BUTTON_CLICK, net.kyori.adventure.sound.Sound.Source.MASTER, 1f, 1f);

@@ -43,7 +43,7 @@ final class GuiRender {
         if (item instanceof GuiItem.Static fixed) {
             inventory.setItem(slot, fixed.item());
         } else if (viewer != null) {
-            inventory.setItem(slot, item.icon(new RenderContext(viewer, gui, slot)));
+            setIfChanged(inventory, slot, item.icon(new RenderContext(viewer, gui, slot)));
         }
     }
 
@@ -51,6 +51,27 @@ final class GuiRender {
     static void renderAll(Inventory inventory, Gui gui, Map<Integer, GuiItem> items, @Nullable Player viewer) {
         for (Map.Entry<Integer, GuiItem> entry : items.entrySet()) {
             writeSlot(inventory, gui, entry.getKey(), entry.getValue(), viewer);
+        }
+    }
+
+    /**
+     * Re-render only the items that can change on a tick — dynamic, stateful, animated — for {@code viewer},
+     * leaving static slots alone. The per-tick path so a 60-slot menu of mostly static buttons doesn't
+     * rewrite every slot 20×/sec, and only resolves the suppliers whose result can differ.
+     */
+    static void renderDynamic(Inventory inventory, Gui gui, Map<Integer, GuiItem> items, Player viewer) {
+        for (Map.Entry<Integer, GuiItem> entry : items.entrySet()) {
+            if (!(entry.getValue() instanceof GuiItem.Static)) {
+                int slot = entry.getKey();
+                setIfChanged(inventory, slot, entry.getValue().icon(new RenderContext(viewer, gui, slot)));
+            }
+        }
+    }
+
+    /** Set {@code slot} only when {@code next} differs from what is there, to avoid needless updates. */
+    private static void setIfChanged(Inventory inventory, int slot, org.bukkit.inventory.ItemStack next) {
+        if (!next.equals(inventory.getItem(slot))) {
+            inventory.setItem(slot, next);
         }
     }
 
