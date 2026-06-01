@@ -1,10 +1,15 @@
 package com.uxplima.uxmlib.item;
 
 import java.util.Objects;
+import java.util.function.Consumer;
 
 import org.bukkit.NamespacedKey;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataContainer;
 
 import io.papermc.paper.registry.RegistryAccess;
 import io.papermc.paper.registry.RegistryKey;
@@ -48,5 +53,33 @@ public final class Items {
         return RegistryAccess.registryAccess()
                 .getRegistry(RegistryKey.ATTRIBUTE)
                 .getOrThrow(key);
+    }
+
+    /**
+     * Edit {@code item}'s persistent data in one scoped pass: read the meta once, hand its
+     * {@link PersistentDataContainer} to {@code editor}, then write the meta back. A no-op on an item with
+     * no meta. Removes the read-meta / edit / set-meta dance (and the easy bug of forgetting to set it back).
+     */
+    public static void editPdc(ItemStack item, Consumer<PersistentDataContainer> editor) {
+        Objects.requireNonNull(item, "item");
+        Objects.requireNonNull(editor, "editor");
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) {
+            return;
+        }
+        editor.accept(meta.getPersistentDataContainer());
+        item.setItemMeta(meta);
+    }
+
+    /**
+     * Give {@code items} to {@code player}, dropping anything that does not fit at the player's feet so a
+     * full inventory never silently swallows a reward.
+     */
+    public static void give(Player player, ItemStack... items) {
+        Objects.requireNonNull(player, "player");
+        Objects.requireNonNull(items, "items");
+        for (ItemStack leftover : player.getInventory().addItem(items).values()) {
+            player.getWorld().dropItemNaturally(player.getLocation(), leftover);
+        }
     }
 }
