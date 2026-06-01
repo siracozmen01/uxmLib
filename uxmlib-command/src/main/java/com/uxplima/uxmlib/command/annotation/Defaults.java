@@ -1,5 +1,7 @@
 package com.uxplima.uxmlib.command.annotation;
 
+import com.uxplima.uxmlib.command.annotation.annotations.Arg;
+
 /**
  * Parses the {@code @}{@link Arg#def()} string of an omitted optional argument into the parameter's type.
  * Only the simple value types that make sense as a literal default are handled; a default on a richer type

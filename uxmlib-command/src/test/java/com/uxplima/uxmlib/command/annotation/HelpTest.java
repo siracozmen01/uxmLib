@@ -6,6 +6,10 @@ import io.papermc.paper.command.brigadier.CommandSourceStack;
 
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.uxplima.uxmlib.command.Sender;
+import com.uxplima.uxmlib.command.annotation.annotations.Arg;
+import com.uxplima.uxmlib.command.annotation.annotations.Command;
+import com.uxplima.uxmlib.command.annotation.annotations.Permission;
+import com.uxplima.uxmlib.command.annotation.annotations.Subcommand;
 import org.junit.jupiter.api.Test;
 
 /** Verifies an auto-generated help subcommand is attached, and can be opted out. */

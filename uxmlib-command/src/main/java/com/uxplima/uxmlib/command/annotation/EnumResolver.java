@@ -7,6 +7,7 @@ import io.papermc.paper.command.brigadier.CommandSourceStack;
 import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
+import com.uxplima.uxmlib.command.annotation.annotations.Arg;
 
 /**
  * Resolves an enum parameter from a lower-cased constant name. Pure Java enums have no native client

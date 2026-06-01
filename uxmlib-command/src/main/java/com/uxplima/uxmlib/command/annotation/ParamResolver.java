@@ -6,6 +6,7 @@ import io.papermc.paper.command.brigadier.CommandSourceStack;
 
 import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.context.CommandContext;
+import com.uxplima.uxmlib.command.annotation.annotations.Arg;
 import org.jspecify.annotations.Nullable;
 
 /**

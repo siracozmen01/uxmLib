@@ -14,6 +14,9 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.uxplima.uxmlib.command.Cmd;
 import com.uxplima.uxmlib.command.Sender;
+import com.uxplima.uxmlib.command.annotation.annotations.Arg;
+import com.uxplima.uxmlib.command.annotation.annotations.Permission;
+import com.uxplima.uxmlib.command.annotation.annotations.Subcommand;
 
 /**
  * Renders a command's help: one line per branch the sender is allowed to use, as an Adventure component.

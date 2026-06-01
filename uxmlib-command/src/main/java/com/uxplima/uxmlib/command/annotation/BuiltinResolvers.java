@@ -20,6 +20,7 @@ import com.mojang.brigadier.arguments.LongArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.uxplima.uxmlib.command.annotation.annotations.Arg;
 
 /**
  * The resolvers shipped with the DSL: the primitives plus common Bukkit types resolved through native

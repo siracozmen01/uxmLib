@@ -8,6 +8,9 @@ import io.papermc.paper.command.brigadier.CommandSourceStack;
 import com.mojang.brigadier.tree.CommandNode;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.uxplima.uxmlib.command.Sender;
+import com.uxplima.uxmlib.command.annotation.annotations.Arg;
+import com.uxplima.uxmlib.command.annotation.annotations.Command;
+import com.uxplima.uxmlib.command.annotation.annotations.Subcommand;
 import org.junit.jupiter.api.Test;
 
 /** Covers optional, default, and greedy trailing arguments and their registration-time ordering rules. */

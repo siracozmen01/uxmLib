@@ -18,6 +18,11 @@ import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.uxplima.uxmlib.command.Cmd;
 import com.uxplima.uxmlib.command.CommandRegistrar;
 import com.uxplima.uxmlib.command.Sender;
+import com.uxplima.uxmlib.command.annotation.annotations.Arg;
+import com.uxplima.uxmlib.command.annotation.annotations.Command;
+import com.uxplima.uxmlib.command.annotation.annotations.Permission;
+import com.uxplima.uxmlib.command.annotation.annotations.PlayerOnly;
+import com.uxplima.uxmlib.command.annotation.annotations.Subcommand;
 
 /**
  * Turns an {@code @}{@link Command} handler into a registered Brigadier command by reflection: each

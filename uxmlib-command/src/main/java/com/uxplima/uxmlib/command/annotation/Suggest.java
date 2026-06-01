@@ -5,6 +5,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import com.uxplima.uxmlib.command.annotation.annotations.Arg;
+
 /**
  * Offers a fixed list of tab-completions for an {@code @}{@link Arg} parameter, overriding the argument
  * type's native suggestions. Use it for a small known set of literal completions that aren't worth a

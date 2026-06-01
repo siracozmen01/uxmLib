@@ -8,6 +8,9 @@ import io.papermc.paper.command.brigadier.CommandSourceStack;
 import com.mojang.brigadier.tree.CommandNode;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.uxplima.uxmlib.command.Sender;
+import com.uxplima.uxmlib.command.annotation.annotations.Arg;
+import com.uxplima.uxmlib.command.annotation.annotations.Command;
+import com.uxplima.uxmlib.command.annotation.annotations.Subcommand;
 import org.junit.jupiter.api.Test;
 
 /** Verifies the resolver registry: rich built-in types build a tree, enums and custom types resolve. */
