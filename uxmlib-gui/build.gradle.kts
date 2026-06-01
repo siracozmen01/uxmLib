@@ -6,6 +6,7 @@ plugins {
 dependencies {
     api(project(":uxmlib-common"))
     api(project(":uxmlib-item"))
+    api(project(":uxmlib-integration"))
     compileOnly(libs.paper.api)
     compileOnly(libs.bundles.adventure)
 
