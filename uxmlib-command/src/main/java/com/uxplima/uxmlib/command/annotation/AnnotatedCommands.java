@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import io.papermc.paper.command.brigadier.CommandSourceStack;
@@ -21,7 +20,6 @@ import com.uxplima.uxmlib.command.Sender;
 import com.uxplima.uxmlib.command.annotation.annotations.Arg;
 import com.uxplima.uxmlib.command.annotation.annotations.Command;
 import com.uxplima.uxmlib.command.annotation.annotations.Permission;
-import com.uxplima.uxmlib.command.annotation.annotations.PlayerOnly;
 import com.uxplima.uxmlib.command.annotation.annotations.Subcommand;
 
 /**
@@ -116,8 +114,10 @@ public final class AnnotatedCommands {
             LiteralArgumentBuilder<CommandSourceStack> root, Object handler, Method method, ParamResolvers resolvers) {
         validateSignature(method, resolvers);
         String path = method.getAnnotation(Subcommand.class).value().trim();
-        com.mojang.brigadier.Command<CommandSourceStack> executor = executorFor(handler, method, resolvers);
-        ArgChain chain = buildArgChain(method, executor, resolvers);
+        List<ArgBinder.ParamArg> args = argParameters(method, resolvers);
+        com.mojang.brigadier.Command<CommandSourceStack> executor =
+                CommandExecutors.executorFor(handler, method, args, resolvers);
+        ArgChain chain = buildArgChain(method, args, executor);
 
         String[] literals = path.isEmpty() ? new String[0] : path.split("\\s+");
         if (literals.length == 0) {
@@ -161,8 +161,7 @@ public final class AnnotatedCommands {
     }
 
     private static ArgChain buildArgChain(
-            Method method, com.mojang.brigadier.Command<CommandSourceStack> executor, ParamResolvers resolvers) {
-        List<ArgBinder.ParamArg> args = argParameters(method, resolvers);
+            Method method, List<ArgBinder.ParamArg> args, com.mojang.brigadier.Command<CommandSourceStack> executor) {
         if (args.isEmpty()) {
             return new ArgChain(null, false);
         }
@@ -174,7 +173,7 @@ public final class AnnotatedCommands {
         for (int i = args.size() - 1; i >= 0; i--) {
             ArgBinder.ParamArg pa = args.get(i);
             RequiredArgumentBuilder<CommandSourceStack, ?> builder =
-                    Cmd.argument(pa.name(), pa.resolver().argumentType(pa.arg()));
+                    Cmd.argument(pa.name(), pa.resolver().argumentType(pa.arg(), pa.parameter()));
             Suggestions.apply(builder, pa.parameter(), pa.resolver());
             if (tail == null) {
                 builder.executes(executor);
@@ -204,69 +203,14 @@ public final class AnnotatedCommands {
         }
     }
 
-    private static com.mojang.brigadier.Command<CommandSourceStack> executorFor(
-            Object handler, Method method, ParamResolvers resolvers) {
-        List<ArgBinder.ParamArg> args = argParameters(method, resolvers);
-        boolean playerOnly = method.isAnnotationPresent(PlayerOnly.class)
-                || method.getDeclaringClass().isAnnotationPresent(PlayerOnly.class);
-        return ctx -> {
-            if (playerOnly && !(ctx.getSource().getSender() instanceof org.bukkit.entity.Player)) {
-                Sender.of(ctx.getSource())
-                        .send(net.kyori.adventure.text.Component.text(
-                                "Only a player can run this command.",
-                                net.kyori.adventure.text.format.NamedTextColor.RED));
-                return 0;
-            }
-            Object[] callArgs;
-            try {
-                callArgs = ArgBinder.bind(ctx, method, args);
-            } catch (IllegalArgumentException badArgument) {
-                // A resolver rejected the input (e.g. an offline player, an out-of-range value). Reply with
-                // its message rather than letting it surface as a server error.
-                Sender.of(ctx.getSource())
-                        .send(net.kyori.adventure.text.Component.text(
-                                badArgument.getMessage() == null ? "Invalid argument." : badArgument.getMessage(),
-                                net.kyori.adventure.text.format.NamedTextColor.RED));
-                return 0;
-            }
-            try {
-                method.invoke(handler, callArgs);
-                return Cmd.OK;
-            } catch (java.lang.reflect.InvocationTargetException thrownByHandler) {
-                // The handler itself failed. Don't let Brigadier dump a red stacktrace in the player's
-                // chat: log the real cause server-side and reply with a clean, generic message.
-                Throwable cause = thrownByHandler.getCause();
-                ctx.getSource()
-                        .getSender()
-                        .getServer()
-                        .getLogger()
-                        .log(
-                                java.util.logging.Level.SEVERE,
-                                "Command '" + method.getName() + "' threw an exception",
-                                cause != null ? cause : thrownByHandler);
-                Sender.of(ctx.getSource())
-                        .send(net.kyori.adventure.text.Component.text(
-                                "An internal error occurred while running this command.",
-                                net.kyori.adventure.text.format.NamedTextColor.RED));
-                return 0;
-            } catch (IllegalAccessException unreachable) {
-                // setAccessible(true) ran at registration, so this cannot happen for a registered handler.
-                throw new CommandParseException("could not invoke " + method.getName(), unreachable);
-            }
-        };
-    }
-
-    private static boolean isInjectable(Class<?> type) {
-        return type == Sender.class
-                || type == CommandSourceStack.class
-                || type == CommandSender.class
-                || type == org.bukkit.entity.Player.class;
+    private static boolean isInjectable(ParamResolvers resolvers, Parameter param) {
+        return !param.isAnnotationPresent(Arg.class) && resolvers.hasContext(param.getType());
     }
 
     private static void validateSignature(Method method, ParamResolvers resolvers) {
         for (Parameter param : method.getParameters()) {
             Class<?> type = param.getType();
-            boolean injectable = isInjectable(type) && !param.isAnnotationPresent(Arg.class);
+            boolean injectable = isInjectable(resolvers, param);
             if (!injectable && !param.isAnnotationPresent(Arg.class)) {
                 throw new CommandParseException("parameter '" + param.getName() + "' of " + method.getName()
                         + " must be @Arg-annotated or be a Sender/CommandSourceStack/CommandSender");

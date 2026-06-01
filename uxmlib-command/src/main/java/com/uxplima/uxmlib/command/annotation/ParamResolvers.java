@@ -1,6 +1,8 @@
 package com.uxplima.uxmlib.command.annotation;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -16,6 +18,9 @@ import org.jspecify.annotations.Nullable;
 public final class ParamResolvers {
 
     private final Map<Class<?>, ParamResolver<?>> byType = new HashMap<>();
+    private final Map<Class<?>, List<ParameterValidator<?>>> validatorsByType = new HashMap<>();
+    private final Map<Class<?>, ContextParameter<?>> contextByType = new HashMap<>();
+    private final List<CommandCondition> conditions = new ArrayList<>();
 
     private ParamResolvers() {}
 
@@ -28,6 +33,7 @@ public final class ParamResolvers {
     public static ParamResolvers withDefaults() {
         ParamResolvers resolvers = new ParamResolvers();
         BuiltinResolvers.installInto(resolvers);
+        ContextParameters.installInto(resolvers);
         return resolvers;
     }
 
@@ -37,9 +43,57 @@ public final class ParamResolvers {
         return this;
     }
 
+    /**
+     * Register a post-resolve {@code validator} for parameters of {@code type}. Several validators may share
+     * a type; each runs against the resolved value and rejects bad input by throwing
+     * {@link IllegalArgumentException}. Returns this for chaining.
+     */
+    public <T> ParamResolvers validate(Class<T> type, ParameterValidator<T> validator) {
+        Objects.requireNonNull(type, "type");
+        Objects.requireNonNull(validator, "validator");
+        validatorsByType.computeIfAbsent(type, ignored -> new ArrayList<>()).add(validator);
+        return this;
+    }
+
+    /**
+     * Register a {@code provider} that injects a non-{@code @Arg} parameter of {@code type} from the command
+     * context. Replaces any provider already registered for that exact type. Returns this for chaining.
+     */
+    public <T> ParamResolvers context(Class<T> type, ContextParameter<T> provider) {
+        contextByType.put(Objects.requireNonNull(type, "type"), Objects.requireNonNull(provider, "provider"));
+        return this;
+    }
+
+    /** Register a pre-execute {@code condition} run before every branch's handler. Returns this for chaining. */
+    public ParamResolvers condition(CommandCondition condition) {
+        conditions.add(Objects.requireNonNull(condition, "condition"));
+        return this;
+    }
+
     /** Whether some resolver handles {@code type} (directly, or as an enum). */
     boolean supports(Class<?> type) {
         return resolverFor(type) != null;
+    }
+
+    /** The validators registered for {@code type}, in registration order; empty when none. */
+    List<ParameterValidator<?>> validatorsFor(Class<?> type) {
+        List<ParameterValidator<?>> found = validatorsByType.get(type);
+        return found == null ? List.of() : found;
+    }
+
+    /** Whether a context provider is registered for the exact {@code type}. */
+    boolean hasContext(Class<?> type) {
+        return contextByType.containsKey(type);
+    }
+
+    /** The context provider for the exact {@code type}, or {@code null} if none is registered. */
+    @Nullable ContextParameter<?> contextFor(Class<?> type) {
+        return contextByType.get(type);
+    }
+
+    /** The pre-execute conditions, in registration order. */
+    List<CommandCondition> conditions() {
+        return conditions;
     }
 
     /** The resolver for {@code type}, or {@code null} if none is registered. Enums share one resolver. */

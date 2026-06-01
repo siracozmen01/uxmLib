@@ -1,5 +1,6 @@
 package com.uxplima.uxmlib.command.annotation;
 
+import java.lang.reflect.Parameter;
 import java.util.Collection;
 
 import io.papermc.paper.command.brigadier.CommandSourceStack;
@@ -22,6 +23,17 @@ public interface ParamResolver<T> {
 
     /** The native Brigadier argument type to register for this parameter. */
     ArgumentType<?> argumentType(Arg arg);
+
+    /**
+     * The native Brigadier argument type for {@code parameter}, given a chance to read parameter-level
+     * annotations the {@link Arg} alone does not carry (e.g. {@code @}{@link
+     * com.uxplima.uxmlib.command.annotation.annotations.Range}). Defaults to {@link #argumentType(Arg)};
+     * the numeric built-ins override it to fold {@code @Range} bounds into the native type. Consumers only
+     * implement {@link #argumentType(Arg)}.
+     */
+    default ArgumentType<?> argumentType(Arg arg, Parameter parameter) {
+        return argumentType(arg);
+    }
 
     /** Read the parsed value for {@code name} out of {@code context}. */
     T resolve(CommandContext<CommandSourceStack> context, String name);

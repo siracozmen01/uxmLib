@@ -36,12 +36,12 @@ final class BuiltinResolvers {
         r.register(String.class, strings());
         r.register(int.class, ints());
         r.register(Integer.class, ints());
-        r.register(long.class, simple(LongArgumentType::longArg, (c, n) -> LongArgumentType.getLong(c, n)));
-        r.register(Long.class, simple(LongArgumentType::longArg, (c, n) -> LongArgumentType.getLong(c, n)));
+        r.register(long.class, longs());
+        r.register(Long.class, longs());
         r.register(double.class, doubles());
         r.register(Double.class, doubles());
-        r.register(float.class, simple(FloatArgumentType::floatArg, (c, n) -> FloatArgumentType.getFloat(c, n)));
-        r.register(Float.class, simple(FloatArgumentType::floatArg, (c, n) -> FloatArgumentType.getFloat(c, n)));
+        r.register(float.class, floats());
+        r.register(Float.class, floats());
         r.register(boolean.class, bools());
         r.register(Boolean.class, bools());
         r.register(UUID.class, simple(ArgumentTypes::uuid, (c, n) -> c.getArgument(n, UUID.class)));
@@ -60,8 +60,40 @@ final class BuiltinResolvers {
             }
 
             @Override
+            public ArgumentType<?> argumentType(Arg arg, java.lang.reflect.Parameter parameter) {
+                double lo = ArgValidators.lowerBound(parameter, arg.min());
+                double hi = ArgValidators.upperBound(parameter, arg.max());
+                int min = lo == Double.NEGATIVE_INFINITY ? Integer.MIN_VALUE : (int) lo;
+                int max = hi == Double.POSITIVE_INFINITY ? Integer.MAX_VALUE : (int) hi;
+                return IntegerArgumentType.integer(min, max);
+            }
+
+            @Override
             public Integer resolve(CommandContext<CommandSourceStack> context, String name) {
                 return IntegerArgumentType.getInteger(context, name);
+            }
+        };
+    }
+
+    private static ParamResolver<Long> longs() {
+        return new ParamResolver<>() {
+            @Override
+            public ArgumentType<?> argumentType(Arg arg) {
+                return LongArgumentType.longArg();
+            }
+
+            @Override
+            public ArgumentType<?> argumentType(Arg arg, java.lang.reflect.Parameter parameter) {
+                double lo = ArgValidators.lowerBound(parameter, arg.min());
+                double hi = ArgValidators.upperBound(parameter, arg.max());
+                long min = lo == Double.NEGATIVE_INFINITY ? Long.MIN_VALUE : (long) lo;
+                long max = hi == Double.POSITIVE_INFINITY ? Long.MAX_VALUE : (long) hi;
+                return LongArgumentType.longArg(min, max);
+            }
+
+            @Override
+            public Long resolve(CommandContext<CommandSourceStack> context, String name) {
+                return LongArgumentType.getLong(context, name);
             }
         };
     }
@@ -74,8 +106,37 @@ final class BuiltinResolvers {
             }
 
             @Override
+            public ArgumentType<?> argumentType(Arg arg, java.lang.reflect.Parameter parameter) {
+                return DoubleArgumentType.doubleArg(
+                        ArgValidators.lowerBound(parameter, arg.min()), ArgValidators.upperBound(parameter, arg.max()));
+            }
+
+            @Override
             public Double resolve(CommandContext<CommandSourceStack> context, String name) {
                 return DoubleArgumentType.getDouble(context, name);
+            }
+        };
+    }
+
+    private static ParamResolver<Float> floats() {
+        return new ParamResolver<>() {
+            @Override
+            public ArgumentType<?> argumentType(Arg arg) {
+                return FloatArgumentType.floatArg();
+            }
+
+            @Override
+            public ArgumentType<?> argumentType(Arg arg, java.lang.reflect.Parameter parameter) {
+                double lo = ArgValidators.lowerBound(parameter, arg.min());
+                double hi = ArgValidators.upperBound(parameter, arg.max());
+                float min = lo == Double.NEGATIVE_INFINITY ? -Float.MAX_VALUE : (float) lo;
+                float max = hi == Double.POSITIVE_INFINITY ? Float.MAX_VALUE : (float) hi;
+                return FloatArgumentType.floatArg(min, max);
+            }
+
+            @Override
+            public Float resolve(CommandContext<CommandSourceStack> context, String name) {
+                return FloatArgumentType.getFloat(context, name);
             }
         };
     }
