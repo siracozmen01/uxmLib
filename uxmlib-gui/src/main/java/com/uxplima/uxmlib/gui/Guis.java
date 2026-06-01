@@ -48,6 +48,7 @@ public final class Guis {
     abstract static class Builder<B extends Builder<B>> {
         Component title = Component.empty();
         int rows = 1;
+        final java.util.Set<InteractionModifier> allowed = java.util.EnumSet.noneOf(InteractionModifier.class);
 
         @SuppressWarnings("unchecked") // self-type cast; safe because B is always the concrete subtype
         final B self() {
@@ -68,6 +69,22 @@ public final class Guis {
             this.rows = rows;
             return self();
         }
+
+        /** Allow one or more interactions the menu would otherwise cancel (e.g. for a storage menu). */
+        public B allow(InteractionModifier... modifiers) {
+            Objects.requireNonNull(modifiers, "modifiers");
+            for (InteractionModifier modifier : modifiers) {
+                allowed.add(Objects.requireNonNull(modifier, "modifier"));
+            }
+            return self();
+        }
+
+        final <G extends Gui> G applyModifiers(G gui) {
+            for (InteractionModifier modifier : allowed) {
+                gui.allow(modifier);
+            }
+            return gui;
+        }
     }
 
     /** Builder for {@link SimpleGui}. */
@@ -76,7 +93,7 @@ public final class Guis {
 
         /** Build the menu. */
         public SimpleGui build() {
-            return new SimpleGui(title, rows);
+            return applyModifiers(new SimpleGui(title, rows));
         }
     }
 
@@ -117,7 +134,7 @@ public final class Guis {
         /** Build the menu. */
         public PaginatedGui build() {
             List<Integer> slots = contentSlots != null ? contentSlots : defaultContentSlots(rows);
-            return new PaginatedGui(title, rows, slots);
+            return applyModifiers(new PaginatedGui(title, rows, slots));
         }
 
         private static List<Integer> defaultContentSlots(int rows) {

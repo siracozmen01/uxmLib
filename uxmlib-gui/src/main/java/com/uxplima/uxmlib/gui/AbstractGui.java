@@ -1,12 +1,15 @@
 package com.uxplima.uxmlib.gui;
 
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Consumer;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.HumanEntity;
+import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
@@ -32,6 +35,7 @@ abstract class AbstractGui implements Gui {
     private @Nullable Consumer<InventoryOpenEvent> openHandler;
     private @Nullable Consumer<InventoryClickEvent> defaultClickHandler;
     private @Nullable Consumer<InventoryClickEvent> outsideClickHandler;
+    private final Set<InteractionModifier> allowed = EnumSet.noneOf(InteractionModifier.class);
 
     AbstractGui(Component title, int rows) {
         this.title = Objects.requireNonNull(title, "title");
@@ -105,6 +109,23 @@ abstract class AbstractGui implements Gui {
     }
 
     @Override
+    public Gui allow(InteractionModifier modifier) {
+        allowed.add(Objects.requireNonNull(modifier, "modifier"));
+        return this;
+    }
+
+    @Override
+    public Gui disallow(InteractionModifier modifier) {
+        allowed.remove(Objects.requireNonNull(modifier, "modifier"));
+        return this;
+    }
+
+    @Override
+    public boolean allows(InteractionModifier modifier) {
+        return allowed.contains(Objects.requireNonNull(modifier, "modifier"));
+    }
+
+    @Override
     public void remove(int slot) {
         checkSlot(slot);
         items.remove(slot);
@@ -157,8 +178,11 @@ abstract class AbstractGui implements Gui {
 
     @Override
     public void handleClick(InventoryClickEvent event) {
-        // Cancel by default so items can never be dragged out of an unconfigured menu.
-        event.setCancelled(true);
+        // Cancel unless this class of interaction has been explicitly allowed, so an unconfigured menu
+        // never leaks items but a storage-style menu can opt taking/placing back in.
+        if (!isAllowed(event)) {
+            event.setCancelled(true);
+        }
         Inventory clicked = event.getClickedInventory();
         if (clicked == null) {
             // A click outside the inventory window entirely (the grey border area).
@@ -180,6 +204,29 @@ abstract class AbstractGui implements Gui {
         if (fallback != null) {
             fallback.accept(event);
         }
+    }
+
+    private boolean isAllowed(InventoryClickEvent event) {
+        if (allowed.isEmpty()) {
+            return false;
+        }
+        InteractionModifier modifier = modifierFor(event.getAction());
+        return modifier != null && allowed.contains(modifier);
+    }
+
+    private static @Nullable InteractionModifier modifierFor(InventoryAction action) {
+        return switch (action) {
+            case PICKUP_ALL,
+                    PICKUP_HALF,
+                    PICKUP_SOME,
+                    PICKUP_ONE,
+                    MOVE_TO_OTHER_INVENTORY,
+                    COLLECT_TO_CURSOR -> InteractionModifier.ITEM_TAKE;
+            case PLACE_ALL, PLACE_SOME, PLACE_ONE -> InteractionModifier.ITEM_PLACE;
+            case SWAP_WITH_CURSOR, HOTBAR_SWAP, HOTBAR_MOVE_AND_READD -> InteractionModifier.ITEM_SWAP;
+            case DROP_ALL_SLOT, DROP_ONE_SLOT, DROP_ALL_CURSOR, DROP_ONE_CURSOR -> InteractionModifier.ITEM_DROP;
+            default -> null;
+        };
     }
 
     @Override

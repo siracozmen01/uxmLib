@@ -43,6 +43,15 @@ public interface Gui extends InventoryHolder {
     /** A helper for filling borders, rows, columns, or the empty slots of this menu. */
     GuiFiller filler();
 
+    /** Allow {@code modifier} (an interaction the menu would otherwise cancel). Returns this menu. */
+    Gui allow(InteractionModifier modifier);
+
+    /** Disallow {@code modifier} again (the default for every modifier). Returns this menu. */
+    Gui disallow(InteractionModifier modifier);
+
+    /** Whether {@code modifier} is currently allowed. */
+    boolean allows(InteractionModifier modifier);
+
     /** Remove whatever is at {@code slot}. */
     void remove(int slot);
 
