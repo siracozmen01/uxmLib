@@ -46,6 +46,13 @@ public interface Hologram {
     /** Whether {@code viewer} is in the allowed-viewer set. */
     boolean isVisibleTo(Player viewer);
 
+    /**
+     * Drop {@code viewer} from the tracked allowed-viewer set without sending any packet. Called when a
+     * player quits or changes world so the per-UUID viewer cache does not leak or go stale; the next
+     * {@link #show(Plugin, Player)} re-establishes visibility cleanly. A no-op if the UUID is not tracked.
+     */
+    void forgetViewer(java.util.UUID viewer);
+
     /** Despawn the backing display entity. Safe to call more than once. */
     void remove();
 

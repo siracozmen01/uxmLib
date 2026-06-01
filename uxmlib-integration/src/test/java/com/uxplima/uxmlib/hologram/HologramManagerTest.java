@@ -44,6 +44,9 @@ class HologramManagerTest {
         }
 
         @Override
+        public void forgetViewer(java.util.UUID viewer) {}
+
+        @Override
         public void remove() {
             removed++;
         }

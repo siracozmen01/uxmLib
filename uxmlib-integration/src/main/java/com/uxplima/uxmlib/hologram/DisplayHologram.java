@@ -78,6 +78,12 @@ final class DisplayHologram implements Hologram {
     }
 
     @Override
+    public void forgetViewer(UUID viewer) {
+        Objects.requireNonNull(viewer, "viewer");
+        viewers.remove(viewer);
+    }
+
+    @Override
     public void remove() {
         display.remove();
     }

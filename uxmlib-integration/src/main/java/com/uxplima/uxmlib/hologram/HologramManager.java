@@ -2,10 +2,12 @@ package com.uxplima.uxmlib.hologram;
 
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Location;
 import org.bukkit.entity.TextDisplay;
+import org.bukkit.plugin.Plugin;
 
 /**
  * Tracks the holograms a plugin spawns so they can all be despawned at once. A {@link TextDisplay}
@@ -46,6 +48,26 @@ public final class HologramManager {
     /** How many holograms are currently tracked. */
     public int count() {
         return tracked.size();
+    }
+
+    /**
+     * Install the listener that keeps per-viewer state from leaking. On quit it drops the player from every
+     * tracked hologram's viewer set; on respawn and world-change it does the same so the cached visibility is
+     * not stale (the consumer re-shows on the next pass). Native entities don't need a packet re-send, but our
+     * {@code Set<UUID>} viewer cache would otherwise hold a departed UUID or a since-moved player forever.
+     * Call once on enable.
+     */
+    public void installLifecycleListener(Plugin plugin) {
+        Objects.requireNonNull(plugin, "plugin");
+        plugin.getServer().getPluginManager().registerEvents(new HologramLifecycleListener(this), plugin);
+    }
+
+    /** Drop {@code viewer} from every tracked hologram's allowed-viewer set. */
+    public void invalidateViewer(UUID viewer) {
+        Objects.requireNonNull(viewer, "viewer");
+        for (Hologram hologram : tracked) {
+            hologram.forgetViewer(viewer);
+        }
     }
 
     /** Despawn every tracked hologram and clear the set. Call this from {@code onDisable}. */
