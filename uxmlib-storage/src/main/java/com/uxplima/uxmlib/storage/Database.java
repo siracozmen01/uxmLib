@@ -42,9 +42,11 @@ public final class Database implements AutoCloseable {
         return dataSource.isClosed();
     }
 
-    /** Shut the pool down, closing all idle connections. */
+    /** Shut the pool down, closing all idle connections. Safe to call more than once. */
     @Override
     public void close() {
-        dataSource.close();
+        if (!dataSource.isClosed()) {
+            dataSource.close();
+        }
     }
 }

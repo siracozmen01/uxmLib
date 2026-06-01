@@ -28,6 +28,14 @@ class DatabaseBuilderTest {
     }
 
     @Test
+    void closeIsIdempotent() {
+        Database db = Database.builder().sqliteInMemory().build();
+        db.close();
+        db.close(); // a second close (e.g. a defensive finally) must not throw
+        assertThat(db.isClosed()).isTrue();
+    }
+
+    @Test
     void failsWhenNoBackendIsConfigured() {
         assertThatThrownBy(() -> Database.builder().build()).isInstanceOf(IllegalStateException.class);
     }

@@ -103,19 +103,59 @@ public final class MigrationRunner {
     }
 
     private static List<String> splitStatements(String sql) {
-        // Split on ';' by scanning rather than String.split / Pattern.split, both of which ErrorProne
-        // flags for surprising trailing-empty behaviour. Blank statements are dropped.
+        // Split on ';' by scanning, but only when the ';' is real SQL — not inside a '...' string literal,
+        // a "..." quoted identifier, a -- line comment, or a /* */ block comment. A naive split would turn
+        // INSERT ... VALUES ('a;b') into two broken fragments. String.split/Pattern.split are avoided both
+        // for that reason and because ErrorProne flags their trailing-empty behaviour. Blank statements drop.
         List<String> statements = new ArrayList<>();
         int start = 0;
-        for (int i = 0; i <= sql.length(); i++) {
-            if (i == sql.length() || sql.charAt(i) == ';') {
-                String trimmed = sql.substring(start, i).strip();
-                if (!trimmed.isEmpty()) {
-                    statements.add(trimmed);
+        boolean inSingle = false;
+        boolean inDouble = false;
+        boolean inLineComment = false;
+        boolean inBlockComment = false;
+        for (int i = 0; i < sql.length(); i++) {
+            char c = sql.charAt(i);
+            char next = i + 1 < sql.length() ? sql.charAt(i + 1) : '\0';
+            if (inLineComment) {
+                if (c == '\n') {
+                    inLineComment = false;
                 }
+            } else if (inBlockComment) {
+                if (c == '*' && next == '/') {
+                    inBlockComment = false;
+                    i++;
+                }
+            } else if (inSingle) {
+                if (c == '\'') {
+                    inSingle = false;
+                }
+            } else if (inDouble) {
+                if (c == '"') {
+                    inDouble = false;
+                }
+            } else if (c == '-' && next == '-') {
+                inLineComment = true;
+                i++;
+            } else if (c == '/' && next == '*') {
+                inBlockComment = true;
+                i++;
+            } else if (c == '\'') {
+                inSingle = true;
+            } else if (c == '"') {
+                inDouble = true;
+            } else if (c == ';') {
+                addStatement(statements, sql, start, i);
                 start = i + 1;
             }
         }
+        addStatement(statements, sql, start, sql.length());
         return statements;
+    }
+
+    private static void addStatement(List<String> statements, String sql, int start, int end) {
+        String trimmed = sql.substring(start, end).strip();
+        if (!trimmed.isEmpty()) {
+            statements.add(trimmed);
+        }
     }
 }

@@ -68,4 +68,27 @@ class MigrationRunnerTest {
     void rejectsAnInvalidMigrationVersion() {
         assertThatThrownBy(() -> new Migration(0, "bad", "SELECT 1")).isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    void doesNotSplitOnSemicolonsInsideStringLiterals() {
+        // The ';' inside the inserted value must not be treated as a statement separator.
+        int applied = runner.apply(List.of(new Migration(
+                1,
+                "seed",
+                "CREATE TABLE notes (id INTEGER PRIMARY KEY, body TEXT);"
+                        + " INSERT INTO notes (id, body) VALUES (1, 'a;b;c')")));
+        assertThat(applied).isEqualTo(1);
+        assertThat(sql.queryFirst("SELECT body FROM notes WHERE id = ?", ps -> ps.setInt(1, 1), r -> r.getString(1)))
+                .contains("a;b;c");
+    }
+
+    @Test
+    void rollsBackAndLeavesTheVersionUnchangedWhenAMigrationFails() {
+        // The second statement is invalid, so the whole migration must roll back: no table, version stays 0.
+        assertThatThrownBy(() -> runner.apply(List.of(new Migration(
+                        1, "bad", "CREATE TABLE good (id INTEGER PRIMARY KEY); INSERT INTO nope VALUES (1)"))))
+                .isInstanceOf(StorageException.class);
+        assertThat(runner.currentVersion()).isZero();
+        assertThatThrownBy(() -> sql.execute("SELECT 1 FROM good")).isInstanceOf(StorageException.class);
+    }
 }

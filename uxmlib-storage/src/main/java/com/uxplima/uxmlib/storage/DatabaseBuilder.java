@@ -111,6 +111,13 @@ public final class DatabaseBuilder {
         } else {
             config.setMaximumPoolSize(maxPoolSize);
         }
-        return new Database(new HikariDataSource(config));
+        HikariDataSource dataSource = new HikariDataSource(config);
+        try {
+            return new Database(dataSource);
+        } catch (RuntimeException failure) {
+            // Don't leak the just-opened pool if wrapping it fails for any reason.
+            dataSource.close();
+            throw failure;
+        }
     }
 }

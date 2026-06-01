@@ -3,11 +3,14 @@ package com.uxplima.uxmlib.storage;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
- * A small, safe SELECT builder. Column and table names are caller-controlled identifiers written into
- * the SQL; every <em>value</em> goes through a bound {@code ?} placeholder, so the produced {@link Query}
- * is injection-safe by construction. Deliberately minimal — for joins or vendor-specific SQL, write the
+ * A small, safe SELECT builder. Every <em>value</em> goes through a bound {@code ?} placeholder, and the
+ * column/table identifiers and comparison operators it writes into the SQL are validated against a strict
+ * allowlist, so the produced {@link Query} is injection-safe by construction even if a caller threads
+ * untrusted input into a column name. Deliberately minimal — for joins or vendor-specific SQL, write the
  * statement directly and use {@link Sql#query(String, StatementBinder, RowMapper)}.
  *
  * <pre>{@code
@@ -21,6 +24,13 @@ import java.util.Objects;
  */
 public final class SelectBuilder {
 
+    // A SQL identifier we are willing to inline: a bare name or dotted/quoted-free table.column, nothing
+    // that could carry an injection. Anything else must go through a hand-written statement instead.
+    private static final Pattern IDENTIFIER = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)?");
+
+    // The only comparison operators the builder will inline; everything else is rejected.
+    private static final Set<String> OPERATORS = Set.of("=", "!=", "<>", "<", "<=", ">", ">=", "LIKE", "IS", "IS NOT");
+
     private final String table;
     private final List<String> columns = new ArrayList<>();
     private final List<String> conditions = new ArrayList<>();
@@ -30,7 +40,7 @@ public final class SelectBuilder {
     private int limit = -1;
 
     private SelectBuilder(String table) {
-        this.table = Objects.requireNonNull(table, "table");
+        this.table = identifier(table, "table");
     }
 
     /** Start a SELECT from {@code table}. */
@@ -42,40 +52,37 @@ public final class SelectBuilder {
     public SelectBuilder columns(String... names) {
         Objects.requireNonNull(names, "names");
         for (String name : names) {
-            columns.add(Objects.requireNonNull(name, "column"));
+            columns.add(identifier(name, "column"));
         }
         return this;
     }
 
     /** An equality condition {@code column = ?} bound to {@code value}. Conditions are AND-combined. */
     public SelectBuilder where(String column, Object value) {
-        Objects.requireNonNull(column, "column");
         Objects.requireNonNull(value, "value");
-        conditions.add(column + " = ?");
+        conditions.add(identifier(column, "column") + " = ?");
         parameters.add(value);
         return this;
     }
 
     /** A comparison condition {@code column <op> ?} bound to {@code value} (op e.g. {@code ">="}). */
     public SelectBuilder where(String column, String operator, Object value) {
-        Objects.requireNonNull(column, "column");
-        Objects.requireNonNull(operator, "operator");
         Objects.requireNonNull(value, "value");
-        conditions.add(column + " " + operator + " ?");
+        conditions.add(identifier(column, "column") + " " + operator(operator) + " ?");
         parameters.add(value);
         return this;
     }
 
     /** Order ascending by {@code column}. */
     public SelectBuilder orderBy(String column) {
-        this.orderBy = Objects.requireNonNull(column, "column");
+        this.orderBy = identifier(column, "column");
         this.descending = false;
         return this;
     }
 
     /** Order descending by {@code column}. */
     public SelectBuilder orderByDescending(String column) {
-        this.orderBy = Objects.requireNonNull(column, "column");
+        this.orderBy = identifier(column, "column");
         this.descending = true;
         return this;
     }
@@ -104,5 +111,23 @@ public final class SelectBuilder {
             sql.append(" LIMIT ").append(limit);
         }
         return new Query(sql.toString(), parameters);
+    }
+
+    private static String identifier(String value, String what) {
+        Objects.requireNonNull(value, what);
+        if (!IDENTIFIER.matcher(value).matches()) {
+            throw new IllegalArgumentException(what + " must be a simple SQL identifier (got '" + value
+                    + "'); write the statement by hand for anything else");
+        }
+        return value;
+    }
+
+    private static String operator(String value) {
+        Objects.requireNonNull(value, "operator");
+        String normalised = value.strip().toUpperCase(java.util.Locale.ROOT);
+        if (!OPERATORS.contains(normalised)) {
+            throw new IllegalArgumentException("unsupported operator '" + value + "'; allowed: " + OPERATORS);
+        }
+        return normalised;
     }
 }
