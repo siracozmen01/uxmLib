@@ -71,13 +71,7 @@ public final class DiscordWebhook {
 
     /** The JSON request body for an embed. Package-private so the encoding is testable. */
     static String embedBody(DiscordEmbed embed) {
-        StringBuilder embedJson = new StringBuilder("{\"title\":")
-                .append(jsonString(embed.title()))
-                .append(",\"description\":")
-                .append(jsonString(embed.description()));
-        embed.colorValue().ifPresent(color -> embedJson.append(",\"color\":").append(color.intValue()));
-        embedJson.append('}');
-        return "{\"embeds\":[" + embedJson + "]}";
+        return "{\"embeds\":[" + EmbedJson.encode(embed) + "]}";
     }
 
     static String jsonString(String raw) {

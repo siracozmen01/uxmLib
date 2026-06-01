@@ -41,4 +41,44 @@ class DiscordEmbedTest {
         assertThat(DiscordEmbed.of("t", "d").colorValue()).isEmpty();
         assertThat(DiscordEmbed.colored("t", "d", 1).colorValue()).contains(1);
     }
+
+    @Test
+    void encodesAuthorFooterAndFields() {
+        DiscordEmbed embed = DiscordEmbed.builder()
+                .title("Report")
+                .author("Bot", "https://x", "https://icon.png")
+                .footer("v1.0", null)
+                .field("Status", "OK", true)
+                .field("Count", "3", true)
+                .build();
+        String body = DiscordWebhook.embedBody(embed);
+
+        assertThat(body)
+                .contains("\"author\":{\"name\":\"Bot\",\"url\":\"https://x\",\"icon_url\":\"https://icon.png\"}");
+        assertThat(body).contains("\"footer\":{\"text\":\"v1.0\"}"); // no icon_url -> omitted
+        assertThat(body).contains("\"fields\":[{\"name\":\"Status\",\"value\":\"OK\",\"inline\":true}");
+    }
+
+    @Test
+    void encodesThumbnailImageAndTimestamp() {
+        DiscordEmbed embed = DiscordEmbed.builder()
+                .title("T")
+                .thumbnail("https://t.png")
+                .image("https://i.png")
+                .timestamp(java.time.Instant.parse("2020-01-01T00:00:00Z"))
+                .build();
+        String body = DiscordWebhook.embedBody(embed);
+
+        assertThat(body).contains("\"thumbnail\":{\"url\":\"https://t.png\"}");
+        assertThat(body).contains("\"image\":{\"url\":\"https://i.png\"}");
+        assertThat(body).contains("\"timestamp\":\"2020-01-01T00:00:00Z\"");
+    }
+
+    @Test
+    void omitsUnsetFields() {
+        // A title-only embed must not emit description/color/author keys.
+        String body =
+                DiscordWebhook.embedBody(DiscordEmbed.builder().title("Only").build());
+        assertThat(body).isEqualTo("{\"embeds\":[{\"title\":\"Only\"}]}");
+    }
 }
