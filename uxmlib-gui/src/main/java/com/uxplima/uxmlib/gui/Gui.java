@@ -28,6 +28,21 @@ public interface Gui extends InventoryHolder {
     /** Place {@code item} at {@code slot}; updates the open inventory immediately if it is showing. */
     void set(int slot, GuiItem item);
 
+    /**
+     * Place {@code item} at 1-indexed {@code row} and {@code col} of a nine-wide chest grid. Convenience
+     * over raw slot math; for non-chest {@link GuiType} menus use {@link #set(int, GuiItem)} instead.
+     */
+    void set(int row, int col, GuiItem item);
+
+    /** Add each item to the next empty slot in order, stopping when the menu is full. */
+    void addItem(GuiItem... items);
+
+    /** The item at {@code slot}, or {@code null} if the slot is empty. */
+    @org.jspecify.annotations.Nullable GuiItem getItem(int slot);
+
+    /** A helper for filling borders, rows, columns, or the empty slots of this menu. */
+    GuiFiller filler();
+
     /** Remove whatever is at {@code slot}. */
     void remove(int slot);
 
@@ -42,6 +57,12 @@ public interface Gui extends InventoryHolder {
 
     /** Run when the menu opens. */
     void onOpen(java.util.function.Consumer<org.bukkit.event.inventory.InventoryOpenEvent> handler);
+
+    /** Run when a menu slot with no item is clicked (a menu-wide fallback). */
+    void onDefaultClick(java.util.function.Consumer<InventoryClickEvent> handler);
+
+    /** Run when the click lands outside the inventory window entirely. */
+    void onOutsideClick(java.util.function.Consumer<InventoryClickEvent> handler);
 
     /** Routes a click to the clicked slot's action. Called by {@link GuiListener}; not for direct use. */
     void handleClick(InventoryClickEvent event);

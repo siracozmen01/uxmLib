@@ -30,6 +30,8 @@ abstract class AbstractGui implements Gui {
     private @Nullable Inventory inventory;
     private @Nullable Consumer<InventoryCloseEvent> closeHandler;
     private @Nullable Consumer<InventoryOpenEvent> openHandler;
+    private @Nullable Consumer<InventoryClickEvent> defaultClickHandler;
+    private @Nullable Consumer<InventoryClickEvent> outsideClickHandler;
 
     AbstractGui(Component title, int rows) {
         this.title = Objects.requireNonNull(title, "title");
@@ -67,6 +69,42 @@ abstract class AbstractGui implements Gui {
     }
 
     @Override
+    public void set(int row, int col, GuiItem item) {
+        Objects.requireNonNull(item, "item");
+        if (row < 1 || col < 1 || col > 9) {
+            throw new IllegalArgumentException("row must be >= 1 and col must be 1..9");
+        }
+        set((row - 1) * 9 + (col - 1), item);
+    }
+
+    @Override
+    public void addItem(GuiItem... newItems) {
+        Objects.requireNonNull(newItems, "items");
+        int slot = 0;
+        for (GuiItem item : newItems) {
+            Objects.requireNonNull(item, "item");
+            while (slot < size && items.containsKey(slot)) {
+                slot++;
+            }
+            if (slot >= size) {
+                return; // menu is full; the rest are silently dropped, matching addItem semantics
+            }
+            set(slot, item);
+            slot++;
+        }
+    }
+
+    @Override
+    public @Nullable GuiItem getItem(int slot) {
+        return items.get(slot);
+    }
+
+    @Override
+    public GuiFiller filler() {
+        return new GuiFiller(this);
+    }
+
+    @Override
     public void remove(int slot) {
         checkSlot(slot);
         items.remove(slot);
@@ -94,6 +132,16 @@ abstract class AbstractGui implements Gui {
     }
 
     @Override
+    public void onDefaultClick(Consumer<InventoryClickEvent> handler) {
+        this.defaultClickHandler = Objects.requireNonNull(handler, "handler");
+    }
+
+    @Override
+    public void onOutsideClick(Consumer<InventoryClickEvent> handler) {
+        this.outsideClickHandler = Objects.requireNonNull(handler, "handler");
+    }
+
+    @Override
     public void handleOpen(InventoryOpenEvent event) {
         Consumer<InventoryOpenEvent> handler = openHandler;
         if (handler != null) {
@@ -112,12 +160,25 @@ abstract class AbstractGui implements Gui {
         // Cancel by default so items can never be dragged out of an unconfigured menu.
         event.setCancelled(true);
         Inventory clicked = event.getClickedInventory();
-        if (clicked == null || !clicked.equals(inventory)) {
+        if (clicked == null) {
+            // A click outside the inventory window entirely (the grey border area).
+            Consumer<InventoryClickEvent> outside = outsideClickHandler;
+            if (outside != null) {
+                outside.accept(event);
+            }
+            return;
+        }
+        if (!clicked.equals(inventory)) {
             return;
         }
         GuiItem item = items.get(event.getSlot());
         if (item != null) {
             item.action().accept(event);
+            return;
+        }
+        Consumer<InventoryClickEvent> fallback = defaultClickHandler;
+        if (fallback != null) {
+            fallback.accept(event);
         }
     }
 
