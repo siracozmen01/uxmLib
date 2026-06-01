@@ -40,23 +40,35 @@ public final class AnnotatedCommands {
 
     private AnnotatedCommands() {}
 
-    /** Reflect over {@code handler}, build its command tree, and register it with the server. */
+    /** Reflect over {@code handler} with the default resolvers, build its tree, and register it. */
     public static void register(JavaPlugin plugin, Object handler) {
+        register(plugin, handler, ParamResolvers.withDefaults());
+    }
+
+    /** Reflect over {@code handler} with {@code resolvers}, build its tree, and register it. */
+    public static void register(JavaPlugin plugin, Object handler, ParamResolvers resolvers) {
         Objects.requireNonNull(plugin, "plugin");
         Objects.requireNonNull(handler, "handler");
         Command command = handler.getClass().getAnnotation(Command.class);
         if (command == null) {
             throw new CommandParseException(handler.getClass().getName() + " is not annotated with @Command");
         }
-        CommandRegistrar.register(plugin, buildNode(handler), command.description(), List.of(command.aliases()));
+        CommandRegistrar.register(
+                plugin, buildNode(handler, resolvers), command.description(), List.of(command.aliases()));
+    }
+
+    /** Build a handler's Brigadier tree with the default resolvers, without registering it. */
+    public static LiteralCommandNode<CommandSourceStack> buildNode(Object handler) {
+        return buildNode(handler, ParamResolvers.withDefaults());
     }
 
     /**
-     * Build the Brigadier tree for an annotated {@code handler} without registering it. Exposed so the
-     * tree shape can be inspected and tested without a live plugin; {@link #register} delegates here.
+     * Build the Brigadier tree for an annotated {@code handler} without registering it, using
+     * {@code resolvers} for its argument types. Exposed so the tree shape can be inspected and tested.
      */
-    public static LiteralCommandNode<CommandSourceStack> buildNode(Object handler) {
+    public static LiteralCommandNode<CommandSourceStack> buildNode(Object handler, ParamResolvers resolvers) {
         Objects.requireNonNull(handler, "handler");
+        Objects.requireNonNull(resolvers, "resolvers");
         Class<?> type = handler.getClass();
         Command command = type.getAnnotation(Command.class);
         if (command == null) {
@@ -73,7 +85,7 @@ public final class AnnotatedCommands {
             throw new CommandParseException(type.getName() + " has no @Subcommand methods");
         }
         for (Method method : branches) {
-            attachBranch(root, handler, method);
+            attachBranch(root, handler, method, resolvers);
         }
         return root.build();
     }
@@ -94,11 +106,12 @@ public final class AnnotatedCommands {
         return methods;
     }
 
-    private static void attachBranch(LiteralArgumentBuilder<CommandSourceStack> root, Object handler, Method method) {
-        validateSignature(method);
+    private static void attachBranch(
+            LiteralArgumentBuilder<CommandSourceStack> root, Object handler, Method method, ParamResolvers resolvers) {
+        validateSignature(method, resolvers);
         String path = method.getAnnotation(Subcommand.class).value().trim();
-        com.mojang.brigadier.Command<CommandSourceStack> executor = executorFor(handler, method);
-        ArgChain chain = buildArgChain(method, executor);
+        com.mojang.brigadier.Command<CommandSourceStack> executor = executorFor(handler, method, resolvers);
+        ArgChain chain = buildArgChain(method, executor, resolvers);
 
         String[] literals = path.isEmpty() ? new String[0] : path.split("\\s+");
         if (literals.length == 0) {
@@ -135,8 +148,9 @@ public final class AnnotatedCommands {
         }
     }
 
-    private static ArgChain buildArgChain(Method method, com.mojang.brigadier.Command<CommandSourceStack> executor) {
-        List<ParamArg> args = argParameters(method);
+    private static ArgChain buildArgChain(
+            Method method, com.mojang.brigadier.Command<CommandSourceStack> executor, ParamResolvers resolvers) {
+        List<ParamArg> args = argParameters(method, resolvers);
         if (args.isEmpty()) {
             return new ArgChain(null);
         }
@@ -145,7 +159,7 @@ public final class AnnotatedCommands {
         for (int i = args.size() - 1; i >= 0; i--) {
             ParamArg pa = args.get(i);
             RequiredArgumentBuilder<CommandSourceStack, ?> builder =
-                    Cmd.argument(pa.name, ArgType.argumentType(pa.type, pa.arg));
+                    Cmd.argument(pa.name, pa.resolver.argumentType(pa.arg));
             if (tail == null) {
                 builder.executes(executor);
             } else {
@@ -156,10 +170,22 @@ public final class AnnotatedCommands {
         return new ArgChain(tail);
     }
 
-    private static com.mojang.brigadier.Command<CommandSourceStack> executorFor(Object handler, Method method) {
-        List<ParamArg> args = argParameters(method);
+    private static com.mojang.brigadier.Command<CommandSourceStack> executorFor(
+            Object handler, Method method, ParamResolvers resolvers) {
+        List<ParamArg> args = argParameters(method, resolvers);
         return ctx -> {
-            Object[] callArgs = buildCallArgs(ctx, method, args);
+            Object[] callArgs;
+            try {
+                callArgs = buildCallArgs(ctx, method, args);
+            } catch (IllegalArgumentException badArgument) {
+                // A resolver rejected the input (e.g. an offline player, an out-of-range value). Reply with
+                // its message rather than letting it surface as a server error.
+                Sender.of(ctx.getSource())
+                        .send(net.kyori.adventure.text.Component.text(
+                                badArgument.getMessage() == null ? "Invalid argument." : badArgument.getMessage(),
+                                net.kyori.adventure.text.format.NamedTextColor.RED));
+                return 0;
+            }
             try {
                 method.invoke(handler, callArgs);
                 return Cmd.OK;
@@ -187,7 +213,7 @@ public final class AnnotatedCommands {
         };
     }
 
-    private static void validateSignature(Method method) {
+    private static void validateSignature(Method method, ParamResolvers resolvers) {
         for (Parameter param : method.getParameters()) {
             Class<?> type = param.getType();
             boolean injectable =
@@ -195,6 +221,10 @@ public final class AnnotatedCommands {
             if (!injectable && !param.isAnnotationPresent(Arg.class)) {
                 throw new CommandParseException("parameter '" + param.getName() + "' of " + method.getName()
                         + " must be @Arg-annotated or be a Sender/CommandSourceStack/CommandSender");
+            }
+            if (!injectable && !resolvers.supports(type)) {
+                throw new CommandParseException(
+                        "no resolver for @Arg type " + type.getName() + " on " + method.getName());
             }
         }
     }
@@ -213,29 +243,30 @@ public final class AnnotatedCommands {
                 callArgs[i] = ctx.getSource().getSender();
             } else {
                 ParamArg pa = args.get(argIndex++);
-                callArgs[i] = ArgType.read(ctx, pa.name, pa.type);
+                callArgs[i] = pa.resolver.resolve(ctx, pa.name);
             }
         }
         return callArgs;
     }
 
-    private static List<ParamArg> argParameters(Method method) {
+    private static List<ParamArg> argParameters(Method method, ParamResolvers resolvers) {
         List<ParamArg> args = new ArrayList<>();
         for (Parameter param : method.getParameters()) {
             Arg arg = param.getAnnotation(Arg.class);
             if (arg == null) {
                 continue;
             }
-            Class<?> type = param.getType();
-            if (!ArgType.isSupported(type)) {
-                throw new CommandParseException("unsupported @Arg type " + type.getName() + " on " + method.getName());
+            ParamResolver<?> resolver = resolvers.resolverFor(param.getType());
+            if (resolver == null) {
+                throw new CommandParseException(
+                        "no resolver for @Arg type " + param.getType().getName() + " on " + method.getName());
             }
-            args.add(new ParamArg(arg.value(), type, arg));
+            args.add(new ParamArg(arg.value(), arg, resolver));
         }
         return args;
     }
 
-    private record ParamArg(String name, Class<?> type, Arg arg) {}
+    private record ParamArg(String name, Arg arg, ParamResolver<?> resolver) {}
 
     /** The outermost argument builder of a branch (or {@code null} when the branch takes no arguments). */
     private record ArgChain(
