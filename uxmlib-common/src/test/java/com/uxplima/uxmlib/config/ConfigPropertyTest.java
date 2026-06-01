@@ -65,4 +65,42 @@ class ConfigPropertyTest {
         config.reload();
         assertThat(reloads.get()).isEqualTo(2);
     }
+
+    @Test
+    void aThrowingChangeListenerDoesNotStopTheOthers(@TempDir Path dir) throws Exception {
+        Path file = dir.resolve("config.conf");
+        Files.writeString(file, "limit = 5\n");
+        HoconConfig config = HoconConfig.load(file);
+
+        ConfigProperty<Integer> limit = config.intProperty("limit", 1);
+        AtomicInteger second = new AtomicInteger(-1);
+        limit.onChange(value -> {
+            throw new IllegalStateException("boom");
+        });
+        limit.onChange(second::set);
+
+        Files.writeString(file, "limit = 9\n");
+        config.reload();
+
+        // The first listener threw, but the second still observed the change.
+        assertThat(second.get()).isEqualTo(9);
+        assertThat(limit.get()).isEqualTo(9);
+    }
+
+    @Test
+    void aThrowingReloadListenerDoesNotStopTheOthers(@TempDir Path dir) throws Exception {
+        Path file = dir.resolve("config.conf");
+        Files.writeString(file, "a = 1\n");
+        HoconConfig config = HoconConfig.load(file);
+
+        AtomicInteger second = new AtomicInteger();
+        config.onReload(() -> {
+            throw new IllegalStateException("boom");
+        });
+        config.onReload(second::incrementAndGet);
+
+        config.reload();
+
+        assertThat(second.get()).isEqualTo(1);
+    }
 }

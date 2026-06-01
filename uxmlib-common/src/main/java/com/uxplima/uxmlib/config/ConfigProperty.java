@@ -14,6 +14,8 @@ import java.util.function.Supplier;
  */
 public final class ConfigProperty<T> {
 
+    private static final System.Logger LOG = System.getLogger(ConfigProperty.class.getName());
+
     private final Supplier<T> reader;
     private final List<Consumer<T>> listeners = new CopyOnWriteArrayList<>();
     private volatile T value;
@@ -40,7 +42,12 @@ public final class ConfigProperty<T> {
         if (!Objects.equals(fresh, value)) {
             value = fresh;
             for (Consumer<T> listener : listeners) {
-                listener.accept(fresh);
+                // One throwing listener must not stop the others from seeing the change.
+                try {
+                    listener.accept(fresh);
+                } catch (RuntimeException failure) {
+                    LOG.log(System.Logger.Level.ERROR, "a config-property change listener threw", failure);
+                }
             }
         }
     }

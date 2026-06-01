@@ -28,6 +28,8 @@ import org.spongepowered.configurate.serialize.TypeSerializerCollection;
  */
 public final class HoconConfig {
 
+    private static final System.Logger LOG = System.getLogger(HoconConfig.class.getName());
+
     private final HoconConfigurationLoader loader;
     private final AtomicReference<CommentedConfigurationNode> root;
     private final List<ConfigProperty<?>> properties = new CopyOnWriteArrayList<>();
@@ -66,11 +68,21 @@ public final class HoconConfig {
      */
     public void reload() {
         root.set(read(loader));
+        // Isolate each property and listener: one that throws is logged and skipped, so a single bad
+        // observer can't stop the rest of a reload from being applied.
         for (ConfigProperty<?> property : properties) {
-            property.refresh();
+            try {
+                property.refresh();
+            } catch (RuntimeException failure) {
+                LOG.log(System.Logger.Level.ERROR, "a config property failed to refresh on reload", failure);
+            }
         }
         for (Runnable listener : reloadListeners) {
-            listener.run();
+            try {
+                listener.run();
+            } catch (RuntimeException failure) {
+                LOG.log(System.Logger.Level.ERROR, "a config reload listener threw", failure);
+            }
         }
     }
 
