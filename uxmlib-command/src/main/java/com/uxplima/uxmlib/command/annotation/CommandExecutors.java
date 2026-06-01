@@ -24,10 +24,18 @@ final class CommandExecutors {
 
     private CommandExecutors() {}
 
-    /** The executor for {@code method} with its pre-resolved {@code args} and the active {@code resolvers}. */
+    /**
+     * The executor for {@code method} with its pre-resolved {@code args} and the active {@code resolvers}.
+     * {@code commandPath} is the full literal path of this branch (root name plus subcommand spine); it
+     * keys the per-branch cooldown so different branches never share a window.
+     */
     static com.mojang.brigadier.Command<CommandSourceStack> executorFor(
-            Object handler, Method method, List<ArgBinder.ParamArg> args, ParamResolvers resolvers) {
-        List<CommandCondition> conditions = conditionsFor(method, resolvers);
+            Object handler,
+            Method method,
+            List<ArgBinder.ParamArg> args,
+            ParamResolvers resolvers,
+            String commandPath) {
+        List<CommandCondition> conditions = conditionsFor(method, resolvers, commandPath);
         return ctx -> {
             try {
                 checkConditions(conditions, ctx);
@@ -81,15 +89,20 @@ final class CommandExecutors {
     }
 
     /**
-     * The conditions to run before {@code method}: the registry conditions, plus an implicit player-only gate
-     * derived from a method- or class-level {@code @}{@link PlayerOnly} (folded into the condition seam so
-     * cooldowns and other gates compose the same way).
+     * The conditions to run before {@code method}: the registry conditions, plus the implicit gates derived
+     * from a method- or class-level {@code @}{@link PlayerOnly} and {@code @}{@link
+     * com.uxplima.uxmlib.command.annotation.annotations.Cooldown}. Folding both into the condition seam lets
+     * them compose with consumer-registered conditions the same way.
      */
-    private static List<CommandCondition> conditionsFor(Method method, ParamResolvers resolvers) {
+    private static List<CommandCondition> conditionsFor(Method method, ParamResolvers resolvers, String commandPath) {
         List<CommandCondition> conditions = new ArrayList<>(resolvers.conditions());
         if (method.isAnnotationPresent(PlayerOnly.class)
                 || method.getDeclaringClass().isAnnotationPresent(PlayerOnly.class)) {
             conditions.add(playerOnlyCondition());
+        }
+        CommandCondition cooldown = CooldownCondition.forMethod(method, commandPath, resolvers.cooldowns());
+        if (cooldown != null) {
+            conditions.add(cooldown);
         }
         return conditions;
     }

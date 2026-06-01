@@ -21,6 +21,7 @@ public final class ParamResolvers {
     private final Map<Class<?>, List<ParameterValidator<?>>> validatorsByType = new HashMap<>();
     private final Map<Class<?>, ContextParameter<?>> contextByType = new HashMap<>();
     private final List<CommandCondition> conditions = new ArrayList<>();
+    private Cooldowns cooldowns = new Cooldowns();
 
     private ParamResolvers() {}
 
@@ -68,6 +69,22 @@ public final class ParamResolvers {
     public ParamResolvers condition(CommandCondition condition) {
         conditions.add(Objects.requireNonNull(condition, "condition"));
         return this;
+    }
+
+    /**
+     * Use {@code cooldowns} as the store backing {@code @}{@link
+     * com.uxplima.uxmlib.command.annotation.annotations.Cooldown} for branches built with this registry.
+     * Pass a shared instance to make several registrations share one set of windows, or one with a
+     * controllable clock in tests. Defaults to a fresh wall-clock store. Returns this for chaining.
+     */
+    public ParamResolvers cooldowns(Cooldowns cooldowns) {
+        this.cooldowns = Objects.requireNonNull(cooldowns, "cooldowns");
+        return this;
+    }
+
+    /** The cooldown store backing {@code @Cooldown} for branches built with this registry. */
+    Cooldowns cooldowns() {
+        return cooldowns;
     }
 
     /** Whether some resolver handles {@code type} (directly, or as an enum). */

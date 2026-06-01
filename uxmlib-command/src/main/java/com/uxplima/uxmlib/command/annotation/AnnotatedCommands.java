@@ -86,7 +86,7 @@ public final class AnnotatedCommands {
             throw new CommandParseException(type.getName() + " has no @Subcommand methods");
         }
         for (Method method : branches) {
-            attachBranch(root, handler, method, resolvers);
+            attachBranch(root, handler, method, resolvers, command.name());
         }
         if (command.help()) {
             root.then(HelpRenderer.helpLiteral(command.name(), branches));
@@ -111,12 +111,17 @@ public final class AnnotatedCommands {
     }
 
     private static void attachBranch(
-            LiteralArgumentBuilder<CommandSourceStack> root, Object handler, Method method, ParamResolvers resolvers) {
+            LiteralArgumentBuilder<CommandSourceStack> root,
+            Object handler,
+            Method method,
+            ParamResolvers resolvers,
+            String rootName) {
         validateSignature(method, resolvers);
         String path = method.getAnnotation(Subcommand.class).value().trim();
         List<ArgBinder.ParamArg> args = argParameters(method, resolvers);
+        String commandPath = path.isEmpty() ? rootName : rootName + ' ' + path;
         com.mojang.brigadier.Command<CommandSourceStack> executor =
-                CommandExecutors.executorFor(handler, method, args, resolvers);
+                CommandExecutors.executorFor(handler, method, args, resolvers, commandPath);
         ArgChain chain = buildArgChain(method, args, executor);
 
         String[] literals = path.isEmpty() ? new String[0] : path.split("\\s+");
