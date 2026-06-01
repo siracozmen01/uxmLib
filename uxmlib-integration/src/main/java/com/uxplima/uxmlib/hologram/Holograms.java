@@ -15,8 +15,6 @@ import org.bukkit.inventory.ItemStack;
 
 import net.kyori.adventure.text.Component;
 
-import org.jspecify.annotations.Nullable;
-
 /**
  * Builds and spawns native-Display holograms. Configure lines and appearance with {@link #builder()},
  * then either inspect the {@link HologramSpec} (pure, for tests) or {@link Builder#spawnAt(Location)}
@@ -55,9 +53,7 @@ public final class Holograms {
     /** Fluent builder for a hologram's content and appearance. */
     public static final class Builder {
         private final List<Component> lines = new ArrayList<>();
-        private Display.Billboard billboard = Display.Billboard.CENTER;
-        private boolean seeThrough;
-        private @Nullable Color glow;
+        private Appearance appearance = Appearance.DEFAULT;
 
         private Builder() {}
 
@@ -69,44 +65,79 @@ public final class Holograms {
 
         /** How the display faces the viewer; {@link Display.Billboard#CENTER} (always faces) by default. */
         public Builder billboard(Display.Billboard billboard) {
-            this.billboard = Objects.requireNonNull(billboard, "billboard");
+            appearance = appearance.withBillboard(Objects.requireNonNull(billboard, "billboard"));
             return this;
         }
 
         /** Whether the text shows through blocks. */
         public Builder seeThrough(boolean seeThrough) {
-            this.seeThrough = seeThrough;
+            appearance = appearance.withSeeThrough(seeThrough);
             return this;
         }
 
         /** Give the text a glowing outline in {@code color}. */
         public Builder glow(Color color) {
-            this.glow = Objects.requireNonNull(color, "color");
+            appearance = appearance.withGlow(Objects.requireNonNull(color, "color"));
+            return this;
+        }
+
+        /** Set the text-panel background colour (supports ARGB). */
+        public Builder background(Color color) {
+            appearance = appearance.withBackground(Objects.requireNonNull(color, "color"));
+            return this;
+        }
+
+        /** Set the text opacity (0–255 as a signed byte; {@code -1} is fully opaque). */
+        public Builder textOpacity(byte opacity) {
+            appearance = appearance.withTextOpacity(opacity);
+            return this;
+        }
+
+        /** Set the maximum line width in pixels before wrapping. */
+        public Builder lineWidth(int width) {
+            appearance = appearance.withLineWidth(width);
+            return this;
+        }
+
+        /** Whether the text casts a shadow. */
+        public Builder textShadow(boolean shadow) {
+            appearance = appearance.withTextShadow(shadow);
+            return this;
+        }
+
+        /** Set how far away the hologram stays visible (a view-range multiplier). */
+        public Builder viewRange(float range) {
+            appearance = appearance.withViewRange(range);
+            return this;
+        }
+
+        /** Override the block/sky light levels the text is rendered at. */
+        public Builder brightness(Display.Brightness brightness) {
+            appearance = appearance.withBrightness(Objects.requireNonNull(brightness, "brightness"));
             return this;
         }
 
         /** The immutable specification, for inspection or reuse. Requires at least one line. */
         public HologramSpec spec() {
-            return new HologramSpec(lines, billboard, seeThrough);
+            return new HologramSpec(lines, appearance);
         }
 
         /** Spawn the hologram at {@code location}. Must run on that location's region thread. */
         public Hologram spawnAt(Location location) {
             Objects.requireNonNull(location, "location");
-            HologramSpec spec = spec();
-            Objects.requireNonNull(location.getWorld(), "location world");
-            Color glowColor = glow;
-            TextDisplay display = location.getWorld().spawn(location, TextDisplay.class, entity -> {
-                entity.text(spec.asText());
-                entity.setBillboard(spec.billboard());
-                entity.setSeeThrough(spec.seeThrough());
-                if (glowColor != null) {
-                    entity.setGlowing(true);
-                    entity.setGlowColorOverride(glowColor);
-                }
-            });
-            return new DisplayHologram(display);
+            return Holograms.spawn(spec(), location);
         }
+    }
+
+    /** Spawn {@code spec} at {@code location} as a tracked, manager-free {@link Hologram}. */
+    static Hologram spawn(HologramSpec spec, Location location) {
+        Objects.requireNonNull(location.getWorld(), "location world");
+        TextDisplay display = location.getWorld().spawn(location, TextDisplay.class, entity -> {
+            entity.text(spec.asText());
+            spec.appearance().applyTo(entity);
+            Markers.stamp(entity);
+        });
+        return new DisplayHologram(display);
     }
 
     /** A {@link Hologram} backed by a live {@link TextDisplay}. */

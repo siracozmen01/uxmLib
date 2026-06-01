@@ -21,8 +21,8 @@ class HologramSpecTest {
                 .spec();
 
         assertThat(spec.lines()).hasSize(2);
-        assertThat(spec.billboard()).isEqualTo(Display.Billboard.CENTER);
-        assertThat(spec.seeThrough()).isFalse();
+        assertThat(spec.appearance().billboard()).isEqualTo(Display.Billboard.CENTER);
+        assertThat(spec.appearance().seeThrough()).isFalse();
     }
 
     @Test
@@ -43,8 +43,29 @@ class HologramSpecTest {
                 .seeThrough(true)
                 .spec();
 
-        assertThat(spec.billboard()).isEqualTo(Display.Billboard.FIXED);
-        assertThat(spec.seeThrough()).isTrue();
+        assertThat(spec.appearance().billboard()).isEqualTo(Display.Billboard.FIXED);
+        assertThat(spec.appearance().seeThrough()).isTrue();
+    }
+
+    @Test
+    void stylingRoundTripsThroughTheSpec() {
+        // The old bug: glow (and other styling) was applied at spawn but dropped from the spec. Now the
+        // spec captures every styling field, so what you build is what you get.
+        HologramSpec spec = Holograms.builder()
+                .line(Component.text("styled"))
+                .glow(org.bukkit.Color.RED)
+                .background(org.bukkit.Color.fromARGB(128, 0, 0, 0))
+                .textShadow(true)
+                .lineWidth(120)
+                .viewRange(2.0f)
+                .spec();
+
+        Appearance look = spec.appearance();
+        assertThat(look.glow()).isEqualTo(org.bukkit.Color.RED);
+        assertThat(look.background()).isEqualTo(org.bukkit.Color.fromARGB(128, 0, 0, 0));
+        assertThat(look.textShadow()).isTrue();
+        assertThat(look.lineWidth()).isEqualTo(120);
+        assertThat(look.viewRange()).isEqualTo(2.0f);
     }
 
     @Test
