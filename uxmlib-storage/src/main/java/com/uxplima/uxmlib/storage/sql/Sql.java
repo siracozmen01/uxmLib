@@ -10,6 +10,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 
 import com.uxplima.uxmlib.storage.StorageException;
 
@@ -120,5 +121,27 @@ public final class Sql {
     /** Run a parameterless statement (typically DDL). */
     public void execute(String sql) {
         update(sql, StatementBinder.NONE);
+    }
+
+    /**
+     * Stream a whole table to {@code consumer} in key order using keyset (seek) pagination: each page is
+     * fetched with {@code WHERE keyColumn > ? ORDER BY keyColumn LIMIT pageSize}, the cursor advancing to the
+     * last key of the page rather than an {@code OFFSET}. A page is buffered and its connection returned to
+     * the pool before the consumer runs, so a multi-thousand-row table is processed without loading it all and
+     * without holding a connection across the callback (the callback may itself query the database).
+     *
+     * @param table the table to walk; a simple SQL identifier
+     * @param keyColumn a unique, monotonically comparable column to seek on (typically the primary key)
+     * @param pageSize rows per page; must be {@code >= 1}
+     * @param mapper maps each row to the value handed to {@code consumer}
+     * @param consumer receives every row exactly once, in {@code keyColumn} order
+     */
+    public <T> void forEachByKey(
+            String table, String keyColumn, int pageSize, RowMapper<T> mapper, Consumer<? super T> consumer) {
+        Objects.requireNonNull(table, "table");
+        Objects.requireNonNull(keyColumn, "keyColumn");
+        Objects.requireNonNull(mapper, "mapper");
+        Objects.requireNonNull(consumer, "consumer");
+        new KeysetPager(database).forEach(table, keyColumn, pageSize, mapper, consumer);
     }
 }
