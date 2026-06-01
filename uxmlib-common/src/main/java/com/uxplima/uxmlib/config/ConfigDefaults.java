@@ -49,6 +49,16 @@ final class ConfigDefaults {
         return parent == null ? Path.of(name) : parent.resolve(name);
     }
 
+    /** The total number of descendant nodes under {@code node}, to detect whether a merge added anything. */
+    static int nodeCount(org.spongepowered.configurate.ConfigurationNode node) {
+        int count = 0;
+        for (org.spongepowered.configurate.ConfigurationNode child :
+                node.childrenMap().values()) {
+            count += 1 + nodeCount(child);
+        }
+        return count;
+    }
+
     /** Parse a bundled HOCON resource into a node, for use as a defaults tree to merge. */
     static org.spongepowered.configurate.CommentedConfigurationNode parseResource(String resource, ClassLoader loader) {
         Objects.requireNonNull(resource, "resource");

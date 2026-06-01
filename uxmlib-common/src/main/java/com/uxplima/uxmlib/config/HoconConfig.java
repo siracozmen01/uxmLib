@@ -133,10 +133,9 @@ public final class HoconConfig {
     public synchronized boolean mergeDefaults(ConfigurationNode defaults) {
         Objects.requireNonNull(defaults, "defaults");
         CommentedConfigurationNode live = currentRoot();
-        int before = live.childrenMap().size() + descendantCount(live);
+        int before = ConfigDefaults.nodeCount(live);
         live.mergeFrom(defaults);
-        int after = live.childrenMap().size() + descendantCount(live);
-        if (after != before) {
+        if (ConfigDefaults.nodeCount(live) != before) {
             save();
             return true;
         }
@@ -152,14 +151,6 @@ public final class HoconConfig {
     public void commentIfAbsent(String path, String comment) {
         Objects.requireNonNull(comment, "comment");
         currentRoot().node((Object[]) path.split("\\.")).commentIfAbsent(comment);
-    }
-
-    private static int descendantCount(ConfigurationNode node) {
-        int count = 0;
-        for (ConfigurationNode child : node.childrenMap().values()) {
-            count += 1 + descendantCount(child);
-        }
-        return count;
     }
 
     /** Write the current in-memory tree back to the file. Synchronized so saves never overlap. */
@@ -253,6 +244,32 @@ public final class HoconConfig {
         } catch (SerializationException failure) {
             throw new ConfigException("failed to map " + path + " to " + type.getName(), failure);
         }
+    }
+
+    /** Map the list at {@code path} into a {@code List<T>}; empty when absent. */
+    public <T> List<T> getList(String path, Class<T> element) {
+        Objects.requireNonNull(element, "element");
+        return ConfigSections.list(node(path), path, element);
+    }
+
+    /**
+     * Map each child of the section at {@code path} onto {@code type}, keyed by child name — for a table
+     * of named entries (e.g. {@code kits { starter {...} vip {...} }}). Empty when the section is absent.
+     */
+    public <T> java.util.Map<String, T> getSection(String path, Class<T> type) {
+        Objects.requireNonNull(type, "type");
+        return ConfigSections.section(node(path), path, type);
+    }
+
+    /** The child key names directly under {@code path} (a section's entries). */
+    public List<String> keys(String path) {
+        return ConfigSections.keys(node(path));
+    }
+
+    /** The live node at the exact key sequence {@code path}, for keys with a dot or list indices. */
+    public ConfigurationNode nodeAt(Object... path) {
+        Objects.requireNonNull(path, "path");
+        return currentRoot().node(path);
     }
 
     /** The raw root node, for callers that need Configurate directly. */
