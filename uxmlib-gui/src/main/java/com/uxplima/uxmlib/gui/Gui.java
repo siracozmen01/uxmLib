@@ -104,6 +104,9 @@ public interface Gui extends InventoryHolder {
     /** Routes a click to the clicked slot's action. Called by {@link GuiListener}; not for direct use. */
     void handleClick(InventoryClickEvent event);
 
+    /** Applies the drag policy (raw-slot test). Called by {@link GuiListener}; not for direct use. */
+    void handleDrag(org.bukkit.event.inventory.InventoryDragEvent event);
+
     /** Runs the close handler. Called by {@link GuiListener}; not for direct use. */
     void handleClose(InventoryCloseEvent event);
 

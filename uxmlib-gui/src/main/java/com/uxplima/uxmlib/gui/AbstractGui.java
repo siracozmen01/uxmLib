@@ -13,6 +13,7 @@ import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.inventory.Inventory;
 
@@ -237,11 +238,27 @@ abstract class AbstractGui implements Gui {
 
     @Override
     public void handleClick(InventoryClickEvent event) {
-        boolean hitItem =
-                GuiClick.route(this, inventory, items, allowed, defaultClickHandler, outsideClickHandler, event);
+        // Cancel synchronously inside the event; the slot action can run inline or be deferred a tick.
+        applyClickPolicy(event);
+        dispatchClick(event);
+    }
+
+    /** Cancel the event with {@code DENY} unless the menu allows its interaction; must run in-event. */
+    final void applyClickPolicy(InventoryClickEvent event) {
+        GuiClick.applyPolicy(allowed, event);
+    }
+
+    /** Run the clicked slot's action (and click sound). May be deferred to the next tick by the listener. */
+    final void dispatchClick(InventoryClickEvent event) {
+        boolean hitItem = GuiClick.dispatch(this, inventory, items, defaultClickHandler, outsideClickHandler, event);
         if (hitItem) {
             sounds.playClick(event.getWhoClicked());
         }
+    }
+
+    @Override
+    public void handleDrag(InventoryDragEvent event) {
+        GuiClick.routeDrag(allowed, event);
     }
 
     /** Set the click/open feedback sounds for this menu. */

@@ -28,6 +28,11 @@ final class GuiRegistry {
         this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
     }
 
+    /** The scheduler backing this registry, so click handling can defer a slot action to the next tick. */
+    Scheduler scheduler() {
+        return scheduler;
+    }
+
     /** Register {@code gui} with the installed registry if it needs ticking; a no-op if none is installed. */
     static void onOpen(AbstractGui gui) {
         GuiRegistry registry = Guis.registry();
