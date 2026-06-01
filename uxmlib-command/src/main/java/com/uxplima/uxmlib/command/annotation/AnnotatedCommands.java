@@ -95,6 +95,7 @@ public final class AnnotatedCommands {
     }
 
     private static void attachBranch(LiteralArgumentBuilder<CommandSourceStack> root, Object handler, Method method) {
+        validateSignature(method);
         String path = method.getAnnotation(Subcommand.class).value().trim();
         com.mojang.brigadier.Command<CommandSourceStack> executor = executorFor(handler, method);
         ArgChain chain = buildArgChain(method, executor);
@@ -161,11 +162,41 @@ public final class AnnotatedCommands {
             Object[] callArgs = buildCallArgs(ctx, method, args);
             try {
                 method.invoke(handler, callArgs);
-            } catch (ReflectiveOperationException failure) {
-                throw new CommandParseException("failed to invoke " + method.getName(), failure);
+                return Cmd.OK;
+            } catch (java.lang.reflect.InvocationTargetException thrownByHandler) {
+                // The handler itself failed. Don't let Brigadier dump a red stacktrace in the player's
+                // chat: log the real cause server-side and reply with a clean, generic message.
+                Throwable cause = thrownByHandler.getCause();
+                ctx.getSource()
+                        .getSender()
+                        .getServer()
+                        .getLogger()
+                        .log(
+                                java.util.logging.Level.SEVERE,
+                                "Command '" + method.getName() + "' threw an exception",
+                                cause != null ? cause : thrownByHandler);
+                Sender.of(ctx.getSource())
+                        .send(net.kyori.adventure.text.Component.text(
+                                "An internal error occurred while running this command.",
+                                net.kyori.adventure.text.format.NamedTextColor.RED));
+                return 0;
+            } catch (IllegalAccessException unreachable) {
+                // setAccessible(true) ran at registration, so this cannot happen for a registered handler.
+                throw new CommandParseException("could not invoke " + method.getName(), unreachable);
             }
-            return Cmd.OK;
         };
+    }
+
+    private static void validateSignature(Method method) {
+        for (Parameter param : method.getParameters()) {
+            Class<?> type = param.getType();
+            boolean injectable =
+                    type == Sender.class || type == CommandSourceStack.class || type == CommandSender.class;
+            if (!injectable && !param.isAnnotationPresent(Arg.class)) {
+                throw new CommandParseException("parameter '" + param.getName() + "' of " + method.getName()
+                        + " must be @Arg-annotated or be a Sender/CommandSourceStack/CommandSender");
+            }
+        }
     }
 
     private static Object[] buildCallArgs(CommandContext<CommandSourceStack> ctx, Method method, List<ParamArg> args) {

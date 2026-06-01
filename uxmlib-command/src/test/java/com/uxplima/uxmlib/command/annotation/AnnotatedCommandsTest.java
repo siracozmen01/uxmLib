@@ -41,6 +41,12 @@ class AnnotatedCommandsTest {
 
     static class NoAnnotation {}
 
+    @Command(name = "unannotated")
+    static class UnannotatedParam {
+        @Subcommand("go")
+        void go(Sender sender, String forgotTheArgAnnotation) {}
+    }
+
     @Test
     void buildsRootAndNestedLiteralBranches() {
         LiteralCommandNode<CommandSourceStack> node = AnnotatedCommands.buildNode(new ShopCommand());
@@ -74,5 +80,13 @@ class AnnotatedCommandsTest {
     void rejectsAnUnsupportedArgumentType() {
         assertThatThrownBy(() -> AnnotatedCommands.buildNode(new UnsupportedArg()))
                 .isInstanceOf(CommandParseException.class);
+    }
+
+    @Test
+    void rejectsAParameterThatIsNeitherInjectableNorAnnotated() {
+        // A plain String parameter with no @Arg would crash at command-run time; catch it at registration.
+        assertThatThrownBy(() -> AnnotatedCommands.buildNode(new UnannotatedParam()))
+                .isInstanceOf(CommandParseException.class)
+                .hasMessageContaining("@Arg");
     }
 }
