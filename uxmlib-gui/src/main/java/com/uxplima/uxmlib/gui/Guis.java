@@ -1,5 +1,6 @@
 package com.uxplima.uxmlib.gui;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -23,10 +24,28 @@ public final class Guis {
 
     private Guis() {}
 
+    private static @org.jspecify.annotations.Nullable GuiRegistry registry;
+
     /** Register the single {@link GuiListener} so menu events are routed. Call once per plugin enable. */
     public static void install(Plugin plugin) {
         Objects.requireNonNull(plugin, "plugin");
         Bukkit.getPluginManager().registerEvents(new GuiListener(), plugin);
+    }
+
+    /**
+     * Install the listener and wire a {@link com.uxplima.uxmlib.scheduler.Scheduler} so menus with
+     * animated items or {@code autoRefresh} can tick. Use this overload to enable animation.
+     */
+    public static void install(Plugin plugin, com.uxplima.uxmlib.scheduler.Scheduler scheduler) {
+        Objects.requireNonNull(plugin, "plugin");
+        Objects.requireNonNull(scheduler, "scheduler");
+        Bukkit.getPluginManager().registerEvents(new GuiListener(), plugin);
+        registry = new GuiRegistry(scheduler);
+    }
+
+    /** The animation registry, present only when {@link #install(Plugin, com.uxplima.uxmlib.scheduler.Scheduler)} was used. */
+    static @org.jspecify.annotations.Nullable GuiRegistry registry() {
+        return registry;
     }
 
     /** A builder for a single-page {@link SimpleGui}. */
@@ -91,16 +110,25 @@ public final class Guis {
 
         private final List<java.util.function.Consumer<Gui>> postBuild = new ArrayList<>();
 
+        @org.jspecify.annotations.Nullable Duration autoRefresh;
+
         /** Run {@code action} on the menu right after it is built (to add items, set handlers, etc.). */
         public B apply(java.util.function.Consumer<Gui> action) {
             postBuild.add(Objects.requireNonNull(action, "action"));
             return self();
         }
 
-        final <G extends Gui> G finish(G gui) {
+        /** Re-render the menu every {@code interval} while it is open (needs the Scheduler-aware install). */
+        public B autoRefresh(Duration interval) {
+            this.autoRefresh = Objects.requireNonNull(interval, "interval");
+            return self();
+        }
+
+        final <G extends AbstractGui> G finish(G gui) {
             for (InteractionModifier modifier : allowed) {
                 gui.allow(modifier);
             }
+            gui.autoRefresh(autoRefresh);
             for (java.util.function.Consumer<Gui> action : postBuild) {
                 action.accept(gui);
             }

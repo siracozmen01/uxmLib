@@ -1,5 +1,6 @@
 package com.uxplima.uxmlib.gui;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -38,6 +39,7 @@ abstract class AbstractGui implements Gui {
     private @Nullable Consumer<InventoryClickEvent> outsideClickHandler;
     private final Set<InteractionModifier> allowed = EnumSet.noneOf(InteractionModifier.class);
     private long ticks;
+    private @Nullable Duration autoRefresh;
 
     AbstractGui(Component title, int rows) {
         this.title = Objects.requireNonNull(title, "title");
@@ -166,10 +168,22 @@ abstract class AbstractGui implements Gui {
 
     @Override
     public void handleOpen(InventoryOpenEvent event) {
+        if (needsTicking()) {
+            GuiRegistry registry = Guis.registry();
+            if (registry != null) {
+                registry.register(this);
+            }
+        }
         Consumer<InventoryOpenEvent> handler = openHandler;
         if (handler != null) {
             handler.accept(event);
         }
+    }
+
+    private boolean needsTicking() {
+        return (autoRefresh != null || hasAnimatedContent())
+                && inventory != null
+                && !inventory.getViewers().isEmpty();
     }
 
     @Override
@@ -208,6 +222,14 @@ abstract class AbstractGui implements Gui {
 
     @Override
     public void handleClose(InventoryCloseEvent event) {
+        // Stop ticking once the last viewer leaves (getViewers still includes the closing player here,
+        // so one-or-fewer means this close empties the menu).
+        if (inventory != null && inventory.getViewers().size() <= 1) {
+            GuiRegistry registry = Guis.registry();
+            if (registry != null) {
+                registry.unregister(this);
+            }
+        }
         Consumer<InventoryCloseEvent> handler = closeHandler;
         if (handler != null) {
             handler.accept(event);
@@ -259,6 +281,11 @@ abstract class AbstractGui implements Gui {
     final void tick() {
         ticks++;
         refresh();
+    }
+
+    /** Set how often this menu auto-refreshes while open; {@code null} disables it. */
+    final void autoRefresh(@Nullable Duration interval) {
+        this.autoRefresh = interval;
     }
 
     /** Whether this menu has any item that needs ticking (animated content). */

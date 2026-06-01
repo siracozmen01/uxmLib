@@ -55,6 +55,17 @@ public sealed interface GuiItem permits GuiItem.Static, GuiItem.Dynamic, GuiItem
         return new Stateful.Builder();
     }
 
+    /** A display-only item that cycles through {@code frames} every {@code interval} while open. */
+    static GuiItem animated(java.util.List<ItemStack> frames, java.time.Duration interval) {
+        return new Animated(frames, interval, GuiAction.None.INSTANCE);
+    }
+
+    /** An animated item that also runs {@code onClick} when clicked. */
+    static GuiItem animated(
+            java.util.List<ItemStack> frames, java.time.Duration interval, Consumer<InventoryClickEvent> onClick) {
+        return new Animated(frames, interval, new GuiAction.Run(onClick));
+    }
+
     /** A fixed icon and action, identical for every viewer. */
     record Static(ItemStack item, GuiAction guiAction) implements GuiItem {
         public Static {
