@@ -9,10 +9,12 @@ import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.FireworkEffect;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemFlag;
+import org.bukkit.inventory.ItemRarity;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.inventory.meta.Damageable;
@@ -127,6 +129,32 @@ public final class ItemBuilder {
      */
     public ItemBuilder glow(boolean glow) {
         return editMeta(meta -> meta.setEnchantmentGlintOverride(glow));
+    }
+
+    /** Set the custom model data resource packs use to select a model variant. */
+    @SuppressWarnings("deprecation") // the int custom-model-data accessor; still the common resource-pack key
+    public ItemBuilder customModelData(int data) {
+        return editMeta(meta -> meta.setCustomModelData(data));
+    }
+
+    /** Override the item model with a resource-pack model key (the native 1.21 {@code item_model}). */
+    public ItemBuilder itemModel(NamespacedKey model) {
+        Objects.requireNonNull(model, "model");
+        return editMeta(meta -> meta.setItemModel(model));
+    }
+
+    /** Cap how many of this item stack together (1..99), overriding the material default. */
+    public ItemBuilder maxStackSize(int max) {
+        if (max < 1 || max > 99) {
+            throw new IllegalArgumentException("maxStackSize must be 1..99");
+        }
+        return editMeta(meta -> meta.setMaxStackSize(max));
+    }
+
+    /** Set the item's rarity, which tints the display name colour. */
+    public ItemBuilder rarity(ItemRarity rarity) {
+        Objects.requireNonNull(rarity, "rarity");
+        return editMeta(meta -> meta.setRarity(rarity));
     }
 
     /** Set the damage (durability used), for items that support it; a no-op on items that do not. */

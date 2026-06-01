@@ -1,11 +1,13 @@
 package com.uxplima.uxmlib.item;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.ItemFlag;
+import org.bukkit.inventory.ItemRarity;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.persistence.PersistentDataType;
@@ -111,6 +113,42 @@ class ItemBuilderTest {
         assertThat(item.getItemMeta().hasEnchantmentGlintOverride()).isTrue();
         assertThat(item.getItemMeta().getEnchantmentGlintOverride()).isTrue();
         assertThat(item.getItemMeta().hasEnchants()).isFalse();
+    }
+
+    @Test
+    @SuppressWarnings("deprecation") // getCustomModelData() is the int read-back; the value round-trips
+    void setsCustomModelData() {
+        ItemStack item = ItemBuilder.of(Material.STONE).customModelData(42).build();
+
+        assertThat(item.getItemMeta().hasCustomModelData()).isTrue();
+        assertThat(item.getItemMeta().getCustomModelData()).isEqualTo(42);
+    }
+
+    @Test
+    void setsMaxStackSizeAndRejectsOutOfRange() {
+        ItemStack item = ItemBuilder.of(Material.DIAMOND_SWORD).maxStackSize(16).build();
+        assertThat(item.getItemMeta().getMaxStackSize()).isEqualTo(16);
+
+        assertThatThrownBy(() -> ItemBuilder.of(Material.STONE).maxStackSize(0))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> ItemBuilder.of(Material.STONE).maxStackSize(100))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void setsRarity() {
+        ItemStack item = ItemBuilder.of(Material.STONE).rarity(ItemRarity.EPIC).build();
+
+        assertThat(item.getItemMeta().getRarity()).isEqualTo(ItemRarity.EPIC);
+    }
+
+    @Test
+    void setsItemModelWithoutThrowing() {
+        // MockBukkit's ItemMeta does not persist item_model, so we can only assert the wiring is valid;
+        // the setItemModel signature itself is verified against the real paper-api 1.21.11 jar.
+        NamespacedKey model = NamespacedKey.fromString("uxmlib:custom");
+        assertThatCode(() -> ItemBuilder.of(Material.STONE).itemModel(model).build())
+                .doesNotThrowAnyException();
     }
 
     @Test
