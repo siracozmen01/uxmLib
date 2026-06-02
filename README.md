@@ -18,11 +18,11 @@ Each module is published separately; pull only what you use.
 | Module | What it gives you |
 | --- | --- |
 | `uxmlib-common` | Folia-ready `Scheduler`, MiniMessage `Text`, typed `HoconConfig`, an i18n message catalog + retargetable `Message`, `Durations`/`Numbers`/`Sounds`/particle helpers |
-| `uxmlib-item` | A fluent `ItemBuilder`, sealed `SkullData`, registry lookups, component-safe serialization, typed PDC + UUID codec, HOCON→item loader, async skull resolver |
-| `uxmlib-gui` | Inventory-menu framework — simple/paginated/scrolling/storage/typed menus, per-viewer & animated items, fillers, interaction control, navigation, config-driven state menus, async/declarative click pipeline, unified anvil/chat/sign input, server-side Dialogs |
-| `uxmlib-command` | A Brigadier facade + annotation DSL over a platform-neutral node IR: args/suggestions/permissions, `@Range`/`@Length`, `@Cooldown`, flags & switches, async execution, validator/context/condition SPIs |
-| `uxmlib-storage` | Pooled (HikariCP) + cached (Caffeine) JDBC, a cross-dialect query builder (SQLite/MySQL/Postgres/H2), upserts, migrations, schema introspection, keyset paging, write-behind cache |
-| `uxmlib-integration` | PlaceholderAPI read **and** expansion registration, Vault/LuckPerms hooks (online & offline), native-Display holograms (pools/widgets/leaderboards), an advancement-toast API, a Discord webhook |
+| `uxmlib-item` | A fluent `ItemBuilder` (name/lore/enchants/flags/banner/map/components, with removers), sealed `SkullData`, registry lookups, component-safe + gzip serialization, single-key `isSimilar`, typed PDC + UUID codec, HOCON→item loader, async skull resolver |
+| `uxmlib-gui` | Inventory-menu framework — simple/paginated/scrolling/storage/typed menus, per-viewer & animated items, fillers, interaction control, navigation, config-driven state menus, an in-game config editor, click audit log, async/declarative click pipeline, unified anvil/chat/sign input, server-side Dialogs |
+| `uxmlib-command` | A Brigadier facade + annotation DSL over a platform-neutral node IR: args/suggestions/permissions, `@Range`/`@Length`, `@Cooldown`, `@CommandPriority`, flags & switches, orphan args, async execution, validator/context/condition + annotation-replacer SPIs |
+| `uxmlib-storage` | Pooled (HikariCP) + cached (Caffeine) JDBC, a cross-dialect query builder (SQLite/MySQL/Postgres/H2), upserts, migrations, schema introspection & column ops, keyset paging, write-behind + two-tier player cache, and cross-server row-sync |
+| `uxmlib-integration` | PlaceholderAPI read **and** expansion registration, Vault **and** VaultUnlocked economy, LuckPerms hooks (online & offline, group listing), native-Display holograms (pools/widgets/leaderboards, live skin resolver, mixed item/block/text lines, per-viewer content), an advancement-toast API, a Discord webhook with a fluent embed builder |
 | `uxmlib-hud` | Native-Adventure HUD overlays — flicker-free diff sidebar, title/subtitle, sticky actionbar, bossbar (with modes), tablist, per-tick update batching, animated/ticker text |
 | `uxmlib-update` | A notify-only release update-checker (GitHub/Modrinth) with a build-time version constant — never self-downloads |
 | `uxmlib-condition` | A declarative condition engine (placeholder comparator + failure policy) and a config-driven action engine |
@@ -192,7 +192,7 @@ List<String> top = sql.query(q, row -> row.getString("uuid"));   // injection-sa
 ### Integrations
 
 ```java
-VaultEconomy.find().ifPresent(eco -> eco.deposit(player, 100));
+EconomyBridge.orDummy().deposit(player, 100);   // resolves Vault or VaultUnlocked; no-op dummy otherwise
 LuckPermsHook.find().flatMap(lp -> lp.prefix(player)).ifPresent(prefix -> /* ... */);
 String text = Placeholders.apply(player, "Hi %player_name%");   // no-op without PlaceholderAPI
 
