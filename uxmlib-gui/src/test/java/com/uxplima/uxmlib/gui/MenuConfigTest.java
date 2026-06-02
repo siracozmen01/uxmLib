@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.bukkit.Material;
 
 import com.uxplima.uxmlib.gui.config.MenuActions;
+import com.uxplima.uxmlib.gui.config.MenuConditions;
 import com.uxplima.uxmlib.gui.config.MenuConfig;
 import com.uxplima.uxmlib.gui.item.GuiItem;
 import org.junit.jupiter.api.AfterEach;
@@ -128,5 +129,102 @@ class MenuConfigTest {
                 """;
         assertThatThrownBy(() -> MenuConfig.load(parse(hocon), new MenuActions()))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void buildsAMultiStateItemAndRendersTheFirstMatchingState() throws Exception {
+        String hocon =
+                """
+                rows = 1
+                mask = [ "S        " ]
+                items {
+                  S {
+                    states {
+                      vip     { condition = "starts-a", material = "EMERALD",  name = "<green>VIP" }
+                      default { condition = "always",   material = "REDSTONE", name = "<gray>Member" }
+                    }
+                  }
+                }
+                """;
+        MenuConditions conditions = new MenuConditions()
+                .register("starts-a", ctx -> ctx.viewer().getName().startsWith("A"));
+        SimpleGui gui = MenuConfig.load(parse(hocon), new MenuActions(), conditions);
+
+        GuiItem item = gui.getItem(0);
+        assertThat(item).isInstanceOf(GuiItem.Stateful.class);
+
+        var alex = MockBukkit.getMock().addPlayer("Alex");
+        gui.open(alex);
+        assertThat(java.util.Objects.requireNonNull(gui.getInventory().getItem(0))
+                        .getType())
+                .isEqualTo(Material.EMERALD);
+
+        var steve = MockBukkit.getMock().addPlayer("Steve");
+        gui.open(steve);
+        assertThat(java.util.Objects.requireNonNull(gui.getInventory().getItem(0))
+                        .getType())
+                .isEqualTo(Material.REDSTONE);
+    }
+
+    @Test
+    void multiStateItemWiresPerStateActions() throws Exception {
+        String hocon =
+                """
+                rows = 1
+                mask = [ "S        " ]
+                items {
+                  S {
+                    states {
+                      only { condition = "always", material = "BARRIER", action = "close" }
+                    }
+                  }
+                }
+                """;
+        boolean[] clicked = {false};
+        MenuActions actions = new MenuActions().register("close", e -> clicked[0] = true);
+        SimpleGui gui = MenuConfig.load(parse(hocon), actions, new MenuConditions());
+
+        var player = MockBukkit.getMock().addPlayer();
+        var view = java.util.Objects.requireNonNull(player.openInventory(gui.getInventory()));
+        var event = new org.bukkit.event.inventory.InventoryClickEvent(
+                view,
+                org.bukkit.event.inventory.InventoryType.SlotType.CONTAINER,
+                0,
+                org.bukkit.event.inventory.ClickType.LEFT,
+                org.bukkit.event.inventory.InventoryAction.PICKUP_ALL);
+        gui.handleClick(event);
+        assertThat(clicked[0]).isTrue();
+    }
+
+    @Test
+    void rejectsAnUnknownConditionInAState() throws Exception {
+        String hocon =
+                """
+                rows = 1
+                mask = [ "S        " ]
+                items {
+                  S { states { a { condition = "ghost", material = "STONE" } } }
+                }
+                """;
+        assertThatThrownBy(() -> MenuConfig.load(parse(hocon), new MenuActions(), new MenuConditions()))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void appliesPerMenuTypeLocksFromConfig() throws Exception {
+        String hocon =
+                """
+                rows = 1
+                locks = [ "ITEM_TAKE", "ITEM_PLACE" ]
+                mask = [ "X        " ]
+                items {
+                  X { material = "STONE" }
+                }
+                """;
+        SimpleGui gui = MenuConfig.load(parse(hocon), new MenuActions());
+
+        assertThat(gui.allows(InteractionModifier.ITEM_TAKE)).isTrue();
+        assertThat(gui.allows(InteractionModifier.ITEM_PLACE)).isTrue();
+        assertThat(gui.allows(InteractionModifier.ITEM_DROP)).isFalse();
     }
 }
