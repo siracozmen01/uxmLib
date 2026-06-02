@@ -32,4 +32,15 @@ final class ConfigUpgrade {
         }
         return false;
     }
+
+    /**
+     * Deep-merge an included tree into {@code live} with the same base-wins semantics as a defaults merge —
+     * keys already present in {@code live} keep their value, the included tree fills the gaps — but purely
+     * in memory, with no save. Returns whether the included tree contributed anything new.
+     */
+    static boolean include(CommentedConfigurationNode live, ConfigurationNode included) {
+        int before = ConfigDefaults.nodeCount(live);
+        live.mergeFrom(included);
+        return ConfigDefaults.nodeCount(live) != before;
+    }
 }

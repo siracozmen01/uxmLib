@@ -1,6 +1,11 @@
-error: uxmlib-item/src/main/java/com/uxplima/uxmlib/item/ItemMigrations.java: does not exist in index
-error: cannot read the current contents of 'uxmlib-item/src/main/java/com/uxplima/uxmlib/item/ItemMigrations.java'
+error: uxmlib-common/src/main/java/com/uxplima/uxmlib/config/ConfigInterpolation.java: does not exist in index
+error: cannot read the current contents of 'uxmlib-common/src/main/java/com/uxplima/uxmlib/config/ConfigInterpolation.java'
 Falling back to direct application...
-error: uxmlib-item/src/test/java/com/uxplima/uxmlib/item/ItemMigrationsTest.java: does not exist in index
-error: cannot read the current contents of 'uxmlib-item/src/test/java/com/uxplima/uxmlib/item/ItemMigrationsTest.java'
+Applied patch to 'uxmlib-common/src/main/java/com/uxplima/uxmlib/config/ConfigUpgrade.java' cleanly.
+Applied patch to 'uxmlib-common/src/main/java/com/uxplima/uxmlib/config/HoconConfig.java' cleanly.
+error: uxmlib-common/src/test/java/com/uxplima/uxmlib/config/ConfigIncludeTest.java: does not exist in index
+error: cannot read the current contents of 'uxmlib-common/src/test/java/com/uxplima/uxmlib/config/ConfigIncludeTest.java'
+Falling back to direct application...
+error: uxmlib-common/src/test/java/com/uxplima/uxmlib/config/ConfigInterpolationTest.java: does not exist in index
+error: cannot read the current contents of 'uxmlib-common/src/test/java/com/uxplima/uxmlib/config/ConfigInterpolationTest.java'
 Falling back to direct application...

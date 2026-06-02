@@ -3,6 +3,7 @@ package com.uxplima.uxmlib.config;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -143,6 +144,53 @@ public final class HoconConfig {
     /** Deep-merge defaults from a bundled classpath resource. Returns whether anything was written. */
     public boolean mergeDefaults(String resource, ClassLoader classLoader) {
         return mergeDefaults(ConfigDefaults.parseResource(resource, classLoader));
+    }
+
+    /**
+     * Compose this config with {@code other} (this config wins per key, {@code other} fills gaps), so config
+     * can be split across files. In-memory only — call {@link #save()} to persist. Returns whether anything
+     * was added.
+     */
+    public synchronized boolean include(HoconConfig other) {
+        Objects.requireNonNull(other, "other");
+        return ConfigUpgrade.include(currentRoot(), other.currentRoot());
+    }
+
+    /** As {@link #include(HoconConfig)} but reading the HOCON file at {@code path}; a missing file is a no-op. */
+    public synchronized boolean include(Path path) {
+        Objects.requireNonNull(path, "path");
+        return ConfigUpgrade.include(currentRoot(), read(loader(path, serializers)));
+    }
+
+    /**
+     * Resolve every {@code ${path.to.key}} reference in string values in place, against this tree and
+     * {@code variables} (which win). A reference loop throws {@link ConfigException}; an unknown reference is
+     * left verbatim. Call {@link #save()} to persist.
+     */
+    public synchronized void interpolate(Map<String, String> variables) {
+        Objects.requireNonNull(variables, "variables");
+        ConfigInterpolation.interpolate(currentRoot(), variables);
+    }
+
+    /** Interpolate against this tree alone, with no extra variables. */
+    public synchronized void interpolate() {
+        interpolate(Map.of());
+    }
+
+    /**
+     * The string at {@code path} with its {@code ${...}} references resolved against this tree and
+     * {@code variables}, or {@code fallback} when absent. A single read; the stored tree is not mutated.
+     */
+    public String getInterpolated(String path, String fallback, Map<String, String> variables) {
+        Objects.requireNonNull(path, "path");
+        Objects.requireNonNull(fallback, "fallback");
+        Objects.requireNonNull(variables, "variables");
+        return ConfigInterpolation.resolveOne(currentRoot(), node(path).getString(fallback), variables);
+    }
+
+    /** The string at {@code path} with references resolved against this tree alone, or {@code fallback}. */
+    public String getInterpolated(String path, String fallback) {
+        return getInterpolated(path, fallback, Map.of());
     }
 
     /** Set the comment shown above {@code path} on the next save, without overwriting a user's own comment. */
