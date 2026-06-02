@@ -13,6 +13,15 @@ final class EmbedJson {
 
     private EmbedJson() {}
 
+    /** Encodes a list of embeds to the JSON array Discord expects under the {@code "embeds"} key. */
+    static String encodeArray(List<DiscordEmbed> embeds) {
+        List<String> encoded = new ArrayList<>(embeds.size());
+        for (DiscordEmbed embed : embeds) {
+            encoded.add(encode(embed));
+        }
+        return "[" + String.join(",", encoded) + "]";
+    }
+
     static String encode(DiscordEmbed embed) {
         List<String> parts = new ArrayList<>();
         add(parts, "title", embed.title());

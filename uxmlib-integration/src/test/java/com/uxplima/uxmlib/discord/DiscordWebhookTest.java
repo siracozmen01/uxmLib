@@ -4,6 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.Duration;
+import java.util.List;
+import java.util.Optional;
+
 import org.junit.jupiter.api.Test;
 
 /** Pure tests of the webhook JSON encoding and URL validation — no network, no Bukkit. */
@@ -44,5 +48,50 @@ class DiscordWebhookTest {
     @Test
     void leavesPlainTextUntouched() {
         assertThat(DiscordWebhook.jsonString("plain text 123")).isEqualTo("\"plain text 123\"");
+    }
+
+    @Test
+    void wrapsMultipleEmbedsInOneArray() {
+        String body = DiscordWebhook.embedsBody(List.of(DiscordEmbed.of("A", "one"), DiscordEmbed.of("B", "two")));
+        assertThat(body)
+                .isEqualTo("{\"embeds\":[{\"title\":\"A\",\"description\":\"one\"},"
+                        + "{\"title\":\"B\",\"description\":\"two\"}],\"allowed_mentions\":{\"parse\":[]}}");
+    }
+
+    @Test
+    void rejectsMoreThanTenEmbedsAtSend() {
+        DiscordWebhook hook = new DiscordWebhook("https://discord.com/api/webhooks/1/abc");
+        List<DiscordEmbed> eleven = java.util.stream.IntStream.range(0, 11)
+                .mapToObj(i -> DiscordEmbed.of("t" + i, "d"))
+                .toList();
+        assertThatThrownBy(() -> hook.sendEmbeds(eleven)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void retriesOnlyOnRateLimitWithinTheCap() {
+        // 429 within the retry budget -> retry; any non-429, or a spent budget, -> no retry.
+        assertThat(DiscordWebhook.shouldRetry(429, 1)).isTrue();
+        assertThat(DiscordWebhook.shouldRetry(429, 0)).isFalse();
+        assertThat(DiscordWebhook.shouldRetry(204, 1)).isFalse();
+        assertThat(DiscordWebhook.shouldRetry(500, 1)).isFalse();
+    }
+
+    @Test
+    void readsRetryAfterFromTheHeaderInSeconds() {
+        assertThat(DiscordWebhook.retryDelay(Optional.of("2"), Optional.empty()))
+                .isEqualTo(Duration.ofSeconds(2));
+    }
+
+    @Test
+    void readsFractionalRetryAfterFromTheJsonBodyWhenHeaderIsAbsent() {
+        // Discord's JSON gives retry_after in seconds as a float (e.g. 0.75s).
+        assertThat(DiscordWebhook.retryDelay(Optional.empty(), Optional.of("{\"retry_after\":0.75}")))
+                .isEqualTo(Duration.ofMillis(750));
+    }
+
+    @Test
+    void fallsBackToAShortDelayWhenNoRetryAfterIsGiven() {
+        Duration delay = DiscordWebhook.retryDelay(Optional.empty(), Optional.of("{}"));
+        assertThat(delay).isGreaterThan(Duration.ZERO).isLessThanOrEqualTo(Duration.ofSeconds(5));
     }
 }
