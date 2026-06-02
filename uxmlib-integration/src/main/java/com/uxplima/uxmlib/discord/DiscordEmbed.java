@@ -4,6 +4,9 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.UnaryOperator;
+
+import net.kyori.adventure.util.RGBLike;
 
 import org.jspecify.annotations.Nullable;
 
@@ -33,12 +36,62 @@ public record DiscordEmbed(
         public Author {
             Objects.requireNonNull(name, "name");
         }
+
+        /** Fluent builder for an author line, used by the closure-style {@code author(...)} on the embed. */
+        public static final class Builder {
+            private @Nullable String name;
+            private @Nullable String url;
+            private @Nullable String iconUrl;
+
+            private Builder() {}
+
+            public Builder name(String value) {
+                this.name = Objects.requireNonNull(value, "name");
+                return this;
+            }
+
+            public Builder url(@Nullable String value) {
+                this.url = value;
+                return this;
+            }
+
+            public Builder iconUrl(@Nullable String value) {
+                this.iconUrl = value;
+                return this;
+            }
+
+            Author build() {
+                return new Author(Objects.requireNonNull(name, "name"), url, iconUrl);
+            }
+        }
     }
 
     /** A footer: text plus an optional icon. */
     public record Footer(String text, @Nullable String iconUrl) {
         public Footer {
             Objects.requireNonNull(text, "text");
+        }
+
+        /** Fluent builder for a footer, used by the closure-style {@code footer(...)} on the embed. */
+        public static final class Builder {
+            private @Nullable String text;
+            private @Nullable String iconUrl;
+
+            private Builder() {}
+
+            public Builder text(String value) {
+                this.text = Objects.requireNonNull(value, "text");
+                return this;
+            }
+
+            public Builder iconUrl(@Nullable String value) {
+                this.iconUrl = value;
+                return this;
+            }
+
+            Footer build() {
+                return new Footer(Objects.requireNonNull(text, "text"), iconUrl);
+            }
         }
     }
 
@@ -47,6 +100,34 @@ public record DiscordEmbed(
         public Field {
             Objects.requireNonNull(name, "name");
             Objects.requireNonNull(value, "value");
+        }
+
+        /** Fluent builder for a field, used by the closure-style {@code field(...)} on the embed. */
+        public static final class Builder {
+            private @Nullable String name;
+            private @Nullable String value;
+            private boolean inline;
+
+            private Builder() {}
+
+            public Builder name(String value) {
+                this.name = Objects.requireNonNull(value, "name");
+                return this;
+            }
+
+            public Builder value(String value) {
+                this.value = Objects.requireNonNull(value, "value");
+                return this;
+            }
+
+            public Builder inline(boolean value) {
+                this.inline = value;
+                return this;
+            }
+
+            Field build() {
+                return new Field(Objects.requireNonNull(name, "name"), Objects.requireNonNull(value, "value"), inline);
+            }
         }
     }
 
@@ -95,8 +176,32 @@ public record DiscordEmbed(
             return this;
         }
 
+        /** A multi-line description, each argument becoming its own line (joined with {@code "\n"}). */
+        public Builder description(String... lines) {
+            return description(List.of(Objects.requireNonNull(lines, "lines")));
+        }
+
+        /** A multi-line description from a list, each element becoming its own line (joined with {@code "\n"}). */
+        public Builder description(List<String> lines) {
+            Objects.requireNonNull(lines, "lines");
+            this.description = String.join("\n", lines);
+            return this;
+        }
+
         public Builder color(int value) {
             this.color = value;
+            return this;
+        }
+
+        /** The colour bar from an Adventure colour (or any {@link RGBLike}); packed to {@code 0xRRGGBB}. */
+        public Builder color(RGBLike rgb) {
+            Objects.requireNonNull(rgb, "rgb");
+            return color(rgb.red(), rgb.green(), rgb.blue());
+        }
+
+        /** The colour bar from 0-255 red/green/blue components, packed to a single {@code 0xRRGGBB} integer. */
+        public Builder color(int red, int green, int blue) {
+            this.color = (channel(red, "red") << 16) | (channel(green, "green") << 8) | channel(blue, "blue");
             return this;
         }
 
@@ -110,8 +215,22 @@ public record DiscordEmbed(
             return this;
         }
 
+        /** The author line, configured through a nested {@link Author.Builder} closure. */
+        public Builder author(UnaryOperator<Author.Builder> spec) {
+            Objects.requireNonNull(spec, "spec");
+            this.author = spec.apply(new Author.Builder()).build();
+            return this;
+        }
+
         public Builder footer(String text, @Nullable String iconUrl) {
             this.footer = new Footer(text, iconUrl);
+            return this;
+        }
+
+        /** The footer, configured through a nested {@link Footer.Builder} closure. */
+        public Builder footer(UnaryOperator<Footer.Builder> spec) {
+            Objects.requireNonNull(spec, "spec");
+            this.footer = spec.apply(new Footer.Builder()).build();
             return this;
         }
 
@@ -135,6 +254,13 @@ public record DiscordEmbed(
             return this;
         }
 
+        /** Adds one field, configured through a nested {@link Field.Builder} closure. */
+        public Builder field(UnaryOperator<Field.Builder> spec) {
+            Objects.requireNonNull(spec, "spec");
+            this.fields.add(spec.apply(new Field.Builder()).build());
+            return this;
+        }
+
         public DiscordEmbed build() {
             return new DiscordEmbed(
                     title, description, color, url, author, footer, thumbnailUrl, imageUrl, timestamp, fields);
@@ -142,6 +268,14 @@ public record DiscordEmbed(
 
         private static String value(String v) {
             return Objects.requireNonNull(v, "url");
+        }
+
+        /** A single 0-255 colour channel, rejected outside that range so a bad component fails fast. */
+        private static int channel(int value, String name) {
+            if (value < 0 || value > 255) {
+                throw new IllegalArgumentException(name + " must be in 0..255: " + value);
+            }
+            return value;
         }
     }
 }

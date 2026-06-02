@@ -126,6 +126,74 @@ class ComparisonTest {
 
     @ParameterizedTest
     @CsvSource({
+        // CONTAINS: left contains right as a substring (case-sensitive), never numeric.
+        "CONTAINS, hello world, world, true",
+        "CONTAINS, hello world, mars, false",
+        "CONTAINS, world, world, true",
+        "CONTAINS, World, world, false",
+        // a numeric-looking pair still uses substring containment, not numeric equality
+        "CONTAINS, 1234, 23, true",
+        "CONTAINS, 12, 123, false",
+    })
+    void containsTestsSubstringInclusion(Operator operator, String left, String right, boolean expected) {
+        assertThat(Comparison.of(operator).test(left, right)).isEqualTo(expected);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        // WILDCARD: the right operand is a glob (* = any run, ? = one char); the left must match it whole.
+        "WILDCARD, world_nether, world_*, true",
+        "WILDCARD, world_nether, *_nether, true",
+        "WILDCARD, world_nether, w*r, true",
+        "WILDCARD, world_nether, nether, false",
+        "WILDCARD, cat, c?t, true",
+        "WILDCARD, coat, c?t, false",
+        "WILDCARD, anything, *, true",
+        // glob is anchored: a pattern that does not cover the whole left fails
+        "WILDCARD, world_nether, world, false",
+        // a numeric-looking pair still globs as text
+        "WILDCARD, 1024, 10*, true",
+    })
+    void wildcardTestsGlobMatch(Operator operator, String left, String right, boolean expected) {
+        assertThat(Comparison.of(operator).test(left, right)).isEqualTo(expected);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        // OR: the right operand is a '|'-separated alternation; left passes if it equals any branch.
+        "OR, world, world|nether|the_end, true",
+        "OR, nether, world|nether|the_end, true",
+        "OR, the_end, world|nether|the_end, true",
+        "OR, aether, world|nether|the_end, false",
+        // a single branch is just equality
+        "OR, world, world, true",
+        "OR, world, nether, false",
+        // numeric branches compare numerically per branch, so 1.0 matches a 1 branch
+        "OR, 1.0, 1|2|3, true",
+        "OR, 4, 1|2|3, false",
+    })
+    void orTestsAlternationOfBranches(Operator operator, String left, String right, boolean expected) {
+        assertThat(Comparison.of(operator).test(left, right)).isEqualTo(expected);
+    }
+
+    @Test
+    void orBranchesAreTrimmedBeforeComparison() {
+        assertThat(Comparison.of(Operator.OR).test("nether", "world | nether | the_end"))
+                .isTrue();
+    }
+
+    @Test
+    void containsAndWildcardEvaluateThroughParse() {
+        assertThat(Comparison.parse("%player_world% ?= nether").comparison().operator())
+                .isEqualTo(Operator.CONTAINS);
+        assertThat(Comparison.parse("%player_group% || admin|owner")
+                        .comparison()
+                        .operator())
+                .isEqualTo(Operator.OR);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
         // Java float-literal suffixes must be treated as plain strings, not numbers.
         "EQUAL, 1d, 1, false",
         "EQUAL, 10F, 10, false",

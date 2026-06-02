@@ -49,6 +49,49 @@ class ItemsTest {
     }
 
     @Test
+    void isSimilarComparesOnlyTheOneNamedPdcKey() {
+        NamespacedKey id = NamespacedKey.fromString("uxmlib:id");
+        NamespacedKey other = NamespacedKey.fromString("uxmlib:other");
+
+        ItemStack a = ItemBuilder.of(Material.STONE)
+                .name(net.kyori.adventure.text.Component.text("A"))
+                .editPersistentData(pdc -> {
+                    pdc.set(id, PersistentDataType.STRING, "x");
+                    pdc.set(other, PersistentDataType.STRING, "left");
+                })
+                .build();
+        ItemStack b = ItemBuilder.of(Material.DIAMOND_SWORD)
+                .name(net.kyori.adventure.text.Component.text("B"))
+                .editPersistentData(pdc -> {
+                    pdc.set(id, PersistentDataType.STRING, "x");
+                    pdc.set(other, PersistentDataType.STRING, "right");
+                })
+                .build();
+
+        // Same value under id, despite different material, name and other keys.
+        assertThat(Items.isSimilar(a, b, id, PersistentDataType.STRING)).isTrue();
+    }
+
+    @Test
+    void isSimilarRejectsAMismatchedOrAbsentKey() {
+        NamespacedKey id = NamespacedKey.fromString("uxmlib:id");
+
+        ItemStack a = ItemBuilder.of(Material.STONE)
+                .editPersistentData(pdc -> pdc.set(id, PersistentDataType.STRING, "x"))
+                .build();
+        ItemStack different = ItemBuilder.of(Material.STONE)
+                .editPersistentData(pdc -> pdc.set(id, PersistentDataType.STRING, "y"))
+                .build();
+        ItemStack absent = ItemBuilder.of(Material.STONE).build();
+
+        assertThat(Items.isSimilar(a, different, id, PersistentDataType.STRING)).isFalse();
+        assertThat(Items.isSimilar(a, absent, id, PersistentDataType.STRING)).isFalse();
+        // Both absent: equal (both empty).
+        assertThat(Items.isSimilar(absent, ItemBuilder.of(Material.STONE).build(), id, PersistentDataType.STRING))
+                .isTrue();
+    }
+
+    @Test
     void schedulerAwareGiveHopsToTheEntityRegionBeforeMutating() {
         PlayerMock player = server.addPlayer();
         java.util.concurrent.atomic.AtomicReference<org.bukkit.entity.Entity> hoppedTo =

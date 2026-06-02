@@ -2,10 +2,13 @@ package com.uxplima.uxmlib.condition;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import net.kyori.adventure.text.Component;
 
+import com.uxplima.uxmlib.condition.action.CommandSink;
 import org.junit.jupiter.api.Test;
 
 /** AND-combination, failure-message flushing, cancel raising, and stop-chain short-circuit. */
@@ -110,5 +113,61 @@ class ConditionListTest {
     void emptyListPasses() {
         ConditionRequest request = request();
         assertThat(ConditionList.builder().build().test(request)).isTrue();
+    }
+
+    @Test
+    void runCommandsPolicyDispatchesItsConsoleCommandsOnFailure() {
+        List<String> consoleCommands = new ArrayList<>();
+        CommandSink consoleSink = consoleCommands::add;
+        ConditionRequest request = ConditionRequest.builder(OperandResolver.identity())
+                .consoleSink(consoleSink)
+                .build();
+        ConditionList list = ConditionList.builder()
+                .runCommands(FAIL, List.of("[console] kick everyone", "[console] say blocked"))
+                .build();
+
+        assertThat(list.test(request)).isFalse();
+        assertThat(consoleCommands).containsExactly("kick everyone", "say blocked");
+    }
+
+    @Test
+    void runCommandsPolicyResolvesPlaceholdersThroughTheRequestResolver() {
+        List<String> consoleCommands = new ArrayList<>();
+        ConditionRequest request = ConditionRequest.builder(
+                        OperandResolver.ofTemplate(line -> line.replace("%target%", "Steve")))
+                .consoleSink(consoleCommands::add)
+                .build();
+        ConditionList list = ConditionList.builder()
+                .runCommands(FAIL, List.of("[console] jail %target%"))
+                .build();
+
+        assertThat(list.test(request)).isFalse();
+        assertThat(consoleCommands).containsExactly("jail Steve");
+    }
+
+    @Test
+    void runCommandsPolicyFiresNoCommandsWhenTheConditionPasses() {
+        List<String> consoleCommands = new ArrayList<>();
+        ConditionRequest request = ConditionRequest.builder(OperandResolver.identity())
+                .consoleSink(consoleCommands::add)
+                .build();
+        ConditionList list = ConditionList.builder()
+                .runCommands(PASS, List.of("[console] never run"))
+                .build();
+
+        assertThat(list.test(request)).isTrue();
+        assertThat(consoleCommands).isEmpty();
+    }
+
+    @Test
+    void runCommandsPolicyRecordsNoMessageAndDoesNotCancelByDefault() {
+        ConditionRequest request = request();
+        ConditionList list = ConditionList.builder()
+                .runCommands(FAIL, List.of("[console] log it"))
+                .build();
+
+        assertThat(list.test(request)).isFalse();
+        assertThat(request.errors()).isEmpty();
+        assertThat(request.isCancelled()).isFalse();
     }
 }

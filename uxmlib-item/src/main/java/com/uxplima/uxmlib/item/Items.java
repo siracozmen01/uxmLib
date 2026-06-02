@@ -10,11 +10,13 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
 
 import io.papermc.paper.registry.RegistryAccess;
 import io.papermc.paper.registry.RegistryKey;
 
 import com.uxplima.uxmlib.scheduler.Scheduler;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Registry lookups for the types that lost their static constants in Paper 1.21. {@link Enchantment} and
@@ -71,6 +73,28 @@ public final class Items {
         }
         editor.accept(meta.getPersistentDataContainer());
         item.setItemMeta(meta);
+    }
+
+    /**
+     * Whether {@code a} and {@code b} carry the same value under a single persistent-data {@code key} — and
+     * nothing else is compared. Unlike {@link ItemStack#isSimilar(ItemStack)}, material, name, lore and every
+     * other key are ignored; this answers "are these the same logical item" when identity lives in one PDC tag
+     * (a shop token, a custom-item id). Two items that both lack the key count as similar (both empty).
+     */
+    public static <P, C> boolean isSimilar(ItemStack a, ItemStack b, NamespacedKey key, PersistentDataType<P, C> type) {
+        Objects.requireNonNull(a, "a");
+        Objects.requireNonNull(b, "b");
+        Objects.requireNonNull(key, "key");
+        Objects.requireNonNull(type, "type");
+        return Objects.equals(pdcValue(a, key, type), pdcValue(b, key, type));
+    }
+
+    private static <P, C> @Nullable C pdcValue(ItemStack item, NamespacedKey key, PersistentDataType<P, C> type) {
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) {
+            return null;
+        }
+        return meta.getPersistentDataContainer().get(key, type);
     }
 
     /**

@@ -28,10 +28,37 @@ public final class DatabaseBuilder {
     private int maxPoolSize = 10;
     private long connectionTimeoutMs = 5_000L;
     private int busyTimeoutMs = DEFAULT_BUSY_TIMEOUT_MS;
+    private JournalMode journalMode = JournalMode.WAL;
     private String poolName = "uxmlib-pool";
     private boolean sqlite;
 
     DatabaseBuilder() {}
+
+    /**
+     * The SQLite {@code journal_mode} the file database opens with. {@link #WAL} (the default) is the durable,
+     * concurrent-reader choice for a real file; {@link #WAL2} is its rolling two-file successor on builds that
+     * ship it (the bundled driver may fall back to {@code WAL}); {@link #MEMORY} keeps the rollback journal in
+     * RAM (faster, but a crash mid-write can corrupt the file); {@link #OFF} disables the journal entirely (no
+     * crash safety, for throwaway or rebuildable data). Each maps to the literal accepted by
+     * {@code PRAGMA journal_mode}.
+     */
+    public enum JournalMode {
+        WAL("WAL"),
+        WAL2("WAL2"),
+        MEMORY("MEMORY"),
+        OFF("OFF");
+
+        private final String pragmaValue;
+
+        JournalMode(String pragmaValue) {
+            this.pragmaValue = pragmaValue;
+        }
+
+        /** The literal this mode is written as in {@code PRAGMA journal_mode = ...}. */
+        public String pragmaValue() {
+            return pragmaValue;
+        }
+    }
 
     /** Use a SQLite database stored at {@code file}, creating it on first use. */
     public DatabaseBuilder sqlite(Path file) {
@@ -97,6 +124,15 @@ public final class DatabaseBuilder {
         return this;
     }
 
+    /**
+     * The SQLite {@code journal_mode} for a file database. Ignored by network backends. Defaults to
+     * {@link JournalMode#WAL}.
+     */
+    public DatabaseBuilder journalMode(JournalMode mode) {
+        this.journalMode = Objects.requireNonNull(mode, "mode");
+        return this;
+    }
+
     /** The Hikari pool name (shown in thread names and metrics). */
     public DatabaseBuilder poolName(String name) {
         this.poolName = Objects.requireNonNull(name, "name");
@@ -122,8 +158,9 @@ public final class DatabaseBuilder {
         }
         if (sqlite) {
             config.setMaximumPoolSize(SQLITE_POOL_SIZE);
-            // WAL + NORMAL sync is the standard durable-but-fast setup for an embedded single-writer file.
-            config.addDataSourceProperty("journal_mode", "WAL");
+            // WAL + NORMAL sync is the standard durable-but-fast setup for an embedded single-writer file; the
+            // journal mode is configurable for the cases that want MEMORY/OFF speed over crash durability.
+            config.addDataSourceProperty("journal_mode", journalMode.pragmaValue());
             config.addDataSourceProperty("synchronous", "NORMAL");
             // Wait for the lock instead of failing instantly, smoothing SQLITE_BUSY under bursty writes.
             config.addDataSourceProperty("busy_timeout", Integer.toString(busyTimeoutMs));

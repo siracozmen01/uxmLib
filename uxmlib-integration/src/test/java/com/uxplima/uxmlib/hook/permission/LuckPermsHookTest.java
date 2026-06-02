@@ -4,11 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
 import java.util.Optional;
 
 import net.luckperms.api.cacheddata.CachedDataManager;
 import net.luckperms.api.cacheddata.CachedMetaData;
 import net.luckperms.api.model.user.User;
+import net.luckperms.api.node.Node;
+import net.luckperms.api.node.NodeType;
+import net.luckperms.api.node.types.InheritanceNode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -52,6 +56,29 @@ class LuckPermsHookTest {
 
         assertThat(LuckPermsHook.extract(user, CachedMetaData::getPrefix)).contains("[VIP] ");
         assertThat(LuckPermsHook.extract(user, CachedMetaData::getSuffix)).isEmpty();
+    }
+
+    @Test
+    void groupNamesAreReadFromTheInheritanceNodes() {
+        InheritanceNode vip = mock(InheritanceNode.class);
+        when(vip.getGroupName()).thenReturn("vip");
+        InheritanceNode staff = mock(InheritanceNode.class);
+        when(staff.getGroupName()).thenReturn("staff");
+
+        assertThat(LuckPermsHook.groupsOf(List.of(vip, staff))).containsExactly("vip", "staff");
+    }
+
+    @Test
+    void groupNamesFromNoInheritanceNodesIsEmpty() {
+        assertThat(LuckPermsHook.groupsOf(List.<InheritanceNode>of())).isEmpty();
+    }
+
+    @Test
+    void inheritanceNodeTypeIsTheOneQueried() {
+        // Guards the helper against drifting off the inheritance node type the groups list is built from.
+        NodeType<InheritanceNode> type = LuckPermsHook.inheritanceType();
+        Node node = mock(InheritanceNode.class);
+        assertThat(type.matches(node)).isTrue();
     }
 
     @Test

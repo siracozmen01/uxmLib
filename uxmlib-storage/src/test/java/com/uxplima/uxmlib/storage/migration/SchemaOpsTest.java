@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.uxplima.uxmlib.storage.sql.Database;
 import com.uxplima.uxmlib.storage.sql.Sql;
+import com.uxplima.uxmlib.storage.sql.SqlType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -72,6 +73,56 @@ class SchemaOpsTest {
                         "SELECT tokens FROM players WHERE id = ?", ps -> ps.setInt(1, 1), row -> row.getInt("tokens"))
                 .orElseThrow();
         assertThat(tokens).isEqualTo(50);
+    }
+
+    @Test
+    void copyColumnDataMovesValuesIntoTheTargetColumn() {
+        schema.ensureColumn("players", "tokens", "INTEGER");
+        sql.update("INSERT INTO players (id, name, coins) VALUES (?, ?, ?)", ps -> {
+            ps.setInt(1, 1);
+            ps.setString(2, "Steve");
+            ps.setInt(3, 42);
+        });
+
+        int updated = ops.copyColumnData("players", "coins", "tokens");
+
+        assertThat(updated).isEqualTo(1);
+        Integer tokens = sql.queryFirst(
+                        "SELECT tokens FROM players WHERE id = ?", ps -> ps.setInt(1, 1), row -> row.getInt("tokens"))
+                .orElseThrow();
+        assertThat(tokens).isEqualTo(42);
+    }
+
+    @Test
+    void wipeColumnDataNullsTheColumnOnEveryRow() {
+        sql.update("INSERT INTO players (id, name, coins) VALUES (?, ?, ?)", ps -> {
+            ps.setInt(1, 1);
+            ps.setString(2, "Steve");
+            ps.setInt(3, 99);
+        });
+
+        int updated = ops.wipeColumnData("players", "coins");
+
+        assertThat(updated).isEqualTo(1);
+        boolean nulled = sql.queryFirst(
+                        "SELECT coins FROM players WHERE id = ?",
+                        ps -> ps.setInt(1, 1),
+                        row -> row.getObject("coins") == null)
+                .orElseThrow();
+        assertThat(nulled).isTrue();
+    }
+
+    @Test
+    void alterColumnTypeIsUnsupportedOnSqlite() {
+        // SQLite has no ALTER COLUMN type change, so the dialect seam refuses it rather than emitting bad SQL.
+        assertThatThrownBy(() -> ops.alterColumnType("players", "coins", SqlType.bigint()))
+                .isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    @Test
+    void rejectsAnInjectingCopyTarget() {
+        assertThatThrownBy(() -> ops.copyColumnData("players", "coins", "tokens; DROP TABLE players"))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

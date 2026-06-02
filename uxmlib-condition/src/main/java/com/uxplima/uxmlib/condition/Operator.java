@@ -5,8 +5,11 @@ import java.util.Objects;
 
 /**
  * The comparison operators a {@link Comparison} understands. The symbols are deliberately the familiar ones
- * from config files. Ordering of {@link #values()} matters for parsing: the two-character operators are
- * declared before their one-character prefixes so a longest-match scan finds {@code >=} before {@code >}.
+ * from config files. Six order or equate two operands; three more — {@link #CONTAINS}, {@link #WILDCARD} and
+ * {@link #OR} — are text operators that match the left operand against the right as a substring, a glob, or a
+ * {@code |}-separated alternation. {@link #bySymbolLengthDescending()} fixes the order a longest-symbol-first
+ * parser tries them in so a two-character symbol is found before a one-character one that prefixes it (so
+ * {@code >=} wins over {@code >}, and the {@code *} of {@link #WILDCARD} is tried last).
  */
 public enum Operator {
 
@@ -26,10 +29,26 @@ public enum Operator {
     GREATER(">"),
 
     /** Strictly less-than. Numeric only; a non-numeric operand makes it false. */
-    LESS("<");
+    LESS("<"),
+
+    /** Substring containment: true when the left operand contains the right one. Always a text test. */
+    CONTAINS("?="),
+
+    /**
+     * Glob match: the right operand is a pattern where {@code *} matches any run of characters and {@code ?}
+     * one character; the left operand must match it in full. Always a text test.
+     */
+    WILDCARD("*"),
+
+    /**
+     * Alternation: the right operand is a {@code |}-separated list of branches and the left passes if it
+     * equals any one of them under the {@link #EQUAL} rules (numeric per branch when both parse as numbers,
+     * trimmed string equality otherwise).
+     */
+    OR("||");
 
     private static final List<Operator> BY_SYMBOL_LENGTH =
-            List.of(EQUAL, NOT_EQUAL, GREATER_OR_EQUAL, LESS_OR_EQUAL, GREATER, LESS);
+            List.of(EQUAL, NOT_EQUAL, GREATER_OR_EQUAL, LESS_OR_EQUAL, CONTAINS, OR, GREATER, LESS, WILDCARD);
 
     private final String symbol;
 
@@ -43,11 +62,15 @@ public enum Operator {
     }
 
     /**
-     * Whether this operator orders its operands numerically. Only {@link #EQUAL}/{@link #NOT_EQUAL} fall back
-     * to string comparison; the four ordering operators are numeric-only.
+     * Whether this operator orders its operands numerically. Only the four ordering operators ({@code >=},
+     * {@code >}, {@code <=}, {@code <}) are numeric-only; the equality operators fall back to string equality
+     * and the text operators ({@link #CONTAINS}, {@link #WILDCARD}, {@link #OR}) are always string tests.
      */
     public boolean isOrdering() {
-        return this != EQUAL && this != NOT_EQUAL;
+        return switch (this) {
+            case GREATER_OR_EQUAL, LESS_OR_EQUAL, GREATER, LESS -> true;
+            case EQUAL, NOT_EQUAL, CONTAINS, WILDCARD, OR -> false;
+        };
     }
 
     /**

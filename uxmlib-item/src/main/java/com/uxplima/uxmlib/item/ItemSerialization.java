@@ -1,10 +1,15 @@
 package com.uxplima.uxmlib.item;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Objects;
 import java.util.OptionalInt;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 import org.bukkit.Bukkit;
 import org.bukkit.inventory.ItemStack;
@@ -95,6 +100,63 @@ public final class ItemSerialization {
             throw new IllegalArgumentException("not valid Base64", invalid);
         }
         return fromBytes(bytes);
+    }
+
+    /**
+     * Serialize an item to gzip-compressed bytes: the same headered blob {@link #toBytes} writes, run through
+     * GZIP. Worth it for large items (shulker boxes, written books) or bulk storage where the NBT compresses
+     * well; for a single trivial item the gzip framing can cost more than it saves.
+     */
+    public static byte[] toCompressedBytes(ItemStack item) {
+        byte[] raw = toBytes(item);
+        ByteArrayOutputStream sink = new ByteArrayOutputStream();
+        try (GZIPOutputStream gzip = new GZIPOutputStream(sink)) {
+            gzip.write(raw);
+        } catch (IOException impossible) {
+            // A ByteArrayOutputStream never throws on write; rethrow unchecked to keep the API checked-free.
+            throw new IllegalStateException("gzip of in-memory bytes failed", impossible);
+        }
+        return sink.toByteArray();
+    }
+
+    /**
+     * Reconstruct an item from bytes produced by {@link #toCompressedBytes}.
+     *
+     * @throws IllegalArgumentException if the bytes are not valid gzip, or not a serialized item
+     */
+    public static ItemStack fromCompressedBytes(byte[] bytes) {
+        Objects.requireNonNull(bytes, "bytes");
+        return fromBytes(gunzip(bytes));
+    }
+
+    /** Serialize an item to a gzip-compressed Base64 string (header included). */
+    public static String toCompressedBase64(ItemStack item) {
+        return Base64.getEncoder().encodeToString(toCompressedBytes(item));
+    }
+
+    /**
+     * Reconstruct an item from a string produced by {@link #toCompressedBase64}.
+     *
+     * @throws IllegalArgumentException if the string is not valid Base64, not valid gzip, or not a serialized
+     *     item
+     */
+    public static ItemStack fromCompressedBase64(String base64) {
+        Objects.requireNonNull(base64, "base64");
+        byte[] bytes;
+        try {
+            bytes = Base64.getDecoder().decode(base64);
+        } catch (IllegalArgumentException invalid) {
+            throw new IllegalArgumentException("not valid Base64", invalid);
+        }
+        return fromCompressedBytes(bytes);
+    }
+
+    private static byte[] gunzip(byte[] bytes) {
+        try (GZIPInputStream gzip = new GZIPInputStream(new ByteArrayInputStream(bytes))) {
+            return gzip.readAllBytes();
+        } catch (IOException invalid) {
+            throw new IllegalArgumentException("not valid gzip-compressed data", invalid);
+        }
     }
 
     private static boolean headered(byte[] bytes) {

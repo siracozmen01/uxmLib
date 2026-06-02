@@ -75,6 +75,33 @@ class DatabaseBuilderTest {
         assertThatThrownBy(() -> Database.builder().busyTimeoutMs(-1)).isInstanceOf(IllegalArgumentException.class);
     }
 
+    @Test
+    void appliesAConfiguredJournalMode() throws SQLException {
+        // OFF is honoured even on an in-memory database, where WAL would fall back to "memory"; asserting on
+        // OFF proves the PRAGMA was actually applied rather than the engine's in-memory default.
+        try (Database db = Database.builder()
+                .sqliteInMemory()
+                .journalMode(DatabaseBuilder.JournalMode.OFF)
+                .build()) {
+            assertThat(readJournalMode(db)).isEqualToIgnoringCase("off");
+        }
+    }
+
+    @Test
+    @SuppressWarnings("NullAway") // intentionally passes null to assert the requireNonNull guard fires
+    void rejectsANullJournalMode() {
+        assertThatThrownBy(() -> Database.builder().journalMode(null)).isInstanceOf(NullPointerException.class);
+    }
+
+    private static String readJournalMode(Database db) throws SQLException {
+        try (Connection conn = db.connection();
+                Statement statement = conn.createStatement();
+                ResultSet rows = statement.executeQuery("PRAGMA journal_mode")) {
+            assertThat(rows.next()).isTrue();
+            return rows.getString(1);
+        }
+    }
+
     private static int readBusyTimeout(Database db) throws SQLException {
         try (Connection conn = db.connection();
                 Statement statement = conn.createStatement();

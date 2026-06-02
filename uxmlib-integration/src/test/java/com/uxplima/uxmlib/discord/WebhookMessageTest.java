@@ -18,6 +18,20 @@ class WebhookMessageTest {
     }
 
     @Test
+    void multilineContentJoinsLinesWithNewlines() {
+        WebhookMessage message =
+                WebhookMessage.builder().content("line1", "line2", "line3").build();
+        assertThat(message.body())
+                .isEqualTo("{\"content\":\"line1\\nline2\\nline3\",\"allowed_mentions\":{\"parse\":[]}}");
+    }
+
+    @Test
+    void multilineContentRejectsAnEmptyVararg() {
+        assertThatThrownBy(() -> WebhookMessage.builder().content(new String[0]))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void carriesUsernameAvatarAndThreadNameOverrides() {
         WebhookMessage message = WebhookMessage.builder()
                 .content("hi")

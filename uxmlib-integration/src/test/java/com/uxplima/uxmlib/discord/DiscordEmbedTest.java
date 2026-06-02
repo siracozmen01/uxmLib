@@ -2,6 +2,10 @@ package com.uxplima.uxmlib.discord;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
+
+import net.kyori.adventure.text.format.NamedTextColor;
+
 import org.junit.jupiter.api.Test;
 
 /** Pure tests of the embed JSON encoding — no network, no Bukkit. */
@@ -76,6 +80,62 @@ class DiscordEmbedTest {
         assertThat(body).contains("\"thumbnail\":{\"url\":\"https://t.png\"}");
         assertThat(body).contains("\"image\":{\"url\":\"https://i.png\"}");
         assertThat(body).contains("\"timestamp\":\"2020-01-01T00:00:00Z\"");
+    }
+
+    @Test
+    void closureSubBuildersMatchTheFlatAuthorFooterAndField() {
+        DiscordEmbed nested = DiscordEmbed.builder()
+                .title("Report")
+                .author(author -> author.name("Bot").url("https://x").iconUrl("https://icon.png"))
+                .footer(footer -> footer.text("v1.0"))
+                .field(field -> field.name("Status").value("OK").inline(true))
+                .build();
+        DiscordEmbed flat = DiscordEmbed.builder()
+                .title("Report")
+                .author("Bot", "https://x", "https://icon.png")
+                .footer("v1.0", null)
+                .field("Status", "OK", true)
+                .build();
+
+        assertThat(DiscordWebhook.embedBody(nested)).isEqualTo(DiscordWebhook.embedBody(flat));
+    }
+
+    @Test
+    void colorFromRgbComponentsPacksToTheDecimalInteger() {
+        // 0xFF8800 == 16746496 decimal — the same colour the int overload encodes.
+        DiscordEmbed embed =
+                DiscordEmbed.builder().title("T").color(0xFF, 0x88, 0x00).build();
+        assertThat(embed.colorValue()).contains(0xFF8800);
+    }
+
+    @Test
+    void colorFromRgbComponentsRejectsAnOutOfRangeChannel() {
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                        () -> DiscordEmbed.builder().color(256, 0, 0))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void colorFromAnRgbLikePacksTheSameWayAsTheComponents() {
+        DiscordEmbed fromRgbLike =
+                DiscordEmbed.builder().color(NamedTextColor.RED).build();
+        assertThat(fromRgbLike.colorValue()).contains(NamedTextColor.RED.value());
+    }
+
+    @Test
+    void multilineDescriptionFromVarargsJoinsWithNewlines() {
+        DiscordEmbed embed =
+                DiscordEmbed.builder().title("T").description("a", "b", "c").build();
+        assertThat(embed.description()).isEqualTo("a\nb\nc");
+    }
+
+    @Test
+    void multilineDescriptionFromListJoinsWithNewlines() {
+        DiscordEmbed embed = DiscordEmbed.builder()
+                .title("T")
+                .description(List.of("one", "two"))
+                .build();
+        assertThat(embed.description()).isEqualTo("one\ntwo");
     }
 
     @Test

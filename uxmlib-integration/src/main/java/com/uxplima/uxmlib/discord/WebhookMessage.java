@@ -74,6 +74,16 @@ public record WebhookMessage(
             return this;
         }
 
+        /** A multi-line content, each argument becoming its own line (joined with {@code "\n"}). */
+        public Builder content(String... lines) {
+            Objects.requireNonNull(lines, "lines");
+            if (lines.length == 0) {
+                throw new IllegalArgumentException("at least one content line is required");
+            }
+            this.content = String.join("\n", lines);
+            return this;
+        }
+
         public Builder embed(DiscordEmbed value) {
             this.embeds.add(Objects.requireNonNull(value, "embed"));
             return this;

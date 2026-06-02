@@ -20,6 +20,16 @@ class DiscordWebhookTest {
     }
 
     @Test
+    @SuppressWarnings("StringConcatToTextBlock") // a one-line JSON assertion reads clearer than a text block
+    void joinsMultipleContentLinesWithNewlines() {
+        DiscordWebhook hook = new DiscordWebhook("https://discord.com/api/webhooks/1/abc");
+        assertThatThrownBy(() -> hook.sendContent(new String[0])).isInstanceOf(IllegalArgumentException.class);
+        // The encoding is what we assert; the send itself is covered by sendContent(String).
+        assertThat(DiscordWebhook.contentBody(String.join("\n", "a", "b")))
+                .isEqualTo("{\"content\":\"a\\nb\",\"allowed_mentions\":{\"parse\":[]}}");
+    }
+
+    @Test
     void suppressesMentionsInBothBodiesByDefault() {
         assertThat(DiscordWebhook.contentBody("hi @everyone")).contains("\"allowed_mentions\":{\"parse\":[]}");
         assertThat(DiscordWebhook.embedBody(DiscordEmbed.of("t", "d"))).contains("\"allowed_mentions\":{\"parse\":[]}");

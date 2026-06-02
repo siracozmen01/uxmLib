@@ -1,5 +1,6 @@
 package com.uxplima.uxmlib.hook.permission;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -13,6 +14,8 @@ import net.luckperms.api.LuckPerms;
 import net.luckperms.api.LuckPermsProvider;
 import net.luckperms.api.cacheddata.CachedMetaData;
 import net.luckperms.api.model.user.User;
+import net.luckperms.api.node.NodeType;
+import net.luckperms.api.node.types.InheritanceNode;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -58,6 +61,36 @@ public final class LuckPermsHook {
     public Optional<String> metaValue(Player player, String key) {
         Objects.requireNonNull(key, "key");
         return meta(player).flatMap(data -> Optional.ofNullable(data.getMetaValue(key)));
+    }
+
+    /**
+     * The groups a player directly belongs to, by name, in the order LuckPerms holds them. Reads the cached
+     * online user's inheritance nodes (non-blocking); an unknown or uncached player yields an empty list.
+     */
+    public List<String> groups(Player player) {
+        Objects.requireNonNull(player, "player");
+        User user = luckPerms.getUserManager().getUser(player.getUniqueId());
+        return user == null ? List.of() : groupsOf(user.getNodes(NodeType.INHERITANCE));
+    }
+
+    /**
+     * Whether a group with this name is defined. Reads LuckPerms' loaded-group set (populated for every
+     * group), so it is non-blocking; a group that exists on disk but is not yet loaded is reported absent.
+     */
+    public boolean groupExists(String name) {
+        Objects.requireNonNull(name, "name");
+        return luckPerms.getGroupManager().getGroup(name) != null;
+    }
+
+    /** Pure mapping of inheritance nodes to their group names, kept separate so the projection is testable. */
+    static List<String> groupsOf(java.util.Collection<InheritanceNode> nodes) {
+        Objects.requireNonNull(nodes, "nodes");
+        return nodes.stream().map(InheritanceNode::getGroupName).toList();
+    }
+
+    /** The inheritance node type the group list is built from; exposed so the projection stays pinned to it. */
+    static NodeType<InheritanceNode> inheritanceType() {
+        return NodeType.INHERITANCE;
     }
 
     /**

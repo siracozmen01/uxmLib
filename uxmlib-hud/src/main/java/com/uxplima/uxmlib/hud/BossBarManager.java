@@ -17,6 +17,7 @@ import net.kyori.adventure.text.Component;
 
 import com.uxplima.uxmlib.scheduler.Scheduler;
 import com.uxplima.uxmlib.scheduler.TaskHandle;
+import com.uxplima.uxmlib.text.Text;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -63,7 +64,7 @@ public final class BossBarManager {
         Objects.requireNonNull(bar, "bar");
         Objects.requireNonNull(mode, "mode");
         long total = totalMillis(mode, duration);
-        track(player, new Entry(bar, mode, clock.getAsLong(), total, null, null));
+        track(player, new Entry(bar, mode, clock.getAsLong(), total, null, null, null));
     }
 
     /**
@@ -75,7 +76,29 @@ public final class BossBarManager {
         Objects.requireNonNull(name, "name");
         requirePositive(duration);
         BossBar bar = BossBar.bossBar(name, BossBar.MAX_PROGRESS, COUNTDOWN_COLOR, COUNTDOWN_OVERLAY);
-        track(player, new Entry(bar, BossBarMode.COUNTDOWN, clock.getAsLong(), duration.toMillis(), null, null));
+        long start = clock.getAsLong();
+        track(player, new Entry(bar, BossBarMode.COUNTDOWN, start, duration.toMillis(), null, null, null));
+        return bar;
+    }
+
+    /**
+     * One-call live countdown: the title is a MiniMessage template carrying a {@code <time>} (or
+     * {@code <auto_time_left>}) tag — for example {@code "<red>Ends in <time>"} — which re-renders every tick
+     * to show the remaining time formatted through uxmlib {@code Durations}. The bar drains from full to empty
+     * over {@code duration} and hides itself at zero. Returns the live {@link BossBar} so callers can restyle
+     * it.
+     *
+     * @see RemainingTime
+     */
+    public BossBar countdown(Player player, String titleTemplate, Duration duration) {
+        Objects.requireNonNull(player, "player");
+        Objects.requireNonNull(titleTemplate, "titleTemplate");
+        requirePositive(duration);
+        long start = clock.getAsLong();
+        long total = duration.toMillis();
+        Component initial = renderTitle(titleTemplate, start, total, start);
+        BossBar bar = BossBar.bossBar(initial, BossBar.MAX_PROGRESS, COUNTDOWN_COLOR, COUNTDOWN_OVERLAY);
+        track(player, new Entry(bar, BossBarMode.COUNTDOWN, start, total, null, null, titleTemplate));
         return bar;
     }
 
@@ -93,7 +116,7 @@ public final class BossBarManager {
         Component initialName = Objects.requireNonNull(name.apply(player), "name function returned null");
         float initial = clampProgress(Objects.requireNonNull(progress.apply(player), "progress returned null"));
         BossBar bar = BossBar.bossBar(initialName, initial, BossBar.Color.WHITE, BossBar.Overlay.PROGRESS);
-        track(player, new Entry(bar, BossBarMode.DYNAMIC, clock.getAsLong(), 0L, name, progress));
+        track(player, new Entry(bar, BossBarMode.DYNAMIC, clock.getAsLong(), 0L, name, progress, null));
         return bar;
     }
 
@@ -186,8 +209,19 @@ public final class BossBarManager {
             removeFrom(player.getUniqueId(), entry.bar());
             return true;
         }
+        String template = entry.titleTemplate();
+        if (template != null) {
+            entry.bar().name(renderTitle(template, entry.startMillis(), entry.totalMillis(), now));
+        }
         entry.bar().progress(mode.progressAt(elapsed, entry.totalMillis()));
         return false;
+    }
+
+    /** Render {@code template} with a {@code <time>} tag bound to the millis left at {@code now}. */
+    private static Component renderTitle(String template, long startMillis, long totalMillis, long now) {
+        long remaining = startMillis + totalMillis - now;
+        Duration left = Duration.ofMillis(Math.max(0L, remaining));
+        return Text.mini(template, RemainingTime.resolver(() -> left));
     }
 
     private void updateDynamic(Player player, Entry entry) {
@@ -252,5 +286,6 @@ public final class BossBarManager {
             long startMillis,
             long totalMillis,
             @Nullable Function<Player, Component> nameFn,
-            @Nullable Function<Player, Float> progressFn) {}
+            @Nullable Function<Player, Float> progressFn,
+            @Nullable String titleTemplate) {}
 }

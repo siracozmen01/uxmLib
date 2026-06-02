@@ -26,6 +26,13 @@ class EconomyBridgeTest {
     }
 
     @Test
+    void vaultUnlockedIsAbsentWithoutThatPlugin() {
+        // No VaultUnlocked plugin under MockBukkit, so its present-guarded view degrades to empty and
+        // EconomyBridge.find() falls through to the other backends rather than throwing.
+        assertThat(VaultUnlockedEconomy.find()).isEmpty();
+    }
+
+    @Test
     void orDummyNeverNullChecksAndDeclinesEverything() {
         EconomyBridge economy = EconomyBridge.orDummy();
         var player = MockBukkit.getMock().addPlayer();

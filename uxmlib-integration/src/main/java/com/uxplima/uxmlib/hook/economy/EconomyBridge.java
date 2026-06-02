@@ -6,9 +6,9 @@ import org.bukkit.OfflinePlayer;
 
 /**
  * A provider-agnostic economy view, so call sites depend on this and not on Vault directly. {@link #find}
- * picks the best available backend (today: Vault); {@link #orDummy} returns a no-op {@link DummyEconomy}
- * when none is present, so a caller never has to null-check. Reads/writes may block on the backing
- * economy plugin — route them off the main thread via the scheduler.
+ * picks the best available backend (classic Vault, then VaultUnlocked); {@link #orDummy} returns a no-op
+ * {@link DummyEconomy} when none is present, so a caller never has to null-check. Reads/writes may block on
+ * the backing economy plugin — route them off the main thread via the scheduler.
  */
 public interface EconomyBridge {
 
@@ -45,9 +45,20 @@ public interface EconomyBridge {
     /** The currency's plural name (e.g. {@code "Dollars"}); empty string on the dummy economy. */
     String currencyNamePlural();
 
-    /** The best available economy backend, or empty when none is installed. */
+    /**
+     * The best available economy backend, or empty when none is installed. Classic Vault is preferred when
+     * present; VaultUnlocked is tried next so a server running only that provider still resolves a backend
+     * (its operational binding awaits the {@code vault2} API on the compile classpath — see {@link
+     * VaultUnlockedEconomy}).
+     */
     static Optional<EconomyBridge> find() {
-        return VaultEconomy.find().map(VaultEconomyBridge::new);
+        Optional<EconomyBridge> vault = VaultEconomy.find().map(VaultEconomyBridge::new);
+        if (vault.isPresent()) {
+            return vault;
+        }
+        // VaultUnlocked is tried next. Its present-guarded view yields empty until the vault2 API is on the
+        // compile classpath, so today this still falls through to orDummy() rather than a half-wired backend.
+        return VaultUnlockedEconomy.find().flatMap(VaultUnlockedEconomy::toBridge);
     }
 
     /** The best available backend, or a no-op {@link DummyEconomy} so call sites never null-check. */

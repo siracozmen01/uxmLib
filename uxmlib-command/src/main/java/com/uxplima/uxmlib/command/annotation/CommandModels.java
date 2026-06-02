@@ -3,10 +3,12 @@ package com.uxplima.uxmlib.command.annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 import com.uxplima.uxmlib.command.annotation.annotations.Arg;
 import com.uxplima.uxmlib.command.annotation.annotations.Command;
+import com.uxplima.uxmlib.command.annotation.annotations.CommandPriority;
 import com.uxplima.uxmlib.command.annotation.annotations.Flag;
 import com.uxplima.uxmlib.command.annotation.annotations.Permission;
 import com.uxplima.uxmlib.command.annotation.annotations.Subcommand;
@@ -49,7 +51,13 @@ final class CommandModels {
         List<FlagModel> flags = flagParameters(method, resolvers);
         checkParamOrder(method, args, !flags.isEmpty());
         String path = method.getAnnotation(Subcommand.class).value().trim();
-        return new BranchModel(method, path, method.getAnnotation(Permission.class), args, flags);
+        return new BranchModel(method, path, method.getAnnotation(Permission.class), args, flags, priorityOf(method));
+    }
+
+    /** The explicit {@code @CommandPriority} of {@code method}, or empty when it declares none. */
+    private static java.util.OptionalInt priorityOf(Method method) {
+        CommandPriority priority = method.getAnnotation(CommandPriority.class);
+        return priority == null ? java.util.OptionalInt.empty() : java.util.OptionalInt.of(priority.value());
     }
 
     private static List<Method> orderedSubcommands(Class<?> type) {
@@ -61,11 +69,23 @@ final class CommandModels {
             }
         }
         // Longer literal paths first so "admin reload" is attached before a bare "" root executor; this keeps
-        // node attachment order deterministic regardless of reflection's method ordering.
-        methods.sort((a, b) -> Integer.compare(
-                b.getAnnotation(Subcommand.class).value().length(),
-                a.getAnnotation(Subcommand.class).value().length()));
+        // node attachment order deterministic regardless of reflection's method ordering. Where two branches
+        // share a path (overlapping overloads), the lower @CommandPriority attaches first so Brigadier, which
+        // tries sibling argument nodes in attachment order, runs the higher-priority overload on ambiguity.
+        methods.sort(Comparator.comparingInt((Method m) -> pathLength(m))
+                .reversed()
+                .thenComparingInt(CommandModels::priorityRank));
         return methods;
+    }
+
+    private static int pathLength(Method method) {
+        return method.getAnnotation(Subcommand.class).value().length();
+    }
+
+    /** The sort rank of a branch's priority: its value, or {@link Integer#MAX_VALUE} when it declares none. */
+    private static int priorityRank(Method method) {
+        CommandPriority priority = method.getAnnotation(CommandPriority.class);
+        return priority == null ? Integer.MAX_VALUE : priority.value();
     }
 
     private static void validateSignature(Method method, ParamResolvers resolvers) {
@@ -200,7 +220,7 @@ final class CommandModels {
 
     /** Whether a parameter type is one of the composing collection types, which consume a greedy trailing node. */
     private static boolean isCollection(Class<?> type) {
-        return type == java.util.List.class || type == java.util.Optional.class;
+        return type == java.util.List.class || type == java.util.Optional.class || type.isArray();
     }
 
     private static void checkFlagsLast(Method method) {

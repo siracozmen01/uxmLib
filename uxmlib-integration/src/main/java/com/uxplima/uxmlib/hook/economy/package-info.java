@@ -1,7 +1,8 @@
 /**
  * The economy integration: {@link com.uxplima.uxmlib.hook.economy.EconomyBridge} is a provider-agnostic
- * economy view whose {@code find} picks the best available backend (Vault, via
- * {@link com.uxplima.uxmlib.hook.economy.VaultEconomy}) and whose {@code orDummy} returns a no-op
+ * economy view whose {@code find} picks the best available backend (classic Vault, via
+ * {@link com.uxplima.uxmlib.hook.economy.VaultEconomy}, then VaultUnlocked, via
+ * {@link com.uxplima.uxmlib.hook.economy.VaultUnlockedEconomy}) and whose {@code orDummy} returns a no-op
  * null-object, so call sites never null-check. The bridge also surfaces the provider's
  * {@code format}/currency names. {@link com.uxplima.uxmlib.hook.economy.CachedEconomyBridge} decorates a
  * bridge with a short TTL balance cache, and {@link com.uxplima.uxmlib.hook.economy.RebindingEconomyBridge}

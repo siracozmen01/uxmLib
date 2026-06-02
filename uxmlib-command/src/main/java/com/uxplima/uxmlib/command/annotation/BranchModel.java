@@ -3,6 +3,7 @@ package com.uxplima.uxmlib.command.annotation;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Objects;
+import java.util.OptionalInt;
 
 import com.uxplima.uxmlib.command.annotation.annotations.Permission;
 import com.uxplima.uxmlib.command.annotation.annotations.Subcommand;
@@ -23,18 +24,21 @@ final class BranchModel {
     private final @Nullable Permission permission;
     private final List<ArgBinder.ParamArg> args;
     private final List<FlagModel> flags;
+    private final OptionalInt priority;
 
     BranchModel(
             Method method,
             String path,
             @Nullable Permission permission,
             List<ArgBinder.ParamArg> args,
-            List<FlagModel> flags) {
+            List<FlagModel> flags,
+            OptionalInt priority) {
         this.method = Objects.requireNonNull(method, "method");
         this.path = Objects.requireNonNull(path, "path");
         this.permission = permission;
         this.args = List.copyOf(Objects.requireNonNull(args, "args"));
         this.flags = List.copyOf(Objects.requireNonNull(flags, "flags"));
+        this.priority = Objects.requireNonNull(priority, "priority");
     }
 
     /** The handler method this branch invokes. */
@@ -50,6 +54,14 @@ final class BranchModel {
     /** The method-level permission gating this branch, or {@code null} when there is none. */
     @Nullable Permission permission() {
         return permission;
+    }
+
+    /**
+     * The explicit {@code @CommandPriority} value of this branch, or empty when it declares none. A lower
+     * value attaches first so an overlapping overload wins on ambiguity; an empty value ranks last.
+     */
+    OptionalInt priority() {
+        return priority;
     }
 
     /** The ordered positional arguments of this branch; empty when it takes none. */

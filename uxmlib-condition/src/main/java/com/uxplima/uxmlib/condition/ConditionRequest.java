@@ -9,6 +9,7 @@ import org.bukkit.entity.Player;
 
 import net.kyori.adventure.text.Component;
 
+import com.uxplima.uxmlib.condition.action.CommandSink;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -22,7 +23,11 @@ import org.jspecify.annotations.Nullable;
  *   <li>an <b>error sink</b> — the mutable list of failure {@link Component}s a {@link ConditionList} flushes
  *       to when conditions fail;
  *   <li>a <b>cancellable</b> flag a failing condition's {@link FailurePolicy#CANCEL} policy can raise, which
- *       a caller reads back to cancel the event/action the conditions were gating.
+ *       a caller reads back to cancel the event/action the conditions were gating;
+ *   <li>two optional {@link CommandSink}s — one dispatching as the console, one as the subject player — that a
+ *       {@link FailurePolicy#RUN_COMMANDS} entry runs its configured commands through. They default to {@link
+ *       CommandSink#noop()}; production wires sinks that route the dispatch through the library {@code
+ *       Scheduler} so a command never runs on the wrong thread.
  * </ul>
  *
  * <p>v1 keeps the subject bases minimal: a {@code Player} is enough. The generic actor is an {@code Object}
@@ -34,6 +39,8 @@ public final class ConditionRequest {
     private final @Nullable Object actor;
     private final OperandResolver resolver;
     private final List<Component> errors;
+    private final CommandSink consoleSink;
+    private final CommandSink playerSink;
     private boolean cancelled;
 
     private ConditionRequest(Builder builder) {
@@ -41,6 +48,8 @@ public final class ConditionRequest {
         this.actor = builder.actor;
         this.resolver = builder.resolver;
         this.errors = builder.errors;
+        this.consoleSink = builder.consoleSink;
+        this.playerSink = builder.playerSink;
     }
 
     /** Start a request builder with the resolver seam every placeholder condition needs. */
@@ -67,6 +76,16 @@ public final class ConditionRequest {
     /** The injected resolver for operand templates. */
     public OperandResolver resolver() {
         return resolver;
+    }
+
+    /** The sink a {@link FailurePolicy#RUN_COMMANDS} entry's {@code [console]} commands dispatch through. */
+    public CommandSink consoleSink() {
+        return consoleSink;
+    }
+
+    /** The sink a {@link FailurePolicy#RUN_COMMANDS} entry's {@code [player]} commands dispatch through. */
+    public CommandSink playerSink() {
+        return playerSink;
     }
 
     /** The live, mutable error sink. A condition adds its failure message here. */
@@ -97,6 +116,8 @@ public final class ConditionRequest {
         private final List<Component> errors = new ArrayList<>();
         private @Nullable Player player;
         private @Nullable Object actor;
+        private CommandSink consoleSink = CommandSink.noop();
+        private CommandSink playerSink = CommandSink.noop();
 
         private Builder(OperandResolver resolver) {
             this.resolver = Objects.requireNonNull(resolver, "resolver");
@@ -111,6 +132,18 @@ public final class ConditionRequest {
         /** Set the generic actor. */
         public Builder actor(Object actor) {
             this.actor = Objects.requireNonNull(actor, "actor");
+            return this;
+        }
+
+        /** Set the console command sink a {@link FailurePolicy#RUN_COMMANDS} entry dispatches through. */
+        public Builder consoleSink(CommandSink consoleSink) {
+            this.consoleSink = Objects.requireNonNull(consoleSink, "consoleSink");
+            return this;
+        }
+
+        /** Set the player command sink a {@link FailurePolicy#RUN_COMMANDS} entry dispatches through. */
+        public Builder playerSink(CommandSink playerSink) {
+            this.playerSink = Objects.requireNonNull(playerSink, "playerSink");
             return this;
         }
 

@@ -109,6 +109,34 @@ class ItemSerializationTest {
     }
 
     @Test
+    void roundTripsThroughGzippedBytes() {
+        ItemStack original = ItemBuilder.of(Material.DIAMOND).amount(4).build();
+
+        byte[] compressed = ItemSerialization.toCompressedBytes(original);
+        ItemStack restored = ItemSerialization.fromCompressedBytes(compressed);
+
+        assertThat(restored.getType()).isEqualTo(Material.DIAMOND);
+        assertThat(restored.getAmount()).isEqualTo(4);
+    }
+
+    @Test
+    void roundTripsThroughGzippedBase64() {
+        ItemStack original = ItemBuilder.of(Material.PAPER).amount(9).build();
+
+        String encoded = ItemSerialization.toCompressedBase64(original);
+        ItemStack restored = ItemSerialization.fromCompressedBase64(encoded);
+
+        assertThat(restored.getType()).isEqualTo(Material.PAPER);
+        assertThat(restored.getAmount()).isEqualTo(9);
+    }
+
+    @Test
+    void rejectsCompressedBytesThatAreNotGzip() {
+        assertThatThrownBy(() -> ItemSerialization.fromCompressedBytes(new byte[] {1, 2, 3, 4}))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void rejectsAHeaderWithAnUnknownFormatVersion() {
         byte[] good = ItemSerialization.toBytes(ItemBuilder.of(Material.STONE).build());
         byte[] tampered = good.clone();

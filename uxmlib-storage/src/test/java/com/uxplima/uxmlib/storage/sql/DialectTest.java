@@ -64,4 +64,22 @@ class DialectTest {
         assertThatThrownBy(() -> Dialect.GENERIC.upsert("t", "id", COLUMNS))
                 .isInstanceOf(UnsupportedOperationException.class);
     }
+
+    @Test
+    void alterColumnTypeUsesEachBackendsSpelling() {
+        assertThat(Dialect.POSTGRES.alterColumnType("players", "coins", "BIGINT"))
+                .isEqualTo("ALTER TABLE players ALTER COLUMN coins TYPE BIGINT");
+        assertThat(Dialect.H2.alterColumnType("players", "coins", "BIGINT"))
+                .isEqualTo("ALTER TABLE players ALTER COLUMN coins BIGINT");
+        assertThat(Dialect.MYSQL.alterColumnType("players", "coins", "BIGINT"))
+                .isEqualTo("ALTER TABLE players MODIFY COLUMN coins BIGINT");
+    }
+
+    @Test
+    void alterColumnTypeIsUnsupportedWhereThereIsNoPortableForm() {
+        assertThatThrownBy(() -> Dialect.SQLITE.alterColumnType("t", "c", "BIGINT"))
+                .isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(() -> Dialect.GENERIC.alterColumnType("t", "c", "BIGINT"))
+                .isInstanceOf(UnsupportedOperationException.class);
+    }
 }

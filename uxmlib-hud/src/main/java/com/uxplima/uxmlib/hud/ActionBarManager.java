@@ -15,6 +15,7 @@ import net.kyori.adventure.text.Component;
 
 import com.uxplima.uxmlib.scheduler.Scheduler;
 import com.uxplima.uxmlib.scheduler.TaskHandle;
+import com.uxplima.uxmlib.text.Text;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -56,8 +57,29 @@ public final class ActionBarManager {
         if (duration.isNegative() || duration.isZero()) {
             throw new IllegalArgumentException("duration must be positive");
         }
-        entries.put(player.getUniqueId(), new Entry(message, clock.getAsLong() + duration.toMillis()));
+        entries.put(player.getUniqueId(), new Entry(message, null, clock.getAsLong() + duration.toMillis()));
         player.sendActionBar(message);
+        startIfIdle();
+    }
+
+    /**
+     * A sticky countdown line: {@code titleTemplate} is a MiniMessage template carrying a {@code <time>} (or
+     * {@code <auto_time_left>}) tag — for example {@code "<gray>Closing in <time>"} — re-rendered on every
+     * re-send to show the remaining time formatted through uxmlib {@code Durations}. The line lapses when
+     * {@code duration} runs out.
+     *
+     * @see RemainingTime
+     */
+    public void countdown(Player player, String titleTemplate, Duration duration) {
+        Objects.requireNonNull(player, "player");
+        Objects.requireNonNull(titleTemplate, "titleTemplate");
+        Objects.requireNonNull(duration, "duration");
+        if (duration.isNegative() || duration.isZero()) {
+            throw new IllegalArgumentException("duration must be positive");
+        }
+        long until = clock.getAsLong() + duration.toMillis();
+        entries.put(player.getUniqueId(), new Entry(null, titleTemplate, until));
+        player.sendActionBar(render(titleTemplate, until, clock.getAsLong()));
         startIfIdle();
     }
 
@@ -103,18 +125,30 @@ public final class ActionBarManager {
                 it.remove();
                 continue;
             }
-            resend(e.getKey(), e.getValue().message());
+            resend(e.getKey(), e.getValue(), now);
         }
         stopIfEmpty(handle);
     }
 
-    private void resend(UUID id, Component message) {
+    private void resend(UUID id, Entry entry, long now) {
         Player player = server.getPlayer(id);
         if (player != null && player.isOnline()) {
-            player.sendActionBar(message);
+            player.sendActionBar(messageOf(entry, now));
         } else {
             entries.remove(id);
         }
+    }
+
+    private static Component messageOf(Entry entry, long now) {
+        String template = entry.template();
+        Component fixed = entry.message();
+        return template != null ? render(template, entry.untilMillis(), now) : Objects.requireNonNull(fixed);
+    }
+
+    /** Render {@code template} with a {@code <time>} tag bound to the millis left until {@code untilMillis}. */
+    private static Component render(String template, long untilMillis, long now) {
+        Duration left = Duration.ofMillis(Math.max(0L, untilMillis - now));
+        return Text.mini(template, RemainingTime.resolver(() -> left));
     }
 
     private synchronized void stopIfEmpty(TaskHandle handle) {
@@ -124,5 +158,5 @@ public final class ActionBarManager {
         }
     }
 
-    private record Entry(Component message, long untilMillis) {}
+    private record Entry(@Nullable Component message, @Nullable String template, long untilMillis) {}
 }

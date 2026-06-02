@@ -24,6 +24,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.inventory.meta.components.CustomModelDataComponent;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.potion.PotionEffect;
 
@@ -168,10 +169,70 @@ public final class ItemBuilder {
         return editMeta(meta -> meta.setCustomModelData(data));
     }
 
+    /**
+     * Set the full 1.21 custom-model-data component (floats, flags, strings and colours), replacing any
+     * existing one. Use this over {@link #customModelData(int)} for the richer resource-pack selectors a
+     * 1.21.4+ pack can key off.
+     */
+    public ItemBuilder customModelData(CustomModelDataComponent component) {
+        Objects.requireNonNull(component, "component");
+        return editMeta(meta -> meta.setCustomModelDataComponent(component));
+    }
+
+    /**
+     * Set only the float list on the custom-model-data component, leaving its other fields as they are. This
+     * is the common case: a resource pack selecting a model variant by a numeric range.
+     */
+    public ItemBuilder customModelDataFloats(List<Float> floats) {
+        Objects.requireNonNull(floats, "floats");
+        List<Float> copy = List.copyOf(floats);
+        return editMeta(meta -> {
+            CustomModelDataComponent component = meta.getCustomModelDataComponent();
+            component.setFloats(copy);
+            meta.setCustomModelDataComponent(component);
+        });
+    }
+
     /** Override the item model with a resource-pack model key (the native 1.21 {@code item_model}). */
     public ItemBuilder itemModel(NamespacedKey model) {
         Objects.requireNonNull(model, "model");
         return editMeta(meta -> meta.setItemModel(model));
+    }
+
+    /** Override the tooltip background/frame with a resource-pack {@code tooltip_style} key. */
+    public ItemBuilder tooltipStyle(NamespacedKey style) {
+        Objects.requireNonNull(style, "style");
+        return editMeta(meta -> meta.setTooltipStyle(style));
+    }
+
+    /** Hide the item's tooltip entirely on hover, leaving only the icon. */
+    public ItemBuilder hideTooltip(boolean hide) {
+        return editMeta(meta -> meta.setHideTooltip(hide));
+    }
+
+    /**
+     * Override how enchantable the item is (its enchanting-table weight); higher means richer enchantments
+     * for the same level cost. Must be positive — Minecraft treats the value as an enchantability rating.
+     */
+    public ItemBuilder enchantable(int value) {
+        if (value < 1) {
+            throw new IllegalArgumentException("enchantable must be >= 1");
+        }
+        return editMeta(meta -> meta.setEnchantable(value));
+    }
+
+    /**
+     * Re-type the in-progress item to {@code material}, carrying over the existing meta where the new type
+     * still supports it. {@code material} must not be {@link Material#AIR}, matching {@link #of(Material)}.
+     */
+    @SuppressWarnings("deprecation") // setType re-types the in-progress stack in place; that is the intent here
+    public ItemBuilder material(Material material) {
+        Objects.requireNonNull(material, "material");
+        if (material.isAir()) {
+            throw new IllegalArgumentException("material must not be air");
+        }
+        stack.setType(material);
+        return this;
     }
 
     /** Cap how many of this item stack together (1..99), overriding the material default. */

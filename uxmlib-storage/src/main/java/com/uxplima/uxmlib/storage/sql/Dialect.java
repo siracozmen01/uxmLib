@@ -77,4 +77,33 @@ public enum Dialect {
         String set = updates.stream().map(c -> c + " = VALUES(" + c + ")").collect(Collectors.joining(", "));
         return " ON DUPLICATE KEY UPDATE " + set;
     }
+
+    /**
+     * Build an {@code ALTER TABLE} that changes the declared type of an existing column. The clause is the one
+     * piece of column-maintenance DDL that genuinely diverges by backend, so it lives behind this seam rather
+     * than in a caller: Postgres spells it {@code ALTER COLUMN col TYPE newType}, H2 {@code ALTER COLUMN col
+     * newType}, and MySQL/MariaDB {@code MODIFY COLUMN col newType}.
+     *
+     * <p>SQLite is intentionally unsupported. It has no {@code ALTER COLUMN} and its columns carry only loose
+     * type <em>affinity</em>, so a type change is both impossible in one statement and largely meaningless;
+     * callers that must retype a SQLite column rebuild the table instead. {@link #GENERIC} is rejected for the
+     * same reason it has no portable upsert — the syntax is unknown.
+     *
+     * @throws UnsupportedOperationException if this dialect cannot retype a column in place (SQLite, generic)
+     */
+    public String alterColumnType(String table, String column, String newType) {
+        Objects.requireNonNull(table, "table");
+        Objects.requireNonNull(column, "column");
+        Objects.requireNonNull(newType, "newType");
+        String prefix = "ALTER TABLE " + table + " ";
+        return switch (this) {
+            case POSTGRES -> prefix + "ALTER COLUMN " + column + " TYPE " + newType;
+            case H2 -> prefix + "ALTER COLUMN " + column + " " + newType;
+            case MYSQL -> prefix + "MODIFY COLUMN " + column + " " + newType;
+            case SQLITE -> throw new UnsupportedOperationException(
+                    "SQLite has no ALTER COLUMN type change; rebuild the table to retype a column");
+            case GENERIC -> throw new UnsupportedOperationException(
+                    "no portable ALTER COLUMN type change for this JDBC backend");
+        };
+    }
 }

@@ -16,13 +16,15 @@ import com.uxplima.uxmlib.command.annotation.annotations.Arg;
 import org.jspecify.annotations.Nullable;
 
 /**
- * The composing resolvers: a {@code List<T>} or {@code Optional<T>} parameter is resolved by deriving a
- * resolver from its element type's own resolver, registered as a {@link ParamResolver.Factory decline-chain
- * factory} so it composes over whatever element types the registry knows. A {@code List<T>} reads one greedy
- * trailing token blob and maps every whitespace-separated token through the element resolver; an
- * {@code Optional<T>} reads one greedy token and is present only when a token was actually given. Both ride
- * {@link TokenResolution} for the per-token parse, so a {@code List<World>} resolves each world exactly like
- * an {@code @Arg World} would. Only a trailing parameter can be one of these, since each consumes a greedy node.
+ * The composing resolvers: a {@code List<T>}, {@code Optional<T>}, or {@code T[]} parameter is resolved by
+ * deriving a resolver from its element type's own resolver, registered as a {@link ParamResolver.Factory
+ * decline-chain factory} so it composes over whatever element types the registry knows. A {@code List<T>} or
+ * {@code T[]} reads one greedy trailing token blob and maps every whitespace-separated token through the
+ * element resolver (a {@code T[]} collecting them into a typed array, primitives included — the natural shape
+ * for trailing "orphan" free args); an {@code Optional<T>} reads one greedy token and is present only when a
+ * token was actually given. All ride {@link TokenResolution} for the per-token parse, so a {@code List<World>}
+ * resolves each world exactly like an {@code @Arg World} would. Only a trailing parameter can be one of these,
+ * since each consumes a greedy node.
  */
 final class CollectionResolvers {
 
@@ -31,6 +33,7 @@ final class CollectionResolvers {
     static void installInto(ParamResolvers r) {
         r.factory(CollectionResolvers::listFactory);
         r.factory(CollectionResolvers::optionalFactory);
+        r.factory(CollectionResolvers::arrayFactory);
     }
 
     /** Split {@code raw} into tokens and resolve each through {@code element}; a blank blob yields no elements. */
@@ -90,6 +93,26 @@ final class CollectionResolvers {
         }
         ParamResolver<?> element = elementResolver(genericType, registry);
         return element == null ? null : new OptionalResolver(element);
+    }
+
+    private static @Nullable ParamResolver<?> arrayFactory(
+            Class<?> rawType, Type genericType, ParamResolvers registry) {
+        if (!rawType.isArray()) {
+            return null;
+        }
+        ParamResolver<?> element = arrayElementResolver(rawType.getComponentType(), registry);
+        return element == null ? null : new ArrayResolver(rawType.getComponentType(), element);
+    }
+
+    /** The resolver for an array's component type, rejecting a native element exactly as a {@code List<T>} does. */
+    private static @Nullable ParamResolver<?> arrayElementResolver(Class<?> componentType, ParamResolvers registry) {
+        ParamResolver<?> element = registry.resolverFor(componentType, componentType);
+        if (element != null && element.nativeArgument()) {
+            throw new CommandParseException("an array of native type " + componentType.getName()
+                    + " is not supported; a native argument (player/world/location/sound/...) cannot be an"
+                    + " array element. Take a single one as a positional @Arg instead.");
+        }
+        return element;
     }
 
     /** The resolver for the single type argument of a {@code List<T>}/{@code Optional<T>}, or null when absent. */
@@ -156,6 +179,43 @@ final class CollectionResolvers {
         public Optional<Object> resolve(CommandContext<CommandSourceStack> context, String name) {
             String raw = StringArgumentType.getString(context, name);
             return resolveOptional(element, context.getSource(), raw);
+        }
+
+        @Override
+        public @Nullable Collection<String> suggestions() {
+            return element.suggestions();
+        }
+    }
+
+    /**
+     * A resolver that greedily consumes the rest of the input and maps every token through the element into a
+     * typed array of the parameter's component type. A reflective {@link java.lang.reflect.Array} is built so a
+     * primitive component ({@code int[]}, {@code double[]}) gets its values unboxed in, matching the handler's
+     * exact parameter type.
+     */
+    private static final class ArrayResolver implements ParamResolver<Object> {
+        private final Class<?> componentType;
+        private final ParamResolver<?> element;
+
+        ArrayResolver(Class<?> componentType, ParamResolver<?> element) {
+            this.componentType = componentType;
+            this.element = element;
+        }
+
+        @Override
+        public ArgumentType<?> argumentType(Arg arg) {
+            return StringArgumentType.greedyString();
+        }
+
+        @Override
+        public Object resolve(CommandContext<CommandSourceStack> context, String name) {
+            String raw = StringArgumentType.getString(context, name);
+            List<Object> values = resolveTokens(element, context.getSource(), raw);
+            Object array = java.lang.reflect.Array.newInstance(componentType, values.size());
+            for (int i = 0; i < values.size(); i++) {
+                java.lang.reflect.Array.set(array, i, values.get(i));
+            }
+            return array;
         }
 
         @Override

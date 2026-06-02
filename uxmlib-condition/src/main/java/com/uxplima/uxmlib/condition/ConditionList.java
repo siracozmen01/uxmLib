@@ -7,6 +7,8 @@ import java.util.Optional;
 
 import net.kyori.adventure.text.Component;
 
+import com.uxplima.uxmlib.condition.action.ActionContext;
+import com.uxplima.uxmlib.condition.action.ActionList;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -71,12 +73,31 @@ public final class ConditionList {
         if (policy.cancels()) {
             request.cancel();
         }
+        if (policy.dispatchesCommands()) {
+            entry.commandList().ifPresent(commands -> commands.run(contextFor(request)));
+        }
     }
 
-    /** A condition paired with its failure policy and optional failure message. */
-    public record Entry(Condition condition, FailurePolicy policy, @Nullable Component message) {
+    // Build the action-side bundle a RUN_COMMANDS entry runs against from the condition-side request: the same
+    // resolver (so command placeholders resolve identically to operand templates), the subject player, and the
+    // request's command sinks — production wires those to route the dispatch through the library Scheduler.
+    private static ActionContext contextFor(ConditionRequest request) {
+        ActionContext.Builder builder = ActionContext.builder(request.resolver())
+                .consoleSink(request.consoleSink())
+                .playerSink(request.playerSink());
+        request.player().ifPresent(builder::player);
+        return builder.build();
+    }
 
-        /** Canonical constructor null-checks the condition and policy; the message is optional. */
+    /**
+     * A condition paired with its failure policy, an optional failure message, and the optional command list a
+     * {@link FailurePolicy#RUN_COMMANDS} entry dispatches on failure. The commands are parsed once when the
+     * entry is built (see {@link Builder#runCommands}); a non-{@code RUN_COMMANDS} entry leaves them absent.
+     */
+    public record Entry(
+            Condition condition, FailurePolicy policy, @Nullable Component message, @Nullable ActionList commands) {
+
+        /** Canonical constructor null-checks the condition and policy; the message and commands are optional. */
         public Entry {
             Objects.requireNonNull(condition, "condition");
             Objects.requireNonNull(policy, "policy");
@@ -85,6 +106,11 @@ public final class ConditionList {
         /** The failure message, if this entry has one. */
         public Optional<Component> failureMessage() {
             return Optional.ofNullable(message);
+        }
+
+        /** The command list this entry dispatches on failure, if it has one. */
+        public Optional<ActionList> commandList() {
+            return Optional.ofNullable(commands);
         }
     }
 
@@ -97,7 +123,7 @@ public final class ConditionList {
 
         /** Add a condition with an explicit policy and failure message. */
         public Builder add(Condition condition, FailurePolicy policy, @Nullable Component failureMessage) {
-            entries.add(new Entry(condition, policy, failureMessage));
+            entries.add(new Entry(condition, policy, failureMessage, null));
             return this;
         }
 
@@ -110,6 +136,22 @@ public final class ConditionList {
         /** Add a silent required condition: no message recorded on failure. */
         public Builder requireSilent(Condition condition) {
             return add(condition, FailurePolicy.SILENCE, null);
+        }
+
+        /**
+         * Add a condition under {@link FailurePolicy#RUN_COMMANDS}: on failure the given {@code [console]}/
+         * {@code [player]} action strings are parsed once now and dispatched through the request's command
+         * sinks. The list must be non-empty, since a {@code RUN_COMMANDS} entry with nothing to run is almost
+         * always a config mistake.
+         */
+        public Builder runCommands(Condition condition, List<String> commandLines) {
+            Objects.requireNonNull(condition, "condition");
+            Objects.requireNonNull(commandLines, "commandLines");
+            if (commandLines.isEmpty()) {
+                throw new IllegalArgumentException("a RUN_COMMANDS entry needs at least one command");
+            }
+            entries.add(new Entry(condition, FailurePolicy.RUN_COMMANDS, null, ActionList.parse(commandLines)));
+            return this;
         }
 
         /** Build the immutable list. */

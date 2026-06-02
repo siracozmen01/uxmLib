@@ -62,6 +62,18 @@ public final class DiscordWebhook {
         return post(contentBody(content));
     }
 
+    /**
+     * Post a multi-line content message, each argument becoming its own line (joined with {@code "\n"}).
+     * Rejects an empty argument list before any network call. Never blocks; the future yields the HTTP status.
+     */
+    public CompletableFuture<Integer> sendContent(String... lines) {
+        Objects.requireNonNull(lines, "lines");
+        if (lines.length == 0) {
+            throw new IllegalArgumentException("at least one content line is required");
+        }
+        return sendContent(String.join("\n", lines));
+    }
+
     /** Post an embed. Never blocks; the future yields the Discord HTTP status code (a 204 means delivered). */
     public CompletableFuture<Integer> sendEmbed(DiscordEmbed embed) {
         Objects.requireNonNull(embed, "embed");

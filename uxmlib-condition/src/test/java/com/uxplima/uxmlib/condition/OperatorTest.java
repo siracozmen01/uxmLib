@@ -41,4 +41,18 @@ class OperatorTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("unknown operator");
     }
+
+    @Test
+    void newStringOperatorsRoundTripBySymbol() {
+        assertThat(Operator.fromSymbol("?=")).isEqualTo(Operator.CONTAINS);
+        assertThat(Operator.fromSymbol("*")).isEqualTo(Operator.WILDCARD);
+        assertThat(Operator.fromSymbol("||")).isEqualTo(Operator.OR);
+    }
+
+    @Test
+    void newStringOperatorsAreNotOrdering() {
+        assertThat(Operator.CONTAINS.isOrdering()).isFalse();
+        assertThat(Operator.WILDCARD.isOrdering()).isFalse();
+        assertThat(Operator.OR.isOrdering()).isFalse();
+    }
 }

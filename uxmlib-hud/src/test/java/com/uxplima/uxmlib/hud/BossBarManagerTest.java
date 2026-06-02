@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,6 +32,10 @@ class BossBarManagerTest {
 
     private static Component c(String s) {
         return Component.text(s);
+    }
+
+    private static String plain(Component component) {
+        return PlainTextComponentSerializer.plainText().serialize(component);
     }
 
     @BeforeEach
@@ -129,6 +134,29 @@ class BossBarManagerTest {
         scheduler.fire();
         assertThat(bar.name()).isEqualTo(c("frame"));
         assertThat(bar.progress()).isEqualTo(0.4f);
+    }
+
+    @Test
+    void countdownWithTitleRendersTheRemainingTimeAndUpdatesAsItDrains() {
+        PlayerMock player = server.addPlayer();
+        BossBar bar = manager.countdown(player, "Ends in <time>", Duration.ofSeconds(10));
+        assertThat(plain(bar.name())).isEqualTo("Ends in 10s");
+
+        now.set(4000L);
+        scheduler.fire();
+        assertThat(plain(bar.name())).isEqualTo("Ends in 6s");
+        assertThat(bar.progress()).isCloseTo(0.6f, within(0.001f));
+    }
+
+    @Test
+    void countdownWithTitleStillAutoHidesAtZero() {
+        PlayerMock player = server.addPlayer();
+        BossBar bar = manager.countdown(player, "<time>", Duration.ofSeconds(3));
+
+        now.set(3001L);
+        scheduler.fire();
+        assertThat(player.getBossBars()).doesNotContain(bar);
+        assertThat(manager.tracked()).isZero();
     }
 
     @Test

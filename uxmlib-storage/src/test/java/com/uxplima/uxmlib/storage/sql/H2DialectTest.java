@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.List;
 import java.util.Optional;
 
+import com.uxplima.uxmlib.storage.migration.SchemaOps;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -69,5 +70,23 @@ class H2DialectTest {
         long first = sql.insertReturningKey("INSERT INTO accounts (name) VALUES (?)", ps -> ps.setString(1, "Steve"));
         long second = sql.insertReturningKey("INSERT INTO accounts (name) VALUES (?)", ps -> ps.setString(1, "Alex"));
         assertThat(second).isGreaterThan(first);
+    }
+
+    @Test
+    void alterColumnTypeRetypesAColumnInPlace() {
+        // Prove the H2 ALTER COLUMN spelling actually runs and widens the column, preserving the row's data.
+        sql.update("INSERT INTO players (uuid, name, coins) VALUES (?, ?, ?)", ps -> {
+            ps.setString(1, "a");
+            ps.setString(2, "Steve");
+            ps.setInt(3, 7);
+        });
+
+        SchemaOps ops = new SchemaOps(database);
+        ops.alterColumnType("players", "coins", SqlType.bigint());
+
+        long coins = sql.queryFirst(
+                        "SELECT coins FROM players WHERE uuid = ?", ps -> ps.setString(1, "a"), row -> row.getLong(1))
+                .orElseThrow();
+        assertThat(coins).isEqualTo(7L);
     }
 }

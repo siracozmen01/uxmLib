@@ -6,6 +6,7 @@ import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;
 
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,6 +25,10 @@ class ActionBarManagerTest {
 
     private static Component c(String s) {
         return Component.text(s);
+    }
+
+    private static String plain(Component component) {
+        return PlainTextComponentSerializer.plainText().serialize(component);
     }
 
     @BeforeEach
@@ -77,6 +82,29 @@ class ActionBarManagerTest {
         manager.show(player, c("hello"), Duration.ofSeconds(2));
 
         now.set(2001L); // past the deadline
+        scheduler.fire();
+        assertThat(manager.tracked()).isZero();
+        assertThat(scheduler.cancelled()).isTrue();
+    }
+
+    @Test
+    void countdownRendersTheRemainingTimeAndUpdatesOnTick() {
+        PlayerMock player = server.addPlayer();
+        manager.countdown(player, "Closing in <time>", Duration.ofSeconds(10));
+        assertThat(plain(player.nextActionBar())).isEqualTo("Closing in 10s");
+
+        now.set(4000L);
+        scheduler.fire();
+        assertThat(plain(player.nextActionBar())).isEqualTo("Closing in 6s");
+        assertThat(manager.tracked()).isEqualTo(1);
+    }
+
+    @Test
+    void countdownExpiresAtItsDeadline() {
+        PlayerMock player = server.addPlayer();
+        manager.countdown(player, "<time>", Duration.ofSeconds(2));
+
+        now.set(2001L);
         scheduler.fire();
         assertThat(manager.tracked()).isZero();
         assertThat(scheduler.cancelled()).isTrue();

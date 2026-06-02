@@ -56,12 +56,28 @@ public final class Comparison {
     public boolean test(String left, String right) {
         Objects.requireNonNull(left, "left");
         Objects.requireNonNull(right, "right");
+        Boolean textResult = testTextOperator(left, right);
+        if (textResult != null) {
+            return textResult;
+        }
         Double leftNumber = asNumber(left);
         Double rightNumber = asNumber(right);
         if (leftNumber != null && rightNumber != null) {
             return compareNumbers(leftNumber, rightNumber);
         }
         return compareStrings(left, right);
+    }
+
+    // The three text operators never coerce their operands to numbers: a value that happens to look like a
+    // number ("1024" containing "10", a group name in a numeric-only realm) is still matched as text. Returns
+    // null for the six numeric-or-string operators so the caller falls through to the numeric path.
+    private @Nullable Boolean testTextOperator(String left, String right) {
+        return switch (operator) {
+            case CONTAINS -> left.contains(right);
+            case WILDCARD -> globMatches(left.strip(), right.strip());
+            case OR -> anyBranchEquals(left, right);
+            default -> null;
+        };
     }
 
     private boolean compareNumbers(double left, double right) {
@@ -73,6 +89,7 @@ public final class Comparison {
             case LESS_OR_EQUAL -> sign <= 0;
             case GREATER -> sign > 0;
             case LESS -> sign < 0;
+            case CONTAINS, WILDCARD, OR -> throw textOperatorOnNumericPath();
         };
     }
 
@@ -83,6 +100,51 @@ public final class Comparison {
         }
         boolean equal = left.strip().equals(right.strip());
         return operator == Operator.EQUAL ? equal : !equal;
+    }
+
+    // A defensive guard: the text operators are intercepted before either numeric or string comparison runs,
+    // so reaching the numeric switch with one means the routing above lost an operator.
+    private IllegalStateException textOperatorOnNumericPath() {
+        return new IllegalStateException("text operator " + operator + " must not reach the numeric path");
+    }
+
+    // Anchored glob: '*' matches any run (including empty), '?' exactly one character; every other character is
+    // literal. The whole left operand must be consumed. Iterative with a single backtrack point so a pattern
+    // can never blow the stack on adversarial input.
+    private static boolean globMatches(String text, String pattern) {
+        int t = 0;
+        int p = 0;
+        int star = -1;
+        int matchedAtStar = 0;
+        while (t < text.length()) {
+            if (p < pattern.length() && (pattern.charAt(p) == '?' || pattern.charAt(p) == text.charAt(t))) {
+                t++;
+                p++;
+            } else if (p < pattern.length() && pattern.charAt(p) == '*') {
+                star = p++;
+                matchedAtStar = t;
+            } else if (star >= 0) {
+                p = star + 1;
+                t = ++matchedAtStar;
+            } else {
+                return false;
+            }
+        }
+        while (p < pattern.length() && pattern.charAt(p) == '*') {
+            p++;
+        }
+        return p == pattern.length();
+    }
+
+    // Split the right operand on '|' into branches and pass if any branch equals the left under EQUAL's rules.
+    private static boolean anyBranchEquals(String left, String branches) {
+        Comparison equality = of(Operator.EQUAL);
+        for (String branch : branches.split("\\|", -1)) {
+            if (equality.test(left, branch)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static @Nullable Double asNumber(String value) {
