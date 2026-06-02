@@ -12,9 +12,13 @@ import java.util.Objects;
  * real cause off the top of a busy console. This drops the leading framework/reflection/JDK frames (and the
  * reflection {@link InvocationTargetException} wrapper) so the logged trace starts at the consumer's own code.
  *
- * <p>Pure and side-effect-free: it copies and rewrites the {@link Throwable}'s frames in place via
- * {@link Throwable#setStackTrace} and returns the same instance, so callers can log it as usual. A throwable
- * whose every frame is framework noise keeps its original trace rather than being blanked.
+ * <p><strong>Mutating, not pure:</strong> {@link #sanitize} rewrites the {@link Throwable}'s frames in place
+ * via {@link Throwable#setStackTrace} and returns the same instance, so callers can log it as usual. Because
+ * the rewrite is visible to any other observer of that throwable, only call it on a freshly-unwrapped
+ * handler exception that is not otherwise held or re-logged — which is exactly the clean-error path's input
+ * (the cause of an {@link InvocationTargetException} or a future's {@code CompletionException}, minted per
+ * dispatch). A throwable whose every frame is framework noise keeps its original trace rather than being
+ * blanked.
  */
 final class StackTraceSanitizer {
 

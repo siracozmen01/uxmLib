@@ -22,6 +22,13 @@ import org.jspecify.annotations.Nullable;
  * ({@link Scheduler#global}). A future that completes exceptionally is reported through the same clean-error
  * path a thrown handler uses, not as a Brigadier stacktrace.
  *
+ * <p>The server-side log of the failure runs <em>synchronously</em> on whatever thread settled the future —
+ * logging is thread-safe and needs no Bukkit API — while only the player-facing reply hops onto the sender's
+ * region. That split matters when the player has already disconnected by the time a genuinely async future
+ * settles: the entity scheduler refuses to schedule a retired entity, so a hop-only design would silently
+ * drop both the log and the reply, erasing the operator's record of the error. Logging first guarantees the
+ * trace survives even when the reply hop is dropped.
+ *
  * <p>Pattern inspired by Lamp's async return (MIT); the Scheduler hop and error routing are ours.
  */
 final class AsyncCompletion {
@@ -30,16 +37,25 @@ final class AsyncCompletion {
 
     /**
      * Attach completion routing to {@code future}. On success the result is ignored (the handler owns its
-     * side effects); on failure {@code onError} runs on the sender's thread with the unwrapped cause. A
-     * future that is already complete still routes through the scheduler so the continuation is uniform.
+     * side effects); on failure {@code logError} runs immediately on the settling thread (server-side log)
+     * and {@code replyError} runs on the sender's thread (the player-facing reply), both with the unwrapped
+     * cause. A future that is already complete still routes the reply through the scheduler so the
+     * continuation is uniform.
      */
     static void route(
-            CompletableFuture<?> future, Scheduler scheduler, CommandSourceStack source, Consumer<Throwable> onError) {
-        // whenComplete returns a derived stage we don't chain on; the completion handling is the scheduler
-        // hop below, so the returned stage is deliberately unused.
+            CompletableFuture<?> future,
+            Scheduler scheduler,
+            CommandSourceStack source,
+            Consumer<Throwable> logError,
+            Consumer<Throwable> replyError) {
+        // whenComplete returns a derived stage we don't chain on; the completion handling is the log + the
+        // scheduler hop below, so the returned stage is deliberately unused.
         var unused = future.whenComplete((result, error) -> {
             if (error != null) {
-                onSenderThread(scheduler, source, () -> onError.accept(unwrap(error)));
+                Throwable cause = unwrap(error);
+                // Log first, off the hop: a dropped reply hop (player gone) must not lose the operator's trace.
+                logError.accept(cause);
+                onSenderThread(scheduler, source, () -> replyError.accept(cause));
             }
         });
     }

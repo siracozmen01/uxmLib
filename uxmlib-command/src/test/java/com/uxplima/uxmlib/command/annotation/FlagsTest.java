@@ -10,7 +10,11 @@ import java.util.List;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 
 import com.mojang.brigadier.StringReader;
+import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.suggestion.Suggestion;
+import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.mojang.brigadier.tree.ArgumentCommandNode;
 import com.mojang.brigadier.tree.CommandNode;
 import com.mojang.brigadier.tree.LiteralCommandNode;
@@ -56,6 +60,18 @@ class FlagsTest {
     static class GreedyWithFlag {
         @Subcommand("say")
         void say(Sender sender, @Arg(value = "msg", greedy = true) String msg, @Switch("loud") boolean loud) {}
+    }
+
+    @Command(name = "nativeflag")
+    static class NativeTypedFlag {
+        @Subcommand("tp")
+        void tp(Sender sender, @Flag("dest") org.bukkit.World dest) {}
+    }
+
+    @Command(name = "nativelist")
+    static class NativeElementList {
+        @Subcommand("worlds")
+        void worlds(Sender sender, @Arg("ws") java.util.List<org.bukkit.World> ws) {}
     }
 
     @Test
@@ -105,6 +121,40 @@ class FlagsTest {
     }
 
     @Test
+    void completingALaterFlagReplacesOnlyTheTypedTokenNotThePriorFlags() throws Exception {
+        // The greedy flags blob begins right after "give item diamond ".
+        String line = "give item diamond --count 5 --si";
+        int blobStart = line.indexOf("--count");
+        SuggestionsBuilder builder = new SuggestionsBuilder(line, blobStart);
+
+        Suggestions suggestions =
+                flagType().listSuggestions(emptyContext(), builder).join();
+
+        Suggestion silent = suggestions.getList().stream()
+                .filter(s -> s.getText().equals("--silent"))
+                .findFirst()
+                .orElseThrow();
+        // Applying the accepted suggestion must keep the already-typed "--count 5" intact.
+        assertThat(silent.apply(line)).isEqualTo("give item diamond --count 5 --silent");
+        assertThat(silent.getRange().getStart()).isEqualTo(line.lastIndexOf("--si"));
+    }
+
+    @Test
+    void completingAnEmptyTailOffersEveryFlagAfterATrailingSpace() throws Exception {
+        String line = "give item diamond --count 5 ";
+        int blobStart = line.indexOf("--count");
+        SuggestionsBuilder builder = new SuggestionsBuilder(line, blobStart);
+
+        Suggestions suggestions =
+                flagType().listSuggestions(emptyContext(), builder).join();
+
+        assertThat(suggestions.getList()).extracting(Suggestion::getText).contains("--count", "--silent");
+        // A fresh token at the cursor: the insert range starts at the cursor, leaving "--count 5 " untouched.
+        Suggestion any = suggestions.getList().get(0);
+        assertThat(any.getRange().getStart()).isEqualTo(line.length());
+    }
+
+    @Test
     void rejectsAnUnknownFlag() {
         assertThatThrownBy(() -> parse(flagType(), "--bogus 1")).isInstanceOf(CommandSyntaxException.class);
     }
@@ -135,8 +185,30 @@ class FlagsTest {
                 .hasMessageContaining("greedy");
     }
 
+    @Test
+    void rejectsANativeArgumentTypeAsAFlagValue() {
+        // A native type (World/Player/Location/...) cannot be parsed in the throwaway dispatcher a flag value
+        // uses, so it must be rejected at registration rather than blow up the first time the command runs.
+        assertThatThrownBy(() -> AnnotatedCommands.buildNode(new NativeTypedFlag()))
+                .isInstanceOf(CommandParseException.class)
+                .hasMessageContaining("native");
+    }
+
+    @Test
+    void rejectsACollectionOfANativeArgumentType() {
+        assertThatThrownBy(() -> AnnotatedCommands.buildNode(new NativeElementList()))
+                .isInstanceOf(CommandParseException.class)
+                .hasMessageContaining("native");
+    }
+
     private static Flags parse(FlagArgumentType type, String input) throws CommandSyntaxException {
         return type.parse(new StringReader(input));
+    }
+
+    /** listSuggestions never reads the context, so a bare mock with no stubbing is enough. */
+    @SuppressWarnings("unchecked")
+    private static CommandContext<CommandSourceStack> emptyContext() {
+        return org.mockito.Mockito.mock(CommandContext.class);
     }
 
     private static FlagArgumentType flagType() throws Exception {

@@ -48,6 +48,11 @@ final class NativeResolvers {
             }
 
             @Override
+            public boolean nativeArgument() {
+                return true;
+            }
+
+            @Override
             public Location resolve(CommandContext<CommandSourceStack> context, String name) {
                 FinePositionResolver positions = context.getArgument(name, FinePositionResolver.class);
                 CommandSourceStack source = context.getSource();
@@ -72,6 +77,11 @@ final class NativeResolvers {
             @Override
             public ArgumentType<?> argumentType(Arg arg) {
                 return ArgumentTypes.playerProfiles();
+            }
+
+            @Override
+            public boolean nativeArgument() {
+                return true;
             }
 
             @Override
@@ -103,6 +113,11 @@ final class NativeResolvers {
             @Override
             public ArgumentType<?> argumentType(Arg arg) {
                 return ArgumentTypes.resource(RegistryKey.SOUND_EVENT);
+            }
+
+            @Override
+            public boolean nativeArgument() {
+                return true;
             }
 
             @Override

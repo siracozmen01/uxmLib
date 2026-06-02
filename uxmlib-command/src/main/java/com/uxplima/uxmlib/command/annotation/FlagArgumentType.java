@@ -138,21 +138,29 @@ final class FlagArgumentType implements ArgumentType<Flags> {
 
     @Override
     public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> context, SuggestionsBuilder builder) {
-        String remaining = builder.getRemainingLowerCase();
-        String tail = lastTokenLower(remaining);
+        // The flags node is a single greedy trailing argument, so the builder's start sits at the beginning of
+        // the whole flag blob (e.g. "--count 5 --si"). Re-base it onto the last token so an accepted suggestion
+        // replaces only that token; otherwise Brigadier would insert at the blob start and clobber every flag
+        // already typed.
+        SuggestionsBuilder scoped = rebaseToLastToken(builder);
+        String tail = scoped.getRemainingLowerCase();
         for (FlagModel flag : flags) {
             String option = "--" + flag.name();
-            if (option.startsWith(tail) || tail.isEmpty()) {
-                builder.suggest(option);
+            if (tail.isEmpty() || option.startsWith(tail)) {
+                scoped.suggest(option);
             }
         }
-        return builder.buildFuture();
+        return scoped.buildFuture();
     }
 
-    /** The not-yet-finished token the player is typing, lower-cased, so completion filters against only it. */
-    private static String lastTokenLower(String remaining) {
+    /** Offset the builder to the start of the last whitespace-separated token, so a suggestion replaces only it. */
+    private static SuggestionsBuilder rebaseToLastToken(SuggestionsBuilder builder) {
+        String remaining = builder.getRemaining();
         int lastSpace = remaining.lastIndexOf(' ');
-        return lastSpace < 0 ? remaining : remaining.substring(lastSpace + 1);
+        if (lastSpace < 0) {
+            return builder;
+        }
+        return builder.createOffset(builder.getStart() + lastSpace + 1);
     }
 
     /** A parsed flag token: its key (name or shorthand chars), an inline {@code =value}, and whether short. */

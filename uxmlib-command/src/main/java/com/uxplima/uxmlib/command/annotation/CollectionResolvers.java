@@ -101,7 +101,17 @@ final class CollectionResolvers {
         if (args.length != 1 || !(args[0] instanceof Class<?> elementClass)) {
             return null;
         }
-        return registry.resolverFor(elementClass, args[0]);
+        ParamResolver<?> element = registry.resolverFor(elementClass, args[0]);
+        if (element != null && element.nativeArgument()) {
+            // Each element is resolved by feeding one token through a standalone Brigadier dispatcher
+            // (TokenResolution), which has no Paper registry/build context; a native element type
+            // (player/world/location/sound/...) cannot parse there and would throw on a live server. Reject the
+            // whole collection at registration with a clear message rather than fail per element at runtime.
+            throw new CommandParseException("a List/Optional of native type " + elementClass.getName()
+                    + " is not supported; a native argument (player/world/location/sound/...) cannot be a"
+                    + " collection element. Take a single one as a positional @Arg instead.");
+        }
+        return element;
     }
 
     /** A resolver that greedily consumes the rest of the input and maps every token through the element. */

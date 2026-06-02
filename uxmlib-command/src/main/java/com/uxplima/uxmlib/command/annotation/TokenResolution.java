@@ -24,6 +24,13 @@ final class TokenResolution {
 
     /** Resolve {@code raw} as the value named {@code name} through {@code resolver} against {@code source}. */
     static Object resolve(ParamResolver<?> resolver, CommandSourceStack source, String name, String raw) {
+        if (resolver.nativeArgument()) {
+            // The standalone dispatcher built below has no Paper registry/build context, so a native (NMS-backed)
+            // argument type cannot parse here. Registration already rejects native flags/collection elements; this
+            // is the runtime backstop for a custom resolver that wraps a native type without flagging itself.
+            throw new IllegalArgumentException(
+                    "native argument type for " + name + " cannot be resolved as a flag value or collection element");
+        }
         CommandContext<CommandSourceStack> parsed = parse(resolver, source, name, raw);
         Object value = resolver.resolve(parsed, name);
         if (value == null) {

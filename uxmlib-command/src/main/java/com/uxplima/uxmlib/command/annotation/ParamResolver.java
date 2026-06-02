@@ -39,6 +39,20 @@ public interface ParamResolver<T> {
     T resolve(CommandContext<CommandSourceStack> context, String name);
 
     /**
+     * Whether {@link #argumentType(Arg)} returns a Paper-native (NMS-backed) argument type rather than a plain
+     * Brigadier one. Native types — a player, world, location, sound, or any registry resource — can only be
+     * parsed inside Paper's live command tree, which carries the registry/build context they need; they throw
+     * when parsed in a standalone Brigadier dispatcher. A {@code @}{@link
+     * com.uxplima.uxmlib.command.annotation.annotations.Flag} value and a {@code List}/{@code Optional} element
+     * are resolved by feeding one token through such a standalone tree ({@link TokenResolution}), so a native
+     * resolver cannot back them and is rejected at registration. Defaults to {@code false}; the built-in native
+     * resolvers override it to {@code true}. A consumer resolver over a plain Brigadier type leaves it false.
+     */
+    default boolean nativeArgument() {
+        return false;
+    }
+
+    /**
      * The completions to offer for this parameter, or {@code null} to leave the argument type's native
      * suggestions (a player/world/material arg completes itself). A resolver over a plain word — an enum,
      * a custom type — overrides this to drive tab-completion.

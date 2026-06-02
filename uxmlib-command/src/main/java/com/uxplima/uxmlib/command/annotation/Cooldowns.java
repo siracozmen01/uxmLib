@@ -68,40 +68,39 @@ public final class Cooldowns {
             return 0L;
         }
         long now = clock.getAsLong();
-        long expiry = expiryOf(key);
-        if (expiry > now) {
-            return expiry - now;
+        warmFromStore(key);
+        long newExpiry = now + durationMillis;
+        boolean[] armed = {false};
+        // compute() runs the check-and-arm under the per-key bin lock the map already holds, so two threads
+        // racing the same elapsed key cannot both observe expiry<=now and both arm a fresh window.
+        long resolved = expiryByKey.compute(key, (ignored, current) -> {
+            if (current != null && current > now) {
+                return current;
+            }
+            armed[0] = true;
+            return newExpiry;
+        });
+        if (!armed[0]) {
+            return resolved - now;
         }
-        arm(key, now + durationMillis);
+        // We won the arm: persist outside the bin lock so a store write never blocks other keys' checks.
+        if (store != null) {
+            store.save(key, newExpiry);
+        }
         return 0L;
     }
 
     /**
-     * The expiry for {@code key}: the in-memory value, or — on a cold key with a {@link CooldownStore} — the
-     * persisted value pulled into memory. {@code 0} when no live window is known.
+     * Pull a cold key's persisted expiry into memory once, so the atomic check-and-arm in {@link #check} sees
+     * it. A no-op when the key is already in memory or no {@link CooldownStore} backs this gate.
      */
-    private long expiryOf(String key) {
-        Long inMemory = expiryByKey.get(key);
-        if (inMemory != null) {
-            return inMemory;
-        }
-        if (store == null) {
-            return 0L;
+    private void warmFromStore(String key) {
+        if (store == null || expiryByKey.containsKey(key)) {
+            return;
         }
         OptionalLong persisted = store.load(key);
-        if (persisted.isEmpty()) {
-            return 0L;
-        }
-        long expiry = persisted.getAsLong();
-        expiryByKey.put(key, expiry);
-        return expiry;
-    }
-
-    /** Arm a fresh window for {@code key} in memory and, when a store backs this gate, persist it too. */
-    private void arm(String key, long expiry) {
-        expiryByKey.put(key, expiry);
-        if (store != null) {
-            store.save(key, expiry);
+        if (persisted.isPresent()) {
+            expiryByKey.putIfAbsent(key, persisted.getAsLong());
         }
     }
 

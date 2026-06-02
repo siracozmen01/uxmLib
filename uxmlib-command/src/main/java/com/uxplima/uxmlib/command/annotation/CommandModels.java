@@ -95,9 +95,18 @@ final class CommandModels {
             }
             return;
         }
-        if (!resolvers.supports(param.getType())) {
+        ParamResolver<?> resolver = resolvers.resolverFor(param.getType());
+        if (resolver == null) {
             throw new CommandParseException(
                     "no resolver for @Flag type " + param.getType().getName() + " on " + method.getName());
+        }
+        if (resolver.nativeArgument()) {
+            // A value flag resolves one token through a standalone Brigadier dispatcher (TokenResolution), which
+            // has no Paper registry/build context; a native type (player/world/location/sound/...) cannot parse
+            // there and would throw on a live server. Reject it here so the failure is a clear startup message.
+            throw new CommandParseException("@Flag type " + param.getType().getName() + " on " + method.getName()
+                    + " is a native argument type (player/world/location/sound/...); a flag value cannot use one."
+                    + " Take it as a positional @Arg instead.");
         }
     }
 

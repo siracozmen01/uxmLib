@@ -89,8 +89,10 @@ final class CommandExecutors {
     }
 
     /**
-     * Hand the handler's future to {@link AsyncCompletion} so an exceptional completion is reported on the
-     * sender's thread. A handler that (wrongly) returns {@code null} is treated as already done.
+     * Hand the handler's future to {@link AsyncCompletion} so an exceptional completion is logged server-side
+     * immediately and replied to on the sender's thread. A handler that (wrongly) returns {@code null} is
+     * treated as already done. The log runs off the scheduler hop so a dropped reply hop (the player logged
+     * off before a genuinely async future settled) never erases the operator's record of the failure.
      */
     private static void routeAsync(
             Object returned, Method method, CommandContext<CommandSourceStack> ctx, Scheduler scheduler) {
@@ -98,14 +100,30 @@ final class CommandExecutors {
         if (future == null) {
             return;
         }
-        AsyncCompletion.route(future, scheduler, ctx.getSource(), cause -> reportError(method, ctx, cause, cause));
+        AsyncCompletion.route(
+                future,
+                scheduler,
+                ctx.getSource(),
+                cause -> logError(method, ctx, cause, cause),
+                cause -> replyRed(ctx, "An internal error occurred while running this command."));
     }
 
     /**
      * The uniform handler-failure path: log the real cause server-side and reply with a clean, generic
-     * message instead of letting Brigadier dump a red stacktrace in the player's chat.
+     * message instead of letting Brigadier dump a red stacktrace in the player's chat. Used by the
+     * synchronous invoke path, where both halves run on the dispatch thread.
      */
     private static void reportError(
+            Method method,
+            CommandContext<CommandSourceStack> ctx,
+            @org.jspecify.annotations.Nullable Throwable cause,
+            Throwable fallback) {
+        logError(method, ctx, cause, fallback);
+        replyRed(ctx, "An internal error occurred while running this command.");
+    }
+
+    /** Log the real (sanitized) cause server-side at {@code SEVERE}. Thread-safe; needs no Bukkit API thread. */
+    private static void logError(
             Method method,
             CommandContext<CommandSourceStack> ctx,
             @org.jspecify.annotations.Nullable Throwable cause,
@@ -116,7 +134,6 @@ final class CommandExecutors {
                 .getServer()
                 .getLogger()
                 .log(Level.SEVERE, "Command '" + method.getName() + "' threw an exception", logged);
-        replyRed(ctx, "An internal error occurred while running this command.");
     }
 
     /** Send {@code message} to the dispatch's sender in red, the uniform clean-error reply. */

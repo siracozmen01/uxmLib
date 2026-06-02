@@ -48,56 +48,103 @@ class AsyncCompletionTest {
         assertThat(AsyncCompletion.isAsync(String.class)).isFalse();
     }
 
+    /** A scheduler whose entity hop is dropped, modelling a player who has retired before the future settled. */
+    static final class DroppingEntityScheduler extends SameThreadScheduler {
+        String routedTo = "none";
+
+        @Override
+        public TaskHandle entity(Entity entity, Runnable task) {
+            // A real Folia entity scheduler refuses a retired entity: the task is never run.
+            routedTo = "entity-dropped";
+            return new DroppedHandle();
+        }
+    }
+
+    static final class DroppedHandle implements TaskHandle {
+        @Override
+        public void cancel() {}
+
+        @Override
+        public boolean isCancelled() {
+            return true;
+        }
+    }
+
     @Test
     void aSuccessfulFutureRunsNoErrorContinuation() {
         RecordingScheduler scheduler = new RecordingScheduler();
-        java.util.List<Throwable> errors = new java.util.ArrayList<>();
+        java.util.List<Throwable> logged = new java.util.ArrayList<>();
+        java.util.List<Throwable> replied = new java.util.ArrayList<>();
         CompletableFuture<String> future = new CompletableFuture<>();
 
-        AsyncCompletion.route(future, scheduler, consoleSource(), errors::add);
+        AsyncCompletion.route(future, scheduler, consoleSource(), logged::add, replied::add);
         future.complete("done");
 
-        assertThat(errors).isEmpty();
+        assertThat(logged).isEmpty();
+        assertThat(replied).isEmpty();
         assertThat(scheduler.routedTo).isEqualTo("none");
     }
 
     @Test
     void anExceptionalFutureRoutesTheCauseOnTheConsoleGlobalThread() {
         RecordingScheduler scheduler = new RecordingScheduler();
-        java.util.List<Throwable> errors = new java.util.ArrayList<>();
+        java.util.List<Throwable> logged = new java.util.ArrayList<>();
+        java.util.List<Throwable> replied = new java.util.ArrayList<>();
         CompletableFuture<String> future = new CompletableFuture<>();
         IllegalStateException boom = new IllegalStateException("boom");
 
-        AsyncCompletion.route(future, scheduler, consoleSource(), errors::add);
+        AsyncCompletion.route(future, scheduler, consoleSource(), logged::add, replied::add);
         future.completeExceptionally(boom);
 
-        // The CompletionException wrapper is peeled off; the continuation ran on the global region.
-        assertThat(errors).containsExactly(boom);
+        // The CompletionException wrapper is peeled off; the reply ran on the global region.
+        assertThat(logged).containsExactly(boom);
+        assertThat(replied).containsExactly(boom);
         assertThat(scheduler.routedTo).isEqualTo("global");
     }
 
     @Test
     void anExceptionalFutureRoutesAPlayerOntoTheEntityThread() {
         RecordingScheduler scheduler = new RecordingScheduler();
-        java.util.List<Throwable> errors = new java.util.ArrayList<>();
+        java.util.List<Throwable> logged = new java.util.ArrayList<>();
+        java.util.List<Throwable> replied = new java.util.ArrayList<>();
         CompletableFuture<String> future = new CompletableFuture<>();
 
-        AsyncCompletion.route(future, scheduler, playerSource(), errors::add);
+        AsyncCompletion.route(future, scheduler, playerSource(), logged::add, replied::add);
         future.completeExceptionally(new IllegalStateException("boom"));
 
         assertThat(scheduler.routedTo).isEqualTo("entity");
-        assertThat(errors).hasSize(1);
+        assertThat(logged).hasSize(1);
+        assertThat(replied).hasSize(1);
+    }
+
+    @Test
+    void theServerSideLogStillRunsWhenThePlayerHopIsDropped() {
+        DroppingEntityScheduler scheduler = new DroppingEntityScheduler();
+        java.util.List<Throwable> logged = new java.util.ArrayList<>();
+        java.util.List<Throwable> replied = new java.util.ArrayList<>();
+        IllegalStateException boom = new IllegalStateException("boom");
+
+        AsyncCompletion.route(
+                CompletableFuture.failedFuture(boom), scheduler, playerSource(), logged::add, replied::add);
+
+        // The player retired, so the entity hop was dropped and the reply never ran; the log still must.
+        assertThat(scheduler.routedTo).isEqualTo("entity-dropped");
+        assertThat(replied).isEmpty();
+        assertThat(logged).containsExactly(boom);
     }
 
     @Test
     void anAlreadyFailedFutureStillRoutesThroughTheScheduler() {
         RecordingScheduler scheduler = new RecordingScheduler();
-        java.util.List<Throwable> errors = new java.util.ArrayList<>();
+        java.util.List<Throwable> logged = new java.util.ArrayList<>();
+        java.util.List<Throwable> replied = new java.util.ArrayList<>();
         IllegalStateException boom = new IllegalStateException("late");
 
-        AsyncCompletion.route(CompletableFuture.failedFuture(boom), scheduler, consoleSource(), errors::add);
+        AsyncCompletion.route(
+                CompletableFuture.failedFuture(boom), scheduler, consoleSource(), logged::add, replied::add);
 
-        assertThat(errors).containsExactly(boom);
+        assertThat(logged).containsExactly(boom);
+        assertThat(replied).containsExactly(boom);
         assertThat(scheduler.routedTo).isEqualTo("global");
     }
 

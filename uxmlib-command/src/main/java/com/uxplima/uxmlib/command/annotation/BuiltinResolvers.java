@@ -44,8 +44,8 @@ final class BuiltinResolvers {
         r.register(Float.class, floats());
         r.register(boolean.class, bools());
         r.register(Boolean.class, bools());
-        r.register(UUID.class, simple(ArgumentTypes::uuid, (c, n) -> c.getArgument(n, UUID.class)));
-        r.register(World.class, simple(ArgumentTypes::world, (c, n) -> c.getArgument(n, World.class)));
+        r.register(UUID.class, simpleNative(ArgumentTypes::uuid, (c, n) -> c.getArgument(n, UUID.class)));
+        r.register(World.class, simpleNative(ArgumentTypes::world, (c, n) -> c.getArgument(n, World.class)));
         r.register(Player.class, playerResolver());
         r.register(Material.class, materialResolver());
         NativeResolvers.installInto(r);
@@ -170,6 +170,11 @@ final class BuiltinResolvers {
             }
 
             @Override
+            public boolean nativeArgument() {
+                return true;
+            }
+
+            @Override
             public Player resolve(CommandContext<CommandSourceStack> context, String name) {
                 PlayerSelectorArgumentResolver selector =
                         context.getArgument(name, PlayerSelectorArgumentResolver.class);
@@ -189,6 +194,11 @@ final class BuiltinResolvers {
             @Override
             public ArgumentType<?> argumentType(Arg arg) {
                 return ArgumentTypes.resource(io.papermc.paper.registry.RegistryKey.ITEM);
+            }
+
+            @Override
+            public boolean nativeArgument() {
+                return true;
             }
 
             @Override
@@ -212,15 +222,41 @@ final class BuiltinResolvers {
     }
 
     /**
-     * Functional shortcut for a resolver. The argument type comes from a supplier so the native Paper
-     * type (e.g. {@code ArgumentTypes.uuid()}) is created lazily when a command is built, not eagerly when
-     * the registry is populated — registering defaults must not touch the server registries.
+     * Functional shortcut for a resolver over a plain Brigadier argument type. The argument type comes from a
+     * supplier so it is created lazily when a command is built, not eagerly when the registry is populated.
      */
     private static <T> ParamResolver<T> simple(java.util.function.Supplier<ArgumentType<?>> type, Reader<T> reader) {
         return new ParamResolver<>() {
             @Override
             public ArgumentType<?> argumentType(Arg arg) {
                 return type.get();
+            }
+
+            @Override
+            public T resolve(CommandContext<CommandSourceStack> context, String name) {
+                return reader.read(context, name);
+            }
+        };
+    }
+
+    /**
+     * Functional shortcut for a resolver over a Paper-native argument type (e.g. {@code ArgumentTypes.uuid()},
+     * {@code ArgumentTypes.world()}). Identical to {@link #simple} but marks itself
+     * {@linkplain ParamResolver#nativeArgument() native}, so it is rejected as a flag value or collection
+     * element — those resolve one token through a standalone Brigadier dispatcher a native type cannot parse.
+     * The type is still created lazily so registering defaults never touches the server registries.
+     */
+    private static <T> ParamResolver<T> simpleNative(
+            java.util.function.Supplier<ArgumentType<?>> type, Reader<T> reader) {
+        return new ParamResolver<>() {
+            @Override
+            public ArgumentType<?> argumentType(Arg arg) {
+                return type.get();
+            }
+
+            @Override
+            public boolean nativeArgument() {
+                return true;
             }
 
             @Override
