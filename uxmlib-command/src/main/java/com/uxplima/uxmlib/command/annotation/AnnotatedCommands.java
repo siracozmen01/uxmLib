@@ -21,6 +21,8 @@ import com.uxplima.uxmlib.command.annotation.annotations.Arg;
 import com.uxplima.uxmlib.command.annotation.annotations.Command;
 import com.uxplima.uxmlib.command.annotation.annotations.Permission;
 import com.uxplima.uxmlib.command.annotation.annotations.Subcommand;
+import com.uxplima.uxmlib.scheduler.PaperScheduler;
+import com.uxplima.uxmlib.scheduler.Scheduler;
 
 /**
  * Turns an {@code @}{@link Command} handler into a registered Brigadier command by reflection: each
@@ -49,13 +51,24 @@ public final class AnnotatedCommands {
     /** Reflect over {@code handler} with {@code resolvers}, build its tree, and register it. */
     public static void register(JavaPlugin plugin, Object handler, ParamResolvers resolvers) {
         Objects.requireNonNull(plugin, "plugin");
+        register(plugin, handler, resolvers, new PaperScheduler(plugin));
+    }
+
+    /**
+     * Reflect over {@code handler} with {@code resolvers}, build its tree, and register it, using
+     * {@code scheduler} to route the completion of any async ({@link java.util.concurrent.CompletableFuture
+     * CompletableFuture}-returning) branch back onto a Bukkit-safe thread.
+     */
+    public static void register(JavaPlugin plugin, Object handler, ParamResolvers resolvers, Scheduler scheduler) {
+        Objects.requireNonNull(plugin, "plugin");
         Objects.requireNonNull(handler, "handler");
+        Objects.requireNonNull(scheduler, "scheduler");
         Command command = handler.getClass().getAnnotation(Command.class);
         if (command == null) {
             throw new CommandParseException(handler.getClass().getName() + " is not annotated with @Command");
         }
         CommandRegistrar.register(
-                plugin, buildNode(handler, resolvers), command.description(), List.of(command.aliases()));
+                plugin, buildNode(handler, resolvers, scheduler), command.description(), List.of(command.aliases()));
     }
 
     /** Build a handler's Brigadier tree with the default resolvers, without registering it. */
@@ -66,10 +79,22 @@ public final class AnnotatedCommands {
     /**
      * Build the Brigadier tree for an annotated {@code handler} without registering it, using
      * {@code resolvers} for its argument types. Exposed so the tree shape can be inspected and tested.
+     * Async branches built this way route their completion on the calling thread (no live server here).
      */
     public static LiteralCommandNode<CommandSourceStack> buildNode(Object handler, ParamResolvers resolvers) {
+        return buildNode(handler, resolvers, new SameThreadScheduler());
+    }
+
+    /**
+     * Build the Brigadier tree for {@code handler} with {@code resolvers} and the {@code scheduler} that
+     * async branches use to route their completion. Exposed so the async wiring can be inspected and tested
+     * with a synchronous scheduler double, without a live server.
+     */
+    public static LiteralCommandNode<CommandSourceStack> buildNode(
+            Object handler, ParamResolvers resolvers, Scheduler scheduler) {
         Objects.requireNonNull(handler, "handler");
         Objects.requireNonNull(resolvers, "resolvers");
+        Objects.requireNonNull(scheduler, "scheduler");
         Class<?> type = handler.getClass();
         Command command = type.getAnnotation(Command.class);
         if (command == null) {
@@ -86,7 +111,7 @@ public final class AnnotatedCommands {
             throw new CommandParseException(type.getName() + " has no @Subcommand methods");
         }
         for (Method method : branches) {
-            attachBranch(root, handler, method, resolvers, command.name());
+            attachBranch(root, handler, method, resolvers, command.name(), scheduler);
         }
         if (command.help()) {
             root.then(HelpRenderer.helpLiteral(command.name(), branches));
@@ -115,13 +140,14 @@ public final class AnnotatedCommands {
             Object handler,
             Method method,
             ParamResolvers resolvers,
-            String rootName) {
+            String rootName,
+            Scheduler scheduler) {
         validateSignature(method, resolvers);
         String path = method.getAnnotation(Subcommand.class).value().trim();
         List<ArgBinder.ParamArg> args = argParameters(method, resolvers);
         String commandPath = path.isEmpty() ? rootName : rootName + ' ' + path;
         com.mojang.brigadier.Command<CommandSourceStack> executor =
-                CommandExecutors.executorFor(handler, method, args, resolvers, commandPath);
+                CommandExecutors.executorFor(handler, method, args, resolvers, commandPath, scheduler);
         ArgChain chain = buildArgChain(method, args, executor);
 
         String[] literals = path.isEmpty() ? new String[0] : path.split("\\s+");

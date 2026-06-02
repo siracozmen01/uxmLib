@@ -4,6 +4,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 
 import io.papermc.paper.command.brigadier.CommandSourceStack;
@@ -12,6 +13,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.uxplima.uxmlib.command.Cmd;
 import com.uxplima.uxmlib.command.Sender;
 import com.uxplima.uxmlib.command.annotation.annotations.PlayerOnly;
+import com.uxplima.uxmlib.scheduler.Scheduler;
 
 /**
  * Builds the Brigadier {@code executes} body for a {@code @}{@link
@@ -27,15 +29,18 @@ final class CommandExecutors {
     /**
      * The executor for {@code method} with its pre-resolved {@code args} and the active {@code resolvers}.
      * {@code commandPath} is the full literal path of this branch (root name plus subcommand spine); it
-     * keys the per-branch cooldown so different branches never share a window.
+     * keys the per-branch cooldown so different branches never share a window. {@code scheduler} routes the
+     * completion of an async ({@link CompletableFuture}-returning) handler back onto a Bukkit-safe thread.
      */
     static com.mojang.brigadier.Command<CommandSourceStack> executorFor(
             Object handler,
             Method method,
             List<ArgBinder.ParamArg> args,
             ParamResolvers resolvers,
-            String commandPath) {
+            String commandPath,
+            Scheduler scheduler) {
         List<CommandCondition> conditions = conditionsFor(method, resolvers, commandPath);
+        boolean async = AsyncCompletion.isAsync(method.getReturnType());
         return ctx -> {
             try {
                 checkConditions(conditions, ctx);
@@ -52,33 +57,63 @@ final class CommandExecutors {
                 replyRed(ctx, badArgument.getMessage() == null ? "Invalid argument." : badArgument.getMessage());
                 return 0;
             }
-            return invoke(handler, method, callArgs, ctx);
+            return invoke(handler, method, callArgs, ctx, async, scheduler);
         };
     }
 
     private static int invoke(
-            Object handler, Method method, Object[] callArgs, CommandContext<CommandSourceStack> ctx) {
+            Object handler,
+            Method method,
+            Object[] callArgs,
+            CommandContext<CommandSourceStack> ctx,
+            boolean async,
+            Scheduler scheduler) {
         try {
-            method.invoke(handler, callArgs);
+            Object returned = method.invoke(handler, callArgs);
+            if (async) {
+                routeAsync(returned, method, ctx, scheduler);
+            }
             return Cmd.OK;
         } catch (InvocationTargetException thrownByHandler) {
-            // The handler itself failed. Don't let Brigadier dump a red stacktrace in the player's chat: log
-            // the real cause server-side and reply with a clean, generic message.
-            Throwable cause = thrownByHandler.getCause();
-            ctx.getSource()
-                    .getSender()
-                    .getServer()
-                    .getLogger()
-                    .log(
-                            Level.SEVERE,
-                            "Command '" + method.getName() + "' threw an exception",
-                            cause != null ? cause : thrownByHandler);
-            replyRed(ctx, "An internal error occurred while running this command.");
+            reportError(method, ctx, thrownByHandler.getCause(), thrownByHandler);
             return 0;
         } catch (IllegalAccessException unreachable) {
             // setAccessible(true) ran at registration, so this cannot happen for a registered handler.
             throw new CommandParseException("could not invoke " + method.getName(), unreachable);
         }
+    }
+
+    /**
+     * Hand the handler's future to {@link AsyncCompletion} so an exceptional completion is reported on the
+     * sender's thread. A handler that (wrongly) returns {@code null} is treated as already done.
+     */
+    private static void routeAsync(
+            Object returned, Method method, CommandContext<CommandSourceStack> ctx, Scheduler scheduler) {
+        CompletableFuture<?> future = AsyncCompletion.asFuture(returned);
+        if (future == null) {
+            return;
+        }
+        AsyncCompletion.route(future, scheduler, ctx.getSource(), cause -> reportError(method, ctx, cause, cause));
+    }
+
+    /**
+     * The uniform handler-failure path: log the real cause server-side and reply with a clean, generic
+     * message instead of letting Brigadier dump a red stacktrace in the player's chat.
+     */
+    private static void reportError(
+            Method method,
+            CommandContext<CommandSourceStack> ctx,
+            @org.jspecify.annotations.Nullable Throwable cause,
+            Throwable fallback) {
+        ctx.getSource()
+                .getSender()
+                .getServer()
+                .getLogger()
+                .log(
+                        Level.SEVERE,
+                        "Command '" + method.getName() + "' threw an exception",
+                        cause != null ? cause : fallback);
+        replyRed(ctx, "An internal error occurred while running this command.");
     }
 
     /** Send {@code message} to the dispatch's sender in red, the uniform clean-error reply. */
