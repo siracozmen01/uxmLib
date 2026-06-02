@@ -79,6 +79,23 @@ class SemanticVersionTest {
     }
 
     @Test
+    void fourSegmentBuildNumberIsNotTruncated() {
+        // A trailing build segment must differentiate versions, not be dropped (1.2.3.4 != 1.2.3.5).
+        assertThat(SemanticVersion.parse("1.2.3.5")).isGreaterThan(SemanticVersion.parse("1.2.3.4"));
+        assertThat(SemanticVersion.parse("1.2.3.7")).isGreaterThan(SemanticVersion.parse("1.2.3.4"));
+        assertThat(SemanticVersion.parse("1.2.3.4").isNewerThan(SemanticVersion.parse("1.2.3.5")))
+                .isFalse();
+    }
+
+    @Test
+    void trailingZeroSegmentDoesNotChangeEquality() {
+        assertThat(SemanticVersion.parse("1.2.3.0")).isEqualTo(SemanticVersion.parse("1.2.3"));
+        assertThat(SemanticVersion.parse("1.2.3.0").hashCode())
+                .isEqualTo(SemanticVersion.parse("1.2.3").hashCode());
+        assertThat(SemanticVersion.parse("1.2.3.4")).isGreaterThan(SemanticVersion.parse("1.2.3"));
+    }
+
+    @Test
     void rejectsBlankInput() {
         assertThatThrownBy(() -> SemanticVersion.parse("  ")).isInstanceOf(IllegalArgumentException.class);
     }

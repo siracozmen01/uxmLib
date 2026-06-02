@@ -36,6 +36,54 @@ class ModrinthReleaseProviderTest {
         assertThat(release.get().url()).isEqualTo("https://modrinth.com/project/proj/version/abc123");
     }
 
+    // A response where the highest version is NOT the first element: Modrinth does not guarantee array order
+    // (e.g. a hotfix re-published against an older game version can land first).
+    private static final String OUT_OF_ORDER =
+            """
+            [
+              {
+                "name": "1.3.9",
+                "version_number": "1.3.9",
+                "id": "old456",
+                "version_type": "release"
+              },
+              {
+                "name": "1.4.0",
+                "version_number": "1.4.0",
+                "id": "abc123",
+                "version_type": "release"
+              },
+              {
+                "name": "1.2.0",
+                "version_number": "1.2.0",
+                "id": "older",
+                "version_type": "release"
+              }
+            ]
+            """;
+
+    @Test
+    void picksHighestVersionEvenWhenNotFirstInTheArray() {
+        var release = ModrinthReleaseProvider.parseLatest(OUT_OF_ORDER, "proj");
+        assertThat(release).isPresent();
+        assertThat(release.get().version()).isEqualTo("1.4.0");
+        assertThat(release.get().url()).isEqualTo("https://modrinth.com/project/proj/version/abc123");
+    }
+
+    @Test
+    void skipsUnparseableVersionNumbersWhenSelectingTheLatest() {
+        String body =
+                """
+                [
+                  {"version_number": "not-a-version", "id": "junk"},
+                  {"version_number": "2.0.1", "id": "real"}
+                ]
+                """;
+        var release = ModrinthReleaseProvider.parseLatest(body, "proj");
+        assertThat(release).isPresent();
+        assertThat(release.get().version()).isEqualTo("2.0.1");
+    }
+
     @Test
     void emptyOnEmptyArray() {
         assertThat(ModrinthReleaseProvider.parseLatest("[]", "proj")).isEmpty();

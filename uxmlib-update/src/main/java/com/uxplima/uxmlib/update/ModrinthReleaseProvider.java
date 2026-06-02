@@ -11,10 +11,11 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * An {@link UpdateProvider} backed by a Modrinth project's version list
- * ({@code GET https://api.modrinth.com/v2/project/{id}/version}). Modrinth returns the versions newest-first,
- * so the first array element is the latest; its {@code version_number} is the version and a stable
- * {@code https://modrinth.com/project/{id}/version/{versionId}} page is the human link. Parsed with the real
- * {@link Json} reader; any non-2xx or unparseable response degrades to "no release".
+ * ({@code GET https://api.modrinth.com/v2/project/{id}/version}). The endpoint's array order is not a
+ * guaranteed version order, so the latest is chosen by parsing every element's {@code version_number} into a
+ * {@link SemanticVersion} and taking the highest (a published page's {@code id} gives a stable
+ * {@code https://modrinth.com/project/{id}/version/{versionId}} human link). Parsed with the real {@link Json}
+ * reader; any non-2xx or unparseable response degrades to "no release".
  */
 public final class ModrinthReleaseProvider implements UpdateProvider {
 
@@ -54,10 +55,37 @@ public final class ModrinthReleaseProvider implements UpdateProvider {
         if (!(root instanceof List<?> versions) || versions.isEmpty()) {
             return Optional.empty();
         }
-        if (!(versions.get(0) instanceof Map<?, ?> newest)) {
-            return Optional.empty();
+        return highest(versions).flatMap(newest -> toRelease(newest, projectId));
+    }
+
+    // The endpoint does not promise version order, so pick the element whose version_number parses to the
+    // highest SemanticVersion. Elements with an absent or unparseable version_number are skipped.
+    private static Optional<Map<?, ?>> highest(List<?> versions) {
+        Map<?, ?> best = null;
+        SemanticVersion bestVersion = null;
+        for (Object element : versions) {
+            if (!(element instanceof Map<?, ?> candidate)) {
+                continue;
+            }
+            SemanticVersion parsed = parsedVersion(candidate);
+            if (parsed != null && (bestVersion == null || parsed.isNewerThan(bestVersion))) {
+                best = candidate;
+                bestVersion = parsed;
+            }
         }
-        return toRelease(newest, projectId);
+        return Optional.ofNullable(best);
+    }
+
+    private static @Nullable SemanticVersion parsedVersion(Map<?, ?> version) {
+        Optional<String> number = Json.string(version, "version_number");
+        if (number.isEmpty()) {
+            return null;
+        }
+        try {
+            return SemanticVersion.parse(number.get());
+        } catch (IllegalArgumentException unparseable) {
+            return null;
+        }
     }
 
     private static Optional<Release> toRelease(Map<?, ?> newest, String projectId) {

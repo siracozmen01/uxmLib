@@ -3,26 +3,27 @@ package com.uxplima.uxmlib.update;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * A semantic version with a pre-release ladder, used to decide whether a {@link Release} is newer than the
  * running build. Parsing is lenient about the shapes real projects publish: an optional {@code v} prefix,
- * missing minor/patch (treated as zero), a {@code -SNAPSHOT}/{@code -rc.1} pre-release tail, and {@code +build}
- * metadata (ignored for ordering, as SemVer requires). Comparison follows SemVer precedence: numeric core
- * first, then a pre-release version always ranks below its release, and pre-release identifiers compare
- * field-by-field with numeric identifiers ranking below alphanumeric ones.
+ * missing minor/patch (treated as zero), extra numeric segments beyond the third (a build number, e.g.
+ * {@code 1.2.3.4}, kept and compared rather than truncated), a {@code -SNAPSHOT}/{@code -rc.1} pre-release
+ * tail, and {@code +build} metadata (ignored for ordering, as SemVer requires). Comparison follows SemVer
+ * precedence: the numeric core first (segment by segment, missing trailing segments treated as zero), then a
+ * pre-release version always ranks below its release, and pre-release identifiers compare field-by-field with
+ * numeric identifiers ranking below alphanumeric ones.
  */
 public final class SemanticVersion implements Comparable<SemanticVersion> {
 
-    private final int major;
-    private final int minor;
-    private final int patch;
+    // The numeric core, segment by segment (at least three: major, minor, patch, then any build segments). A
+    // four-segment publish such as 1.2.3.4 keeps its trailing component instead of dropping it.
+    private final List<Integer> core;
     private final List<String> preRelease;
 
-    private SemanticVersion(int major, int minor, int patch, List<String> preRelease) {
-        this.major = major;
-        this.minor = minor;
-        this.patch = patch;
+    private SemanticVersion(List<Integer> core, List<String> preRelease) {
+        this.core = List.copyOf(core);
         this.preRelease = List.copyOf(preRelease);
     }
 
@@ -47,8 +48,7 @@ public final class SemanticVersion implements Comparable<SemanticVersion> {
             core = text.substring(0, dash);
             pre = splitIdentifiers(text.substring(dash + 1));
         }
-        int[] numbers = parseCore(core);
-        return new SemanticVersion(numbers[0], numbers[1], numbers[2], pre);
+        return new SemanticVersion(parseCore(core), pre);
     }
 
     private static List<String> splitIdentifiers(String tail) {
@@ -61,11 +61,15 @@ public final class SemanticVersion implements Comparable<SemanticVersion> {
         return out;
     }
 
-    private static int[] parseCore(String core) {
+    private static List<Integer> parseCore(String core) {
         String[] parts = core.split("\\.", -1);
-        int[] numbers = new int[3];
-        for (int i = 0; i < 3; i++) {
-            numbers[i] = i < parts.length ? parseNumber(parts[i]) : 0;
+        List<Integer> numbers = new ArrayList<>();
+        for (String part : parts) {
+            numbers.add(parseNumber(part));
+        }
+        // Always carry at least major/minor/patch so a bare "1" still compares against "1.0.0".
+        while (numbers.size() < 3) {
+            numbers.add(0);
         }
         return numbers;
     }
@@ -84,7 +88,7 @@ public final class SemanticVersion implements Comparable<SemanticVersion> {
 
     /** This version stripped of any pre-release tail (its release counterpart). */
     public SemanticVersion release() {
-        return new SemanticVersion(major, minor, patch, List.of());
+        return new SemanticVersion(core, List.of());
     }
 
     /** Whether this version sorts strictly after {@code other}. */
@@ -104,15 +108,19 @@ public final class SemanticVersion implements Comparable<SemanticVersion> {
     }
 
     private int compareCore(SemanticVersion other) {
-        int byMajor = Integer.compare(major, other.major);
-        if (byMajor != 0) {
-            return byMajor;
+        int segments = Math.max(core.size(), other.core.size());
+        for (int i = 0; i < segments; i++) {
+            int bySegment = Integer.compare(segmentAt(i), other.segmentAt(i));
+            if (bySegment != 0) {
+                return bySegment;
+            }
         }
-        int byMinor = Integer.compare(minor, other.minor);
-        if (byMinor != 0) {
-            return byMinor;
-        }
-        return Integer.compare(patch, other.patch);
+        return 0;
+    }
+
+    // A trailing segment that one version omits is treated as zero, so 1.2.3 and 1.2.3.0 compare equal.
+    private int segmentAt(int index) {
+        return index < core.size() ? core.get(index) : 0;
     }
 
     private int comparePreRelease(SemanticVersion other) {
@@ -173,20 +181,27 @@ public final class SemanticVersion implements Comparable<SemanticVersion> {
         if (!(o instanceof SemanticVersion other)) {
             return false;
         }
-        return major == other.major
-                && minor == other.minor
-                && patch == other.patch
-                && preRelease.equals(other.preRelease);
+        // Equality matches comparison: a trailing-zero difference (1.2.3 vs 1.2.3.0) is not a difference.
+        return compareCore(other) == 0 && preRelease.equals(other.preRelease);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(major, minor, patch, preRelease);
+        return Objects.hash(canonicalCore(), preRelease);
+    }
+
+    // The core with trailing zero segments beyond the third dropped, so equal versions hash alike.
+    private List<Integer> canonicalCore() {
+        int end = core.size();
+        while (end > 3 && core.get(end - 1) == 0) {
+            end--;
+        }
+        return core.subList(0, end);
     }
 
     @Override
     public String toString() {
-        String core = major + "." + minor + "." + patch;
-        return preRelease.isEmpty() ? core : core + "-" + String.join(".", preRelease);
+        String numeric = canonicalCore().stream().map(String::valueOf).collect(Collectors.joining("."));
+        return preRelease.isEmpty() ? numeric : numeric + "-" + String.join(".", preRelease);
     }
 }

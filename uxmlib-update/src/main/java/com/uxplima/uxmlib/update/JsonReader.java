@@ -16,8 +16,14 @@ import org.jspecify.annotations.Nullable;
  */
 final class JsonReader {
 
+    // A sane cap on object/array nesting. A release payload is shallow; anything deeper is hostile or corrupt
+    // and is rejected with an IllegalArgumentException (which the providers already catch) rather than left to
+    // overflow the stack with a StackOverflowError that bypasses that catch.
+    private static final int MAX_DEPTH = 64;
+
     private final String src;
     private int pos;
+    private int depth;
 
     JsonReader(String src) {
         this.src = src;
@@ -48,12 +54,20 @@ final class JsonReader {
         };
     }
 
+    private void enter() {
+        if (++depth > MAX_DEPTH) {
+            throw error("nesting too deep (max " + MAX_DEPTH + ")");
+        }
+    }
+
     private Map<String, Object> readObject() {
+        enter();
         expect('{');
         Map<String, Object> object = new LinkedHashMap<>();
         skipWhitespace();
         if (peek() == '}') {
             pos++;
+            depth--;
             return object;
         }
         while (true) {
@@ -66,6 +80,7 @@ final class JsonReader {
             skipWhitespace();
             char c = next();
             if (c == '}') {
+                depth--;
                 return object;
             }
             if (c != ',') {
@@ -75,11 +90,13 @@ final class JsonReader {
     }
 
     private List<Object> readArray() {
+        enter();
         expect('[');
         List<Object> array = new ArrayList<>();
         skipWhitespace();
         if (peek() == ']') {
             pos++;
+            depth--;
             return array;
         }
         while (true) {
@@ -88,6 +105,7 @@ final class JsonReader {
             skipWhitespace();
             char c = next();
             if (c == ']') {
+                depth--;
                 return array;
             }
             if (c != ',') {
@@ -173,7 +191,8 @@ final class JsonReader {
             pos++;
         }
         if (pos == start) {
-            throw error("unexpected character '" + src.charAt(pos) + "'");
+            String found = pos < src.length() ? "'" + src.charAt(pos) + "'" : "end of input";
+            throw error("unexpected character " + found);
         }
         try {
             return Double.parseDouble(src.substring(start, pos));

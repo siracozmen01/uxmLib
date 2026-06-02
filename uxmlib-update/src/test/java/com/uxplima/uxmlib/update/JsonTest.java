@@ -64,6 +64,32 @@ class JsonTest {
     }
 
     @Test
+    void rejectsAdversariallyDeepNestingWithoutOverflowing() {
+        // A few thousand levels of nesting must surface as an IllegalArgumentException the providers catch, not
+        // a StackOverflowError that bypasses that catch.
+        String deep = "[".repeat(5_000) + "]".repeat(5_000);
+        assertThatThrownBy(() -> Json.parse(deep))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("nesting too deep");
+    }
+
+    @Test
+    void parsesNestingUpToTheDepthLimit() {
+        // 64 levels is allowed; the guard rejects only what exceeds it.
+        String atLimit = "[".repeat(64) + "]".repeat(64);
+        assertThat(Json.parse(atLimit)).isInstanceOf(List.class);
+    }
+
+    @Test
+    void reportsUnexpectedCharacterForANonValueStartAsIllegalArgument() {
+        // A bare ':' can never start a value; the number error path reports it cleanly as an
+        // IllegalArgumentException rather than letting any other exception type leak out.
+        assertThatThrownBy(() -> Json.parse(":"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("unexpected character ':'");
+    }
+
+    @Test
     void extractsTopLevelStringField() {
         String body = "{\"tag_name\":\"v1.4.0\",\"html_url\":\"https://example.test/r\"}";
         Map<?, ?> map = (Map<?, ?>) parse(body);

@@ -3,7 +3,6 @@ package com.uxplima.uxmlib.update;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
@@ -25,7 +24,9 @@ public final class UpdateChecker {
     private final UpdateProvider provider;
     private final SemanticVersion current;
     private final AtomicReference<@Nullable UpdateOutcome> lastOutcome = new AtomicReference<>();
-    private final AtomicBoolean announced = new AtomicBoolean(false);
+    // The highest version already announced, or null if nothing has been announced yet. A later, strictly newer
+    // release is announced again; the same (or an older) outdated build is not re-announced by the recurring timer.
+    private final AtomicReference<@Nullable SemanticVersion> lastAnnounced = new AtomicReference<>();
 
     /**
      * @param scheduler the library scheduler; the fetch runs on its async pool
@@ -75,17 +76,44 @@ public final class UpdateChecker {
     }
 
     /**
-     * Run one check and, the first time it reports {@link UpdateStatus#OUTDATED}, invoke {@code onOutdated}.
-     * Subsequent outdated results are swallowed so a recurring timer announces only once.
+     * Run one check and, when it reports {@link UpdateStatus#OUTDATED} for a version newer than the last one
+     * announced, invoke {@code onOutdated}. The same outdated build is not re-announced by the recurring timer,
+     * but a later, strictly newer release seen in the same process is announced again.
      */
     public CompletableFuture<UpdateOutcome> checkAndAnnounce(Consumer<UpdateOutcome> onOutdated) {
         Objects.requireNonNull(onOutdated, "onOutdated");
         return check().thenApply(outcome -> {
-            if (outcome.isOutdated() && announced.compareAndSet(false, true)) {
+            if (outcome.isOutdated() && shouldAnnounce(outcome)) {
                 onOutdated.accept(outcome);
             }
             return outcome;
         });
+    }
+
+    // True (and latches the version as announced) only when this outcome's release is strictly newer than the
+    // last version already announced. Unparseable versions never re-announce; the CAS keeps the gate race-free.
+    private boolean shouldAnnounce(UpdateOutcome outcome) {
+        SemanticVersion published =
+                outcome.release().map(release -> parseOrNull(release.version())).orElse(null);
+        if (published == null) {
+            return false;
+        }
+        SemanticVersion previous;
+        do {
+            previous = lastAnnounced.get();
+            if (previous != null && !published.isNewerThan(previous)) {
+                return false;
+            }
+        } while (!lastAnnounced.compareAndSet(previous, published));
+        return true;
+    }
+
+    private static @Nullable SemanticVersion parseOrNull(String version) {
+        try {
+            return SemanticVersion.parse(version);
+        } catch (IllegalArgumentException unparseable) {
+            return null;
+        }
     }
 
     private UpdateOutcome evaluate(Optional<Release> latest) {

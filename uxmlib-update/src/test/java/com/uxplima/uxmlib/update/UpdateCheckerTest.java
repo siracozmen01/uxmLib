@@ -63,6 +63,51 @@ class UpdateCheckerTest {
     }
 
     @Test
+    void announceFiresAgainForAStrictlyNewerLaterRelease() {
+        AtomicInteger announced = new AtomicInteger();
+        MutableProvider provider = new MutableProvider(release("1.5.0"));
+        UpdateChecker checker = new UpdateChecker(new InlineScheduler(), provider, "1.4.0");
+
+        checker.checkAndAnnounce(outcome -> announced.incrementAndGet()).join();
+        checker.checkAndAnnounce(outcome -> announced.incrementAndGet()).join(); // same version: no re-announce
+        provider.set(release("1.6.0"));
+        checker.checkAndAnnounce(outcome -> announced.incrementAndGet()).join(); // newer: announce again
+
+        assertThat(announced).hasValue(2);
+    }
+
+    @Test
+    void announceDoesNotFireForAnOlderLaterRelease() {
+        AtomicInteger announced = new AtomicInteger();
+        MutableProvider provider = new MutableProvider(release("1.6.0"));
+        UpdateChecker checker = new UpdateChecker(new InlineScheduler(), provider, "1.4.0");
+
+        checker.checkAndAnnounce(outcome -> announced.incrementAndGet()).join();
+        provider.set(release("1.5.0"));
+        checker.checkAndAnnounce(outcome -> announced.incrementAndGet()).join(); // older than announced: skip
+
+        assertThat(announced).hasValue(1);
+    }
+
+    // A provider whose current release can be swapped between checks, so a recurring poll can be simulated.
+    private static final class MutableProvider implements UpdateProvider {
+        private volatile Release current;
+
+        MutableProvider(Release initial) {
+            this.current = initial;
+        }
+
+        void set(Release next) {
+            this.current = next;
+        }
+
+        @Override
+        public CompletableFuture<Optional<Release>> latest() {
+            return CompletableFuture.completedFuture(Optional.of(current));
+        }
+    }
+
+    @Test
     void announceDoesNotFireWhenUpToDate() {
         AtomicInteger announced = new AtomicInteger();
         UpdateChecker checker = new UpdateChecker(new InlineScheduler(), providing(release("1.4.0")), "1.4.0");
