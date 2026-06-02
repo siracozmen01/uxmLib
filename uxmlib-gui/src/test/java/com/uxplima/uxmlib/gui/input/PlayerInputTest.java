@@ -96,6 +96,33 @@ class PlayerInputTest {
     }
 
     @Test
+    void uninstallUnregistersTheListenersItInstalled() {
+        PlayerInput input = new PlayerInput(plugin);
+        input.install();
+        assertThat(isRegistered(input)).isTrue();
+
+        input.uninstall();
+
+        // After teardown no handler list still references this instance, so a stale instance cannot keep
+        // receiving events across a reload/disable.
+        assertThat(isRegistered(input)).isFalse();
+    }
+
+    @Test
+    void uninstallRunsCleanlyWithNothingPending() {
+        PlayerInput input = new PlayerInput(plugin);
+        input.install();
+
+        assertThatCode(input::uninstall).doesNotThrowAnyException();
+    }
+
+    private static boolean isRegistered(org.bukkit.event.Listener listener) {
+        return org.bukkit.event.HandlerList.getHandlerLists().stream()
+                .flatMap(list -> java.util.Arrays.stream(list.getRegisteredListeners()))
+                .anyMatch(registered -> registered.getListener() == listener);
+    }
+
+    @Test
     void signPromptThatCannotOpenResolvesAsCancelledInsteadOfHanging() {
         // MockBukkit cannot drive the native sign editor, so opening it raises an UnimplementedOperation.
         // The backend must swallow that into a Cancelled result (never leaving the caller hanging) rather

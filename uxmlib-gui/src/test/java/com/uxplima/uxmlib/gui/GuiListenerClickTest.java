@@ -68,6 +68,24 @@ class GuiListenerClickTest {
     }
 
     @Test
+    void quitForgetsTheViewerSoTheirDebounceEntryDoesNotLeak() {
+        GuiListener listener = new GuiListener();
+        SimpleGui gui = Guis.gui().rows(1).build();
+        int[] runs = {0};
+        gui.set(0, GuiItem.button(new ItemStack(Material.STONE), e -> runs[0]++));
+        PlayerMock player = MockBukkit.getMock().addPlayer();
+
+        listener.onClick(clickFor(player, gui)); // arms the debounce window for this viewer
+        listener.onQuit(new org.bukkit.event.player.PlayerQuitEvent(
+                player,
+                net.kyori.adventure.text.Component.empty(),
+                org.bukkit.event.player.PlayerQuitEvent.QuitReason.DISCONNECTED));
+        listener.onClick(clickFor(player, gui)); // entry was pruned on quit, so this is accepted, not debounced
+
+        assertThat(runs[0]).isEqualTo(2);
+    }
+
+    @Test
     void separateViewersAreNotDebouncedAgainstEachOther() {
         GuiListener listener = new GuiListener();
         SimpleGui gui = Guis.gui().rows(1).build();

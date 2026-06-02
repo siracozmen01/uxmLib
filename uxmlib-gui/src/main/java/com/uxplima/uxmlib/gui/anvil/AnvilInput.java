@@ -47,6 +47,12 @@ public final class AnvilInput implements Listener {
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
+    /** Unregister the anvil listeners and drop any in-flight sessions. Call on disable, mirrors {@link #install()}. */
+    public void uninstall() {
+        org.bukkit.event.HandlerList.unregisterAll(this);
+        sessions.clear();
+    }
+
     /**
      * Open an anvil prompt for {@code player}. The {@code promptItem}'s name is the hint; {@code callback}
      * fires once with the submission or a cancellation.

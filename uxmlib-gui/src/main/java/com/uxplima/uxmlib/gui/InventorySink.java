@@ -34,6 +34,17 @@ final class InventorySink implements SlotAnimation.Sink {
     }
 
     @Override
+    public boolean holdsIcon(int slot, ItemStack icon) {
+        // A button placed through the menu lands in the item map; if that happened, the overlay no longer
+        // owns the cell even if its rendered icon looks similar, so it must not touch it.
+        if (slot < 0 || slot >= inventory.getSize() || items.containsKey(slot)) {
+            return false;
+        }
+        ItemStack current = inventory.getItem(slot);
+        return current != null && current.isSimilar(icon);
+    }
+
+    @Override
     public void light(int slot, ItemStack icon) {
         inventory.setItem(slot, icon);
     }

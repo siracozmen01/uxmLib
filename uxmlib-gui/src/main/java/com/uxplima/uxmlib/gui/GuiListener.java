@@ -7,6 +7,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 
 import com.uxplima.uxmlib.scheduler.Scheduler;
 
@@ -65,6 +66,13 @@ public final class GuiListener implements Listener {
         if (event.getInventory().getHolder() instanceof Gui gui) {
             gui.handleOpen(event);
         }
+    }
+
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        // A viewer can leave via a path that never delivers an InventoryCloseEvent for the menu (kick, world
+        // unload). Prune their debounce entry on quit so the table stays bounded to online players.
+        clickGuard.forget(event.getPlayer().getUniqueId());
     }
 
     private static @org.jspecify.annotations.Nullable Scheduler installedScheduler() {

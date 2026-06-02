@@ -53,11 +53,14 @@ final class AsyncClick {
         if (!ClickRecheck.stillMatches(orAir(event.getCurrentItem()), currentIcon)) {
             return; // the slot changed between render and click: skip, leaving the cancel in place
         }
-        CompletableFuture<List<GuiResponse>> future = run(action, ClickContext.of(event), onError);
+        // Snapshot the click now, while the event is still live; responses are applied against this snapshot
+        // (and the viewer's current open view), never the recycled event, which may settle a tick later.
+        ClickContext context = ClickContext.of(event);
+        CompletableFuture<List<GuiResponse>> future = run(action, context, onError);
         if (future.isDone()) {
-            applyNow(future, gui, event, onError); // fast-path: handler ran synchronously, apply inline
+            applyNow(future, gui, context, onError); // fast-path: handler ran synchronously, apply inline
         } else {
-            applyLater(future, gui, event, scheduler, onError);
+            applyLater(future, gui, context, scheduler, onError);
         }
     }
 
@@ -75,12 +78,9 @@ final class AsyncClick {
 
     /** Apply an already-complete future inline on the current (region) thread. */
     private static void applyNow(
-            CompletableFuture<List<GuiResponse>> future,
-            Gui gui,
-            InventoryClickEvent event,
-            Consumer<Throwable> onError) {
+            CompletableFuture<List<GuiResponse>> future, Gui gui, ClickContext context, Consumer<Throwable> onError) {
         try {
-            GuiResponses.apply(future.join(), gui, event);
+            GuiResponses.apply(future.join(), gui, context);
         } catch (CompletionException error) {
             onError.accept(unwrap(error));
         }
@@ -94,23 +94,23 @@ final class AsyncClick {
     private static void applyLater(
             CompletableFuture<List<GuiResponse>> future,
             Gui gui,
-            InventoryClickEvent event,
+            ClickContext context,
             @Nullable Scheduler scheduler,
             Consumer<Throwable> onError) {
         var unused = future.whenComplete((responses, error) -> {
             if (error != null) {
                 onError.accept(unwrap(error));
             } else {
-                onRegionThread(scheduler, event, () -> GuiResponses.apply(responses, gui, event));
+                onRegionThread(scheduler, context.viewer(), () -> GuiResponses.apply(responses, gui, context));
             }
         });
     }
 
-    private static void onRegionThread(@Nullable Scheduler scheduler, InventoryClickEvent event, Runnable task) {
+    private static void onRegionThread(@Nullable Scheduler scheduler, org.bukkit.entity.Player viewer, Runnable task) {
         if (scheduler == null) {
             task.run();
         } else {
-            scheduler.entity(event.getWhoClicked(), task);
+            scheduler.entity(viewer, task);
         }
     }
 

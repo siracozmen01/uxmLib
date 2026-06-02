@@ -168,6 +168,27 @@ class AsyncClickTest {
     }
 
     @Test
+    void aDeferredResponseAppliesToTheViewerNotTheRecycledEvent() {
+        // A response that touches view/cursor state must resolve against the viewer's CURRENT open view, not
+        // the click event (which the server has already resolved and recycled by the time the deferred
+        // response settles a tick later). Driving it through the async path proves the snapshot is used.
+        SimpleGui gui = Guis.gui().rows(1).build();
+        PlayerMock player = MockBukkit.getMock().addPlayer();
+        ItemStack icon = new ItemStack(Material.STONE);
+        CompletableFuture<List<GuiResponse>> pending = new CompletableFuture<>();
+        GuiAction.Responding action = GuiItem.respondingAsync(ctx -> pending);
+        InventoryClickEvent event = clickWithIcon(player, gui, icon);
+        RecordingScheduler scheduler = new RecordingScheduler();
+
+        AsyncClick.dispatch(action, gui, event, scheduler, icon, t -> {});
+        pending.complete(List.of(GuiResponse.replaceCursor(new ItemStack(Material.GOLD_INGOT, 3))));
+
+        assertThat(scheduler.entityUsed).isTrue();
+        assertThat(player.getOpenInventory().getCursor().getType()).isEqualTo(Material.GOLD_INGOT);
+        assertThat(player.getOpenInventory().getCursor().getAmount()).isEqualTo(3);
+    }
+
+    @Test
     void aStaleIconSkipsTheHandlerEntirely() {
         SimpleGui gui = Guis.gui().rows(1).build();
         PlayerMock player = MockBukkit.getMock().addPlayer();

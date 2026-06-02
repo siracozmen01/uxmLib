@@ -15,7 +15,8 @@ import org.bukkit.entity.Player;
  * statically, so two plugins each with their own install do not share a cooldown table.
  *
  * <p>The window defaults to ~150ms, matching the debounce CMILib and AdvancedCore settled on. The map is
- * keyed by viewer UUID and pruned when a player leaves their menu, so it does not grow without bound.
+ * keyed by viewer UUID and pruned when a player closes their menu or quits the server, so it stays bounded
+ * to online players and does not grow without bound.
  */
 final class ClickGuard {
 

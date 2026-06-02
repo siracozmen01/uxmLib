@@ -48,10 +48,21 @@ final class SignPrompt {
     /** Restore the block this prompt replaced for {@code player}, if any is still pending. */
     void restore(Player player) {
         Objects.requireNonNull(player, "player");
-        Saved saved = placed.remove(player.getUniqueId());
+        restore(player.getUniqueId());
+    }
+
+    private void restore(UUID id) {
+        Saved saved = placed.remove(id);
         if (saved != null) {
             Block block = saved.location.getBlock();
             block.setBlockData(saved.data, false);
+        }
+    }
+
+    /** Restore every still-pending transient sign block; used on teardown so none is left in the world. */
+    void restoreAll() {
+        for (UUID id : new java.util.ArrayList<>(placed.keySet())) {
+            restore(id);
         }
     }
 

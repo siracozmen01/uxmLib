@@ -30,10 +30,11 @@ import org.jspecify.annotations.Nullable;
  * transient sign) — all delivering the same {@link InputResult} through one callback. Per-player pending
  * state lives on the instance via an {@link InputRouter}; there is no static mutable state.
  *
- * <p>Construct one per plugin, {@link #install()} it once on enable, then {@link #open} as needed. A
- * configurable cancel keyword aborts any backend, and pending requests auto-clean on quit. When a
- * {@link Scheduler} is supplied, results from the async chat backend are marshalled back onto the player's
- * region thread before the callback runs, so a callback may safely touch the Bukkit API.
+ * <p>Construct one per plugin, {@link #install()} it once on enable, then {@link #open} as needed, and
+ * {@link #uninstall()} it on disable. A configurable cancel keyword aborts any backend, and pending requests
+ * auto-clean on quit. When a {@link Scheduler} is supplied, results from the async chat backend are
+ * marshalled back onto the player's region thread before the callback runs, so a callback may safely touch
+ * the Bukkit API.
  */
 public final class PlayerInput implements Listener {
 
@@ -61,6 +62,17 @@ public final class PlayerInput implements Listener {
     public void install() {
         anvil.install();
         Bukkit.getPluginManager().registerEvents(this, plugin);
+    }
+
+    /**
+     * Symmetric teardown for {@link #install()}: unregister this listener and the anvil backend, restore any
+     * transient sign blocks still pending in the world, and drop all per-player pending state. Call on
+     * plugin disable so handlers do not stay bound to a stale instance and no sign block is left behind.
+     */
+    public void uninstall() {
+        org.bukkit.event.HandlerList.unregisterAll(this);
+        anvil.uninstall();
+        signPrompt.restoreAll();
     }
 
     /**
@@ -148,6 +160,10 @@ public final class PlayerInput implements Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
+        // SIGN writes a real block into the world; if a player quits mid-prompt (no SignChangeEvent ever
+        // fires) that block would leak permanently, so restore it before dropping the pending request.
+        // restore() is idempotent, so this is harmless for ANVIL/CHAT quits with nothing pending.
+        signPrompt.restore(event.getPlayer());
         router.cancel(event.getPlayer().getUniqueId());
     }
 

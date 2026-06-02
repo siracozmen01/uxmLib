@@ -34,14 +34,26 @@ class SlotAnimationTest {
         return new ItemStack(Material.LIME_STAINED_GLASS_PANE);
     }
 
-    /** Records the slots written/cleared so a test can assert exactly which slots a tick touched. */
+    /**
+     * Records the slots written/cleared so a test can assert exactly which slots a tick touched. It models a
+     * real cell: {@code occupied} is any non-empty cell, and {@code holding} is the subset that currently
+     * shows the overlay's own highlight icon (so {@code holdsIcon} can distinguish our highlight from a
+     * caller's button placed over it).
+     */
     private static final class RecordingSink implements SlotAnimation.Sink {
         final List<Integer> lit = new ArrayList<>();
         final List<Integer> cleared = new ArrayList<>();
         private final java.util.Set<Integer> occupied;
+        private final java.util.Set<Integer> holding = new java.util.HashSet<>();
 
         RecordingSink(Integer... occupiedSlots) {
             this.occupied = new java.util.HashSet<>(List.of(occupiedSlots));
+        }
+
+        /** Simulate a caller placing a real item (a button) into {@code slot} after the animation lit it. */
+        void placeButton(int slot) {
+            occupied.add(slot);
+            holding.remove(slot);
         }
 
         @Override
@@ -50,15 +62,22 @@ class SlotAnimationTest {
         }
 
         @Override
+        public boolean holdsIcon(int slot, ItemStack icon) {
+            return holding.contains(slot);
+        }
+
+        @Override
         public void light(int slot, ItemStack icon) {
             lit.add(slot);
             occupied.add(slot);
+            holding.add(slot);
         }
 
         @Override
         public void clear(int slot) {
             cleared.add(slot);
             occupied.remove(slot);
+            holding.remove(slot);
         }
     }
 
@@ -111,5 +130,30 @@ class SlotAnimationTest {
         animation.advance(1L, sink); // moves to slot 1, must not clear slot 0 it never lit
         assertThat(sink.cleared).isEmpty();
         assertThat(sink.lit).containsExactly(1);
+    }
+
+    @Test
+    void aButtonPlacedOverAnOwnedSlotIsNeitherRepaintedNorCleared() {
+        // Frame 0 lights {5,6}; frame 1 lights {5,7} (5 stays owned); frame 2 lights {8,9} (5 drops out).
+        SlotAnimation animation =
+                SlotAnimation.of(SlotPattern.of(List.of(List.of(5, 6), List.of(5, 7), List.of(8, 9))), highlight());
+        RecordingSink sink = new RecordingSink();
+
+        animation.advance(0L, sink); // lights 5 and 6
+        assertThat(sink.lit).containsExactly(5, 6);
+
+        // A caller now places a real button onto slot 5, which the overlay had lit.
+        sink.placeButton(5);
+        sink.lit.clear();
+        sink.cleared.clear();
+
+        animation.advance(1L, sink); // frame 1: 5 stays in-window but is now a button -> must NOT be re-lit
+        assertThat(sink.lit).containsExactly(7); // only the genuinely new slot is lit
+        assertThat(sink.cleared).doesNotContain(5);
+
+        sink.lit.clear();
+        sink.cleared.clear();
+        animation.advance(2L, sink); // frame 2: 5 leaves the window -> must NOT be cleared (it's a button now)
+        assertThat(sink.cleared).doesNotContain(5);
     }
 }

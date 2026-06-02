@@ -36,20 +36,21 @@ class GuiResponsesTest {
         MockBukkit.unmock();
     }
 
-    private static InventoryClickEvent clickOn(PlayerMock player, Gui gui) {
+    private static ClickContext clickOn(PlayerMock player, Gui gui) {
         InventoryView view = java.util.Objects.requireNonNull(player.openInventory(gui.getInventory()));
-        return new InventoryClickEvent(
+        InventoryClickEvent event = new InventoryClickEvent(
                 view, InventoryType.SlotType.CONTAINER, 0, ClickType.LEFT, InventoryAction.PICKUP_ALL);
+        return ClickContext.of(event);
     }
 
     @Test
     void runResponseRunsItsTask() {
         SimpleGui gui = Guis.gui().rows(1).build();
         PlayerMock player = MockBukkit.getMock().addPlayer();
-        InventoryClickEvent event = clickOn(player, gui);
+        ClickContext context = clickOn(player, gui);
         boolean[] ran = {false};
 
-        GuiResponses.apply(List.of(GuiResponse.run(() -> ran[0] = true)), gui, event);
+        GuiResponses.apply(List.of(GuiResponse.run(() -> ran[0] = true)), gui, context);
 
         assertThat(ran[0]).isTrue();
     }
@@ -58,11 +59,11 @@ class GuiResponsesTest {
     void appliesResponsesInOrder() {
         SimpleGui gui = Guis.gui().rows(1).build();
         PlayerMock player = MockBukkit.getMock().addPlayer();
-        InventoryClickEvent event = clickOn(player, gui);
+        ClickContext context = clickOn(player, gui);
         List<Integer> order = new java.util.ArrayList<>();
 
         GuiResponses.apply(
-                List.of(GuiResponse.run(() -> order.add(1)), GuiResponse.run(() -> order.add(2))), gui, event);
+                List.of(GuiResponse.run(() -> order.add(1)), GuiResponse.run(() -> order.add(2))), gui, context);
 
         assertThat(order).containsExactly(1, 2);
     }
@@ -71,34 +72,35 @@ class GuiResponsesTest {
     void updateItemPlacesTheItemInTheMenu() {
         SimpleGui gui = Guis.gui().rows(1).build();
         PlayerMock player = MockBukkit.getMock().addPlayer();
-        InventoryClickEvent event = clickOn(player, gui);
+        ClickContext context = clickOn(player, gui);
         GuiItem placed = GuiItem.display(new ItemStack(Material.BEACON));
 
-        GuiResponses.apply(List.of(GuiResponse.updateItem(3, placed)), gui, event);
+        GuiResponses.apply(List.of(GuiResponse.updateItem(3, placed)), gui, context);
 
         assertThat(gui.getItem(3)).isSameAs(placed);
     }
 
     @Test
-    void replaceCursorSetsTheEventCursor() {
+    void replaceCursorSetsTheViewersCursor() {
         SimpleGui gui = Guis.gui().rows(1).build();
         PlayerMock player = MockBukkit.getMock().addPlayer();
-        InventoryClickEvent event = clickOn(player, gui);
+        ClickContext context = clickOn(player, gui);
 
-        GuiResponses.apply(List.of(GuiResponse.replaceCursor(new ItemStack(Material.GOLD_INGOT, 5))), gui, event);
+        GuiResponses.apply(List.of(GuiResponse.replaceCursor(new ItemStack(Material.GOLD_INGOT, 5))), gui, context);
 
-        assertThat(event.getCursor().getType()).isEqualTo(Material.GOLD_INGOT);
-        assertThat(event.getCursor().getAmount()).isEqualTo(5);
+        // The cursor is set on the viewer's live open view, not the (recycled) event object.
+        assertThat(player.getOpenInventory().getCursor().getType()).isEqualTo(Material.GOLD_INGOT);
+        assertThat(player.getOpenInventory().getCursor().getAmount()).isEqualTo(5);
     }
 
     @Test
     void nothingIsANoOp() {
         SimpleGui gui = Guis.gui().rows(1).build();
         PlayerMock player = MockBukkit.getMock().addPlayer();
-        InventoryClickEvent event = clickOn(player, gui);
+        ClickContext context = clickOn(player, gui);
 
         // Must not throw and must leave the menu untouched.
-        GuiResponses.apply(List.of(GuiResponse.nothing()), gui, event);
+        GuiResponses.apply(List.of(GuiResponse.nothing()), gui, context);
 
         assertThat(gui.getItem(0)).isNull();
     }
