@@ -22,6 +22,8 @@ h2           = "2.3.232"    # com.h2database:h2 — pure-Java embedded backend; 
 luckperms      = "5.5"
 vault          = "1.7.1"        # com.github.MilkBowl:VaultAPI — JitPack
 placeholderapi = "2.11.6"       # me.clip:placeholderapi — extendedclip repo
+worldguard     = "7.0.13"       # com.sk89q.worldguard:worldguard-bukkit — enginehub repo
+towny          = "0.100.4.0"    # com.palmergames.bukkit.towny:towny — glaremasters repo
 
 # tests
 junit    = "5.12.1"
@@ -55,6 +57,8 @@ jspecify          = { module = "org.jspecify:jspecify",                 version.
 luckperms-api     = { module = "net.luckperms:api",                     version.ref = "luckperms" }
 vault-api         = { module = "com.github.MilkBowl:VaultAPI",          version.ref = "vault" }
 placeholderapi    = { module = "me.clip:placeholderapi",               version.ref = "placeholderapi" }
+worldguard-bukkit = { module = "com.sk89q.worldguard:worldguard-bukkit", version.ref = "worldguard" }
+towny             = { module = "com.palmergames.bukkit.towny:towny",     version.ref = "towny" }
 
 junit-bom         = { module = "org.junit:junit-bom",                   version.ref = "junit" }
 junit-jupiter     = { module = "org.junit.jupiter:junit-jupiter" }

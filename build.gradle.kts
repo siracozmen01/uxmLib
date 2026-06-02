@@ -11,5 +11,7 @@ allprojects {
         maven("https://repo.papermc.io/repository/maven-public/")
         maven("https://repo.extendedclip.com/releases/") // PlaceholderAPI
         maven("https://jitpack.io")                       // Vault API
+        maven("https://maven.enginehub.org/repo/")        // WorldGuard / WorldEdit
+        maven("https://repo.glaremasters.me/repository/towny/") // Towny
     }
 }

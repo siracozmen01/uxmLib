@@ -11,6 +11,8 @@ dependencies {
     compileOnly(libs.luckperms.api)
     compileOnly(libs.vault.api)
     compileOnly(libs.placeholderapi)
+    compileOnly(libs.worldguard.bukkit)
+    compileOnly(libs.towny)
 
     // Tests exercise the absent-plugin path (MockBukkit) and the pure JSON/spec logic (plain JUnit).
     // LuckPerms is on the test runtime so the hook class loads (and reports absent) without a real plugin.
@@ -21,4 +23,8 @@ dependencies {
     // Vault on the test runtime lets a fake Economy service exercise the bridge's format/currency
     // delegation and the service-register rebinding; production still treats Vault as compileOnly.
     testImplementation(libs.vault.api)
+    // WorldGuard and Towny on the test runtime let the region adapter classes load so the present-guard
+    // (no plugin under MockBukkit -> empty) is asserted; production still treats both as compileOnly.
+    testImplementation(libs.worldguard.bukkit)
+    testImplementation(libs.towny)
 }

@@ -1,11 +1,24 @@
-error: uxmlib-common/src/main/java/com/uxplima/uxmlib/config/ConfigInterpolation.java: does not exist in index
-error: cannot read the current contents of 'uxmlib-common/src/main/java/com/uxplima/uxmlib/config/ConfigInterpolation.java'
+Applied patch to 'build.gradle.kts' cleanly.
+Applied patch to 'gradle/libs.versions.toml' cleanly.
+Applied patch to 'uxmlib-integration/build.gradle.kts' cleanly.
+error: uxmlib-integration/src/main/java/com/uxplima/uxmlib/hook/region/RegionHooks.java: does not exist in index
+error: cannot read the current contents of 'uxmlib-integration/src/main/java/com/uxplima/uxmlib/hook/region/RegionHooks.java'
 Falling back to direct application...
-Applied patch to 'uxmlib-common/src/main/java/com/uxplima/uxmlib/config/ConfigUpgrade.java' cleanly.
-Applied patch to 'uxmlib-common/src/main/java/com/uxplima/uxmlib/config/HoconConfig.java' cleanly.
-error: uxmlib-common/src/test/java/com/uxplima/uxmlib/config/ConfigIncludeTest.java: does not exist in index
-error: cannot read the current contents of 'uxmlib-common/src/test/java/com/uxplima/uxmlib/config/ConfigIncludeTest.java'
+error: uxmlib-integration/src/main/java/com/uxplima/uxmlib/hook/region/RegionService.java: does not exist in index
+error: cannot read the current contents of 'uxmlib-integration/src/main/java/com/uxplima/uxmlib/hook/region/RegionService.java'
 Falling back to direct application...
-error: uxmlib-common/src/test/java/com/uxplima/uxmlib/config/ConfigInterpolationTest.java: does not exist in index
-error: cannot read the current contents of 'uxmlib-common/src/test/java/com/uxplima/uxmlib/config/ConfigInterpolationTest.java'
+error: uxmlib-integration/src/main/java/com/uxplima/uxmlib/hook/region/TownyRegionService.java: does not exist in index
+error: cannot read the current contents of 'uxmlib-integration/src/main/java/com/uxplima/uxmlib/hook/region/TownyRegionService.java'
+Falling back to direct application...
+error: uxmlib-integration/src/main/java/com/uxplima/uxmlib/hook/region/WorldGuardRegionService.java: does not exist in index
+error: cannot read the current contents of 'uxmlib-integration/src/main/java/com/uxplima/uxmlib/hook/region/WorldGuardRegionService.java'
+Falling back to direct application...
+error: uxmlib-integration/src/main/java/com/uxplima/uxmlib/hook/region/package-info.java: does not exist in index
+error: cannot read the current contents of 'uxmlib-integration/src/main/java/com/uxplima/uxmlib/hook/region/package-info.java'
+Falling back to direct application...
+error: uxmlib-integration/src/test/java/com/uxplima/uxmlib/hook/region/RegionHooksTest.java: does not exist in index
+error: cannot read the current contents of 'uxmlib-integration/src/test/java/com/uxplima/uxmlib/hook/region/RegionHooksTest.java'
+Falling back to direct application...
+error: uxmlib-integration/src/test/java/com/uxplima/uxmlib/hook/region/RegionServiceAdaptersTest.java: does not exist in index
+error: cannot read the current contents of 'uxmlib-integration/src/test/java/com/uxplima/uxmlib/hook/region/RegionServiceAdaptersTest.java'
 Falling back to direct application...
