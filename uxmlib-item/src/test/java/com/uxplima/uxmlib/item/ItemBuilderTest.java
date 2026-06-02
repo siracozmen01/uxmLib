@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemRarity;
 import org.bukkit.inventory.ItemStack;
@@ -56,6 +57,19 @@ class ItemBuilderTest {
     }
 
     @Test
+    void clearsNameAndLore() {
+        ItemStack named = ItemBuilder.of(Material.DIAMOND_SWORD)
+                .name(Component.text("Blade"))
+                .lore(Component.text("line"))
+                .build();
+
+        ItemStack cleared = ItemBuilder.from(named).clearName().clearLore().build();
+
+        assertThat(cleared.getItemMeta().hasDisplayName()).isFalse();
+        assertThat(cleared.getItemMeta().hasLore()).isFalse();
+    }
+
+    @Test
     void setsAmountAndRejectsOutOfRange() {
         ItemStack item = ItemBuilder.of(Material.STONE).amount(16).build();
         assertThat(item.getAmount()).isEqualTo(16);
@@ -72,6 +86,26 @@ class ItemBuilderTest {
 
         assertThat(item.getItemMeta().getItemFlags()).contains(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES);
         assertThat(item.getItemMeta().isUnbreakable()).isTrue();
+    }
+
+    @Test
+    void removesFlagsAndEnchants() {
+        ItemStack decorated = ItemBuilder.of(Material.DIAMOND_SWORD)
+                .enchant(Enchantment.SHARPNESS, 3)
+                .enchant(Enchantment.UNBREAKING, 2)
+                .flags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES)
+                .build();
+
+        ItemStack stripped = ItemBuilder.from(decorated)
+                .removeEnchant(Enchantment.SHARPNESS)
+                .removeFlags(ItemFlag.HIDE_ENCHANTS)
+                .build();
+        assertThat(stripped.getItemMeta().hasEnchant(Enchantment.SHARPNESS)).isFalse();
+        assertThat(stripped.getItemMeta().hasEnchant(Enchantment.UNBREAKING)).isTrue();
+        assertThat(stripped.getItemMeta().getItemFlags()).containsExactly(ItemFlag.HIDE_ATTRIBUTES);
+
+        ItemStack disenchanted = ItemBuilder.from(decorated).clearEnchants().build();
+        assertThat(disenchanted.getItemMeta().hasEnchants()).isFalse();
     }
 
     @Test

@@ -80,6 +80,11 @@ public final class ItemBuilder {
         return editMeta(meta -> meta.displayName(name));
     }
 
+    /** Remove the display name, restoring the item's default (vanilla) name. */
+    public ItemBuilder clearName() {
+        return editMeta(meta -> meta.displayName(null));
+    }
+
     /** Replace the lore with these lines. */
     public ItemBuilder lore(Component... lines) {
         Objects.requireNonNull(lines, "lines");
@@ -90,6 +95,11 @@ public final class ItemBuilder {
     public ItemBuilder lore(List<Component> lines) {
         Objects.requireNonNull(lines, "lines");
         return editMeta(meta -> meta.lore(List.copyOf(lines)));
+    }
+
+    /** Remove all lore lines. */
+    public ItemBuilder clearLore() {
+        return editMeta(meta -> meta.lore(null));
     }
 
     /** Append one line to the existing lore. */
@@ -112,10 +122,31 @@ public final class ItemBuilder {
         return editMeta(meta -> meta.addEnchant(enchantment, level, true));
     }
 
+    /** Remove one enchantment, if present. */
+    public ItemBuilder removeEnchant(Enchantment enchantment) {
+        Objects.requireNonNull(enchantment, "enchantment");
+        return editMeta(meta -> meta.removeEnchant(enchantment));
+    }
+
+    /** Remove every enchantment. */
+    public ItemBuilder clearEnchants() {
+        return editMeta(meta -> {
+            for (Enchantment enchantment : List.copyOf(meta.getEnchants().keySet())) {
+                meta.removeEnchant(enchantment);
+            }
+        });
+    }
+
     /** Add display flags (e.g. {@link ItemFlag#HIDE_ENCHANTS}). */
     public ItemBuilder flags(ItemFlag... flags) {
         Objects.requireNonNull(flags, "flags");
         return editMeta(meta -> meta.addItemFlags(flags));
+    }
+
+    /** Remove display flags, restoring their default visibility. */
+    public ItemBuilder removeFlags(ItemFlag... flags) {
+        Objects.requireNonNull(flags, "flags");
+        return editMeta(meta -> meta.removeItemFlags(flags));
     }
 
     /** Set whether the item is unbreakable. */
