@@ -76,6 +76,39 @@ class HoconConfigTest {
     }
 
     @Test
+    void reloadHoldsTheSameLockAsTheInPlaceMutators(@TempDir Path dir) throws Exception {
+        // reload() must be synchronized like save()/interpolate() so its whole-tree swap cannot race an
+        // in-place edit. Prove it by checking another thread's save() cannot enter while reload runs a
+        // listener: the save would corrupt the swap if reload held no lock.
+        Path file = dir.resolve("config.conf");
+        Files.writeString(file, "value = 1\n");
+        HoconConfig config = HoconConfig.load(file);
+
+        java.util.concurrent.atomic.AtomicBoolean saveCompleted = new java.util.concurrent.atomic.AtomicBoolean();
+        java.util.concurrent.atomic.AtomicBoolean saveSeenInsideListener =
+                new java.util.concurrent.atomic.AtomicBoolean(true);
+        config.onReload(() -> {
+            Thread saver = new Thread(() -> {
+                config.save();
+                saveCompleted.set(true);
+            });
+            saver.start();
+            try {
+                // The saver is blocked on the config monitor reload holds; give it ample time to (not) run.
+                saver.join(500L);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            // Record, while still inside reload's monitor, whether the saver managed to complete.
+            saveSeenInsideListener.set(saveCompleted.get());
+        });
+
+        config.reload();
+        // The saver could not have acquired the lock while the listener (inside reload's monitor) ran.
+        assertThat(saveSeenInsideListener).isFalse();
+    }
+
+    @Test
     void savesToANewFileWhenNoneExists(@TempDir Path dir) throws Exception {
         Path file = dir.resolve("fresh.conf");
         HoconConfig config = HoconConfig.load(file);

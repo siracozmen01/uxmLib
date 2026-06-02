@@ -20,6 +20,7 @@ public final class Numbers {
     // below a thousand, which are shown as-is.
     private static final long[] UNIT_VALUES = {1_000_000_000_000L, 1_000_000_000L, 1_000_000L, 1_000L};
     private static final String[] UNIT_SUFFIXES = {"T", "B", "M", "K"};
+    private static final BigDecimal THOUSAND = BigDecimal.valueOf(1_000L);
 
     // Roman value/symbol pairs largest-first, including the subtractive forms (IV, IX, XL, ...), so a
     // greedy left-to-right subtraction renders any value in 1..3999.
@@ -58,20 +59,27 @@ public final class Numbers {
         if (precision < 0) {
             throw new IllegalArgumentException("precision must not be negative: " + precision);
         }
-        long magnitude = Math.abs(value);
+        // Math.abs(Long.MIN_VALUE) is itself (still negative), so map it to MAX_VALUE for unit selection;
+        // both land in the largest unit and the scaling below divides the true value, not this magnitude.
+        long magnitude = value == Long.MIN_VALUE ? Long.MAX_VALUE : Math.abs(value);
         for (int i = 0; i < UNIT_VALUES.length; i++) {
             if (magnitude >= UNIT_VALUES[i]) {
-                return scaled(value, UNIT_VALUES[i], precision) + UNIT_SUFFIXES[i];
+                BigDecimal scaled = scaled(value, UNIT_VALUES[i], precision);
+                // Rounding can carry a value just under the next boundary up to a full 1000 of this unit
+                // (999_500 at precision 0 -> 1000K); promote it to the larger unit so it reads as 1M.
+                if (i > 0 && scaled.abs().compareTo(THOUSAND) >= 0) {
+                    return scaled(value, UNIT_VALUES[i - 1], precision).toPlainString() + UNIT_SUFFIXES[i - 1];
+                }
+                return scaled.toPlainString() + UNIT_SUFFIXES[i];
             }
         }
         return Long.toString(value);
     }
 
-    private static String scaled(long value, long unit, int precision) {
-        BigDecimal quotient = BigDecimal.valueOf(value)
+    private static BigDecimal scaled(long value, long unit, int precision) {
+        return BigDecimal.valueOf(value)
                 .divide(BigDecimal.valueOf(unit), precision, RoundingMode.HALF_UP)
                 .stripTrailingZeros();
-        return quotient.toPlainString();
     }
 
     /**

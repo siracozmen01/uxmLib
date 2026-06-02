@@ -79,7 +79,7 @@ public final class HoconConfig {
     }
 
     /** Re-read the file, swap the tree atomically, refresh bound properties, and run reload listeners. */
-    public void reload() {
+    public synchronized void reload() {
         root.set(read(loader));
         // Isolate each property and listener: one that throws is logged and skipped, so a single bad
         // observer can't stop the rest of a reload from being applied.

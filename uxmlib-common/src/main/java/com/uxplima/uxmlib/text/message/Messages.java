@@ -47,7 +47,15 @@ public final class Messages {
         Objects.requireNonNull(key, "key");
         Objects.requireNonNull(resolvers, "resolvers");
         Component content = render(viewer, key, resolvers);
-        channel(key).send(viewer, content);
+        Message channel = channel(key);
+        // A title carries its own subtitle template (intrinsic to the channel, not the catalog); render it
+        // with the same placeholders and use the subtitle-aware send so a configured subtitle reaches the
+        // player. The plain two-arg send would drop it.
+        if (channel instanceof Message.TitleText title) {
+            title.send(viewer, content, Text.mini(title.subtitle(), resolvers));
+            return;
+        }
+        channel.send(viewer, content);
     }
 
     /** The rendered {@link Component} for {@code key} in {@code viewer}'s locale, without delivering it. */

@@ -93,8 +93,11 @@ public sealed interface Message
 
     /**
      * Boss-bar delivery via {@link Audience#showBossBar(BossBar)}. The content is the bar title; the
-     * progress, colour and overlay are intrinsic. The bar is shown but not auto-hidden here — a timed bar is
-     * the HUD layer's job; this is the one-shot "flash a bar" send the catalog can express.
+     * progress, colour and overlay are intrinsic. A boss bar persists on the client until it is hidden or the
+     * viewer disconnects — there is no auto-expiry — so a caller that needs to remove it must keep the handle
+     * {@link #show(Audience, Component)} returns and later {@link Audience#hideBossBar(BossBar) hide} it; a
+     * timed bar is the HUD layer's job. The {@link #send(Audience, Component)} fire-and-forget form discards
+     * that handle, so use it only when something else already owns the bar's lifecycle.
      */
     record BossBarText(String template, float progress, BossBar.Color color, BossBar.Overlay overlay)
             implements Message {
@@ -109,9 +112,19 @@ public sealed interface Message
 
         @Override
         public void send(Audience viewer, Component content) {
+            show(viewer, content);
+        }
+
+        /**
+         * Show the bar and return its {@link BossBar} handle so the caller can later
+         * {@link Audience#hideBossBar(BossBar) hide} it; without retaining this the bar can never be removed.
+         */
+        public BossBar show(Audience viewer, Component content) {
             Objects.requireNonNull(viewer, "viewer");
             Objects.requireNonNull(content, "content");
-            viewer.showBossBar(BossBar.bossBar(content, progress, color, overlay));
+            BossBar bar = BossBar.bossBar(content, progress, color, overlay);
+            viewer.showBossBar(bar);
+            return bar;
         }
     }
 

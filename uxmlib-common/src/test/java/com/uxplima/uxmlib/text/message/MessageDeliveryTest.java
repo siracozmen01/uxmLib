@@ -78,4 +78,17 @@ class MessageDeliveryTest {
 
         assertThatCode(() -> bar.send(player, Component.text("boss"))).doesNotThrowAnyException();
     }
+
+    @Test
+    void bossBarShowReturnsAHandleThatCanHideTheBar() {
+        PlayerMock player = server.addPlayer();
+        Message.BossBarText spec =
+                new Message.BossBarText("<red>boss", 0.75f, BossBar.Color.RED, BossBar.Overlay.PROGRESS);
+
+        BossBar handle = spec.show(player, Component.text("boss"));
+        assertThat(player.getBossBars()).contains(handle);
+
+        player.hideBossBar(handle);
+        assertThat(player.getBossBars()).doesNotContain(handle);
+    }
 }

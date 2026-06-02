@@ -2,6 +2,7 @@ package com.uxplima.uxmlib.text.message;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
 import java.util.Locale;
 import java.util.Map;
 
@@ -76,6 +77,37 @@ class MessagesTest {
 
         assertThat(player.nextComponentMessage()).isNull();
         assertThat(Text.plain(player.nextActionBar())).isEqualTo("Welcome Alex");
+    }
+
+    @Test
+    void aConfiguredTitleChannelRendersBothTitleAndItsSubtitle() {
+        // MockBukkit does not round-trip Adventure showTitle into a readable queue, so capture the Title at
+        // the Adventure layer to assert the facade renders the channel's own subtitle template, not empty.
+        CapturingTitleAudience viewer = new CapturingTitleAudience();
+        Message.TitleText channel = new Message.TitleText(
+                "<unused>", "<gray>welcome <name>", Duration.ZERO, Duration.ofSeconds(1), Duration.ZERO);
+        Map<String, Message> channels = Map.of(WELCOME.path(), channel);
+        Messages messages = new Messages(catalog(), LocaleSource.ofDefault(Locale.ENGLISH), channels);
+
+        messages.send(viewer, WELCOME, Text.placeholder("name", "Alex"));
+
+        net.kyori.adventure.title.Title shown = viewer.shown();
+        assertThat(Text.plain(shown.title())).isEqualTo("Welcome Alex");
+        assertThat(Text.plain(shown.subtitle())).isEqualTo("welcome Alex");
+    }
+
+    /** A minimal Audience that records the {@link net.kyori.adventure.title.Title} shown to it. */
+    private static final class CapturingTitleAudience implements net.kyori.adventure.audience.Audience {
+        private net.kyori.adventure.title.@org.jspecify.annotations.Nullable Title shown;
+
+        @Override
+        public void showTitle(net.kyori.adventure.title.Title title) {
+            this.shown = title;
+        }
+
+        net.kyori.adventure.title.Title shown() {
+            return java.util.Objects.requireNonNull(shown, "no title was shown");
+        }
     }
 
     @Test

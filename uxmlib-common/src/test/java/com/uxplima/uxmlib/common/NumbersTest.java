@@ -56,6 +56,22 @@ class NumbersTest {
     }
 
     @Test
+    void promotesToTheNextUnitWhenRoundingCrossesABoundary() {
+        // 999_500 at precision 0 rounds to 1000K, which must read as 1M, not "1000K".
+        assertThat(Numbers.abbreviate(999_500L, 0)).isEqualTo("1M");
+        // The same carry at the billion boundary: 999_999_999_999 must read as 1T, not "1000B".
+        assertThat(Numbers.abbreviate(999_999_999_999L, 0)).isEqualTo("1T");
+        // The carry also applies to negatives.
+        assertThat(Numbers.abbreviate(-999_500L, 0)).isEqualTo("-1M");
+    }
+
+    @Test
+    void abbreviatesTheExtremeNegative() {
+        // Math.abs(Long.MIN_VALUE) is still negative, which used to fall through to the raw number.
+        assertThat(Numbers.abbreviate(Long.MIN_VALUE, 0)).isEqualTo("-9223372T");
+    }
+
+    @Test
     void rejectsNegativePrecision() {
         assertThatThrownBy(() -> Numbers.abbreviate(1_000L, -1)).isInstanceOf(IllegalArgumentException.class);
     }
