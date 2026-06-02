@@ -11,11 +11,13 @@ import com.uxplima.uxmlib.scheduler.TaskHandle;
 import org.jspecify.annotations.Nullable;
 
 /** A Scheduler that captures the single global timer so a test can fire it and observe cancellation. */
-final class FakeScheduler implements Scheduler {
+public final class FakeScheduler implements Scheduler {
 
     private @Nullable Consumer<TaskHandle> timerTask;
+    private @Nullable Runnable laterTask;
     private boolean cancelled;
     private int starts;
+    private int laters;
 
     private final TaskHandle handle = new TaskHandle() {
         @Override
@@ -37,19 +39,32 @@ final class FakeScheduler implements Scheduler {
         return handle;
     }
 
-    void fire() {
+    public void fire() {
         Consumer<TaskHandle> task = timerTask;
         if (task != null) {
             task.accept(handle);
         }
     }
 
-    boolean cancelled() {
+    /** Run the most recently scheduled one-shot {@code globalLater} task, clearing it like a real tick would. */
+    public void runLater() {
+        Runnable task = laterTask;
+        laterTask = null;
+        if (task != null) {
+            task.run();
+        }
+    }
+
+    public boolean cancelled() {
         return cancelled;
     }
 
-    int starts() {
+    public int starts() {
         return starts;
+    }
+
+    public int laters() {
+        return laters;
     }
 
     // Unused Scheduler members for these tests.
@@ -60,7 +75,9 @@ final class FakeScheduler implements Scheduler {
 
     @Override
     public TaskHandle globalLater(Duration delay, Runnable task) {
-        throw new UnsupportedOperationException();
+        this.laterTask = task;
+        this.laters++;
+        return handle;
     }
 
     @Override

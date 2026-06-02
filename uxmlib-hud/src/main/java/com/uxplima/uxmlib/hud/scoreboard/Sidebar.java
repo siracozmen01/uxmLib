@@ -32,11 +32,12 @@ public final class Sidebar {
     private final Objective objective;
     private final List<Team> teams = new ArrayList<>();
     private final List<Component> shown = new ArrayList<>();
+    private Component titleText;
 
     Sidebar(Player player, Scoreboard board, Component title) {
         this.player = Objects.requireNonNull(player, "player");
         this.board = Objects.requireNonNull(board, "board");
-        Objects.requireNonNull(title, "title");
+        this.titleText = Objects.requireNonNull(title, "title");
         this.objective = board.registerNewObjective("uxmsb", Criteria.DUMMY, title);
         this.objective.setDisplaySlot(DisplaySlot.SIDEBAR);
     }
@@ -44,7 +45,13 @@ public final class Sidebar {
     /** Replace the sidebar title. */
     public void title(Component title) {
         Objects.requireNonNull(title, "title");
+        this.titleText = title;
         objective.displayName(title);
+    }
+
+    /** The current sidebar title, for tests and for capturing a board to restore later. */
+    public Component title() {
+        return titleText;
     }
 
     /**

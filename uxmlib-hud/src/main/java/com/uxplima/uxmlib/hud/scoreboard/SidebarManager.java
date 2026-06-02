@@ -1,5 +1,7 @@
 package com.uxplima.uxmlib.hud.scoreboard;
 
+import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -11,6 +13,7 @@ import org.bukkit.scoreboard.ScoreboardManager;
 
 import net.kyori.adventure.text.Component;
 
+import com.uxplima.uxmlib.scheduler.Scheduler;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -25,11 +28,21 @@ import org.jspecify.annotations.Nullable;
 public final class SidebarManager {
 
     private final ScoreboardManager scoreboards;
+    private final @Nullable Scheduler scheduler;
     private final Map<UUID, Sidebar> active = new ConcurrentHashMap<>();
     private final Map<UUID, Scoreboard> prior = new ConcurrentHashMap<>();
 
     public SidebarManager(ScoreboardManager scoreboards) {
+        this(scoreboards, null);
+    }
+
+    /**
+     * As {@link #SidebarManager(ScoreboardManager)}, plus a {@link Scheduler} so {@link #showTemporary} can
+     * arm a one-shot restore. Inject the scheduler when temporary sidebars are needed.
+     */
+    public SidebarManager(ScoreboardManager scoreboards, @Nullable Scheduler scheduler) {
         this.scoreboards = Objects.requireNonNull(scoreboards, "scoreboards");
+        this.scheduler = scheduler;
     }
 
     /** Create, show and track a sidebar with {@code title} for {@code player}, replacing any prior one. */
@@ -47,6 +60,25 @@ public final class SidebarManager {
         active.put(id, sidebar);
         sidebar.show();
         return sidebar;
+    }
+
+    /**
+     * Show a temporary sidebar titled {@code title} with {@code lines} for {@code duration}, then restore
+     * whatever the player had before — their prior managed sidebar (rebuilt with its title and lines) or their
+     * bare scoreboard. Requires a {@link Scheduler}; the no-arg constructor cannot arm the restore.
+     */
+    public Sidebar showTemporary(Player player, Component title, List<Component> lines, Duration duration) {
+        Objects.requireNonNull(player, "player");
+        Objects.requireNonNull(title, "title");
+        Objects.requireNonNull(lines, "lines");
+        requirePositive(duration);
+        Scheduler timer = requireScheduler();
+        UUID id = player.getUniqueId();
+        Restore restore = snapshot(id);
+        Sidebar temporary = create(player, title);
+        temporary.lines(lines);
+        timer.globalLater(duration, () -> restore(player, id, temporary, restore));
+        return temporary;
     }
 
     /** The sidebar currently shown to {@code player}, or {@code null} if none. */
@@ -84,4 +116,43 @@ public final class SidebarManager {
     public int count() {
         return active.size();
     }
+
+    /** Capture what the player shows now so a temporary sidebar can put it back when it lapses. */
+    private Restore snapshot(UUID id) {
+        Sidebar current = active.get(id);
+        if (current != null) {
+            return new Restore(current.title(), current.currentLines());
+        }
+        return new Restore(null, null);
+    }
+
+    /** Tear down the temporary sidebar and re-establish the captured prior board, if the temp is still shown. */
+    private void restore(Player player, UUID id, Sidebar temporary, Restore priorBoard) {
+        if (active.get(id) != temporary) {
+            return;
+        }
+        remove(player);
+        Component title = priorBoard.title();
+        List<Component> lines = priorBoard.lines();
+        if (title != null && lines != null) {
+            create(player, title).lines(lines);
+        }
+    }
+
+    private Scheduler requireScheduler() {
+        if (scheduler == null) {
+            throw new IllegalStateException("a Scheduler is required for temporary sidebars");
+        }
+        return scheduler;
+    }
+
+    private static void requirePositive(Duration duration) {
+        Objects.requireNonNull(duration, "duration");
+        if (duration.isNegative() || duration.isZero()) {
+            throw new IllegalArgumentException("duration must be positive");
+        }
+    }
+
+    /** The title and lines of the board to re-show when a temporary sidebar lapses; both null means bare. */
+    private record Restore(@Nullable Component title, @Nullable List<Component> lines) {}
 }
