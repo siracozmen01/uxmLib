@@ -48,6 +48,7 @@ final class BuiltinResolvers {
         r.register(World.class, simple(ArgumentTypes::world, (c, n) -> c.getArgument(n, World.class)));
         r.register(Player.class, playerResolver());
         r.register(Material.class, materialResolver());
+        NativeResolvers.installInto(r);
     }
 
     private static ParamResolver<Integer> ints() {

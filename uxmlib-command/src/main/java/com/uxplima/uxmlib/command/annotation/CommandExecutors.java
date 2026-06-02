@@ -52,9 +52,13 @@ final class CommandExecutors {
             Object[] callArgs;
             try {
                 callArgs = ArgBinder.bind(ctx, method, args, flags, resolvers);
+            } catch (ArgumentResolveException typed) {
+                // A resolver/validator rejected one argument; reply naming which argument and the bad input.
+                Sender.of(ctx.getSource()).send(typed.context().toComponent());
+                return 0;
             } catch (IllegalArgumentException badArgument) {
-                // A resolver or validator rejected the input (an offline player, an out-of-range value). Reply
-                // with its message rather than letting it surface as a server error.
+                // A rejection with no per-argument context (a flag value, say). Reply with its flat message
+                // rather than letting it surface as a server error.
                 replyRed(ctx, badArgument.getMessage() == null ? "Invalid argument." : badArgument.getMessage());
                 return 0;
             }

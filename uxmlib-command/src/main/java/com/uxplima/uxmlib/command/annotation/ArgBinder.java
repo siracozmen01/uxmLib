@@ -104,10 +104,37 @@ final class ArgBinder {
 
     private static @Nullable Object resolveArg(
             CommandContext<CommandSourceStack> ctx, ParamArg pa, ParamResolvers resolvers) {
-        Object value = resolveOrDefault(ctx, pa, pa.parameter().getType());
-        ArgValidators.check(pa.parameter(), value);
-        runValidators(resolvers, pa, value);
-        return value;
+        try {
+            Object value = resolveOrDefault(ctx, pa, pa.parameter().getType());
+            ArgValidators.check(pa.parameter(), value);
+            runValidators(resolvers, pa, value);
+            return value;
+        } catch (ArgumentResolveException alreadyTyped) {
+            throw alreadyTyped;
+        } catch (IllegalArgumentException rejected) {
+            // Re-throw with which argument failed and the raw input the sender gave, so the reply can point at
+            // the exact argument rather than a flat message. The original message becomes the typed reason.
+            throw new ArgumentResolveException(
+                    new ErrorContext(pa.name(), rawInput(ctx, pa.name()), reasonOf(rejected)), rejected);
+        }
+    }
+
+    /** The raw text the sender gave for the node named {@code name}, or {@code ""} when it cannot be read. */
+    private static String rawInput(CommandContext<CommandSourceStack> ctx, String name) {
+        String input = ctx.getInput();
+        for (ParsedCommandNode<CommandSourceStack> node : ctx.getNodes()) {
+            if (node.getNode().getName().equals(name)) {
+                int start = Math.min(node.getRange().getStart(), input.length());
+                int end = Math.min(node.getRange().getEnd(), input.length());
+                return start <= end ? input.substring(start, end) : "";
+            }
+        }
+        return "";
+    }
+
+    private static String reasonOf(IllegalArgumentException rejected) {
+        String message = rejected.getMessage();
+        return message == null ? "" : message;
     }
 
     @SuppressWarnings("unchecked") // a validator registered for type T only sees a value resolved as T
@@ -152,6 +179,12 @@ final class ArgBinder {
         }
         if (type == boolean.class || type == Boolean.class) {
             return false;
+        }
+        if (type == java.util.Optional.class) {
+            return java.util.Optional.empty();
+        }
+        if (type == java.util.List.class) {
+            return java.util.List.of();
         }
         return null;
     }

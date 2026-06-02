@@ -79,7 +79,7 @@ final class CommandModels {
                 throw new CommandParseException("parameter '" + param.getName() + "' of " + method.getName()
                         + " must be @Arg-annotated, a @Flag/@Switch, or a Sender/CommandSourceStack/CommandSender");
             }
-            if (!injectable && !resolvers.supports(param.getType())) {
+            if (!injectable && !resolvers.supports(param)) {
                 throw new CommandParseException(
                         "no resolver for @Arg type " + param.getType().getName() + " on " + method.getName());
             }
@@ -116,7 +116,7 @@ final class CommandModels {
             if (arg == null) {
                 continue;
             }
-            ParamResolver<?> resolver = resolvers.resolverFor(param.getType());
+            ParamResolver<?> resolver = resolvers.resolverFor(param.getType(), param.getParameterizedType());
             if (resolver == null) {
                 throw new CommandParseException(
                         "no resolver for @Arg type " + param.getType().getName() + " on " + method.getName());
@@ -176,15 +176,22 @@ final class CommandModels {
                         "a required argument cannot follow an optional one on " + method.getName());
             }
             seenOptional = seenOptional || pa.arg().optional();
-            if (pa.arg().greedy() && i != args.size() - 1) {
+            boolean consumesRest =
+                    pa.arg().greedy() || isCollection(pa.parameter().getType());
+            if (consumesRest && i != args.size() - 1) {
                 throw new CommandParseException("only the last argument may be greedy on " + method.getName());
             }
-            if (pa.arg().greedy() && hasFlags) {
+            if (consumesRest && hasFlags) {
                 throw new CommandParseException(
                         "a greedy argument cannot be combined with @Flag/@Switch on " + method.getName());
             }
         }
         checkFlagsLast(method);
+    }
+
+    /** Whether a parameter type is one of the composing collection types, which consume a greedy trailing node. */
+    private static boolean isCollection(Class<?> type) {
+        return type == java.util.List.class || type == java.util.Optional.class;
     }
 
     private static void checkFlagsLast(Method method) {

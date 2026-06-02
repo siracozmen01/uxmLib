@@ -37,7 +37,7 @@ class AnnotatedCommandsTest {
     @Command(name = "broken")
     static class UnsupportedArg {
         @Subcommand("go")
-        void go(@Arg("where") java.util.List<String> where) {}
+        void go(@Arg("where") java.util.Map<String, String> where) {}
     }
 
     @Command(name = "empty")

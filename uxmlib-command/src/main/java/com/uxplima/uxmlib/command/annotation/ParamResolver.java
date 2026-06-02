@@ -46,4 +46,23 @@ public interface ParamResolver<T> {
     default @Nullable Collection<String> suggestions() {
         return null;
     }
+
+    /**
+     * A resolver source that can <em>decline</em>: given a parameter's full generic type, it either produces
+     * a {@link ParamResolver} for it or returns {@code null} to let the next factory try. This is the seam
+     * the composing resolvers ride — a {@code List<T>} or {@code Optional<T>} factory derives a resolver from
+     * the element type's own resolver, declining for any raw type it does not recognise. Factories are
+     * consulted in registration order, after the direct per-type registrations, so a direct
+     * {@link ParamResolvers#register(Class, ParamResolver)} always wins over a factory for the same raw type.
+     */
+    @FunctionalInterface
+    interface Factory {
+
+        /**
+         * Build a resolver for the parameter whose erased type is {@code rawType} and whose full generic type
+         * is {@code genericType} (e.g. {@code List<World>}), looking up element resolvers through
+         * {@code registry}, or return {@code null} to decline and let the next factory try.
+         */
+        @Nullable ParamResolver<?> create(Class<?> rawType, java.lang.reflect.Type genericType, ParamResolvers registry);
+    }
 }

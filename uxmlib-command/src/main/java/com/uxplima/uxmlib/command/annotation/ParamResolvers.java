@@ -18,6 +18,7 @@ import org.jspecify.annotations.Nullable;
 public final class ParamResolvers {
 
     private final Map<Class<?>, ParamResolver<?>> byType = new HashMap<>();
+    private final List<ParamResolver.Factory> factories = new ArrayList<>();
     private final Map<Class<?>, List<ParameterValidator<?>>> validatorsByType = new HashMap<>();
     private final Map<Class<?>, ContextParameter<?>> contextByType = new HashMap<>();
     private final List<CommandCondition> conditions = new ArrayList<>();
@@ -34,6 +35,7 @@ public final class ParamResolvers {
     public static ParamResolvers withDefaults() {
         ParamResolvers resolvers = new ParamResolvers();
         BuiltinResolvers.installInto(resolvers);
+        CollectionResolvers.installInto(resolvers);
         ContextParameters.installInto(resolvers);
         return resolvers;
     }
@@ -41,6 +43,17 @@ public final class ParamResolvers {
     /** Register {@code resolver} for parameters of {@code type}. Returns this for chaining. */
     public <T> ParamResolvers register(Class<T> type, ParamResolver<T> resolver) {
         byType.put(Objects.requireNonNull(type, "type"), Objects.requireNonNull(resolver, "resolver"));
+        return this;
+    }
+
+    /**
+     * Register a {@link ParamResolver.Factory} that derives a resolver from a parameter's full generic type,
+     * declining (returning {@code null}) for types it does not handle so the next factory is tried. Factories
+     * run after the direct per-type registrations, in registration order; this is how the composing
+     * {@code List<T>}/{@code Optional<T>} resolvers compose over an element resolver. Returns this for chaining.
+     */
+    public ParamResolvers factory(ParamResolver.Factory factory) {
+        factories.add(Objects.requireNonNull(factory, "factory"));
         return this;
     }
 
@@ -92,6 +105,11 @@ public final class ParamResolvers {
         return resolverFor(type) != null;
     }
 
+    /** Whether some resolver handles {@code param}, honouring its full generic type for composing factories. */
+    boolean supports(java.lang.reflect.Parameter param) {
+        return resolverFor(param.getType(), param.getParameterizedType()) != null;
+    }
+
     /** The validators registered for {@code type}, in registration order; empty when none. */
     List<ParameterValidator<?>> validatorsFor(Class<?> type) {
         List<ParameterValidator<?>> found = validatorsByType.get(type);
@@ -115,12 +133,28 @@ public final class ParamResolvers {
 
     /** The resolver for {@code type}, or {@code null} if none is registered. Enums share one resolver. */
     @Nullable ParamResolver<?> resolverFor(Class<?> type) {
-        ParamResolver<?> direct = byType.get(type);
+        return resolverFor(type, type);
+    }
+
+    /**
+     * The resolver for a parameter whose erased type is {@code rawType} and full generic type is
+     * {@code genericType}, or {@code null} if none applies. Direct registrations and enums win first; only
+     * then are the {@link ParamResolver.Factory factories} consulted in registration order, so a composing
+     * {@code List<T>}/{@code Optional<T>} factory can read the element type off {@code genericType}.
+     */
+    @Nullable ParamResolver<?> resolverFor(Class<?> rawType, java.lang.reflect.Type genericType) {
+        ParamResolver<?> direct = byType.get(rawType);
         if (direct != null) {
             return direct;
         }
-        if (type.isEnum()) {
-            return BuiltinResolvers.enumResolver(type);
+        if (rawType.isEnum()) {
+            return BuiltinResolvers.enumResolver(rawType);
+        }
+        for (ParamResolver.Factory factory : factories) {
+            ParamResolver<?> made = factory.create(rawType, genericType, this);
+            if (made != null) {
+                return made;
+            }
         }
         return null;
     }
