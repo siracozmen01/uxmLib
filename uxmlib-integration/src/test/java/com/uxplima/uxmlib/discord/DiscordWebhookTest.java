@@ -68,6 +68,19 @@ class DiscordWebhookTest {
     }
 
     @Test
+    void rejectsEmbedsOverTheCombinedMessageBudgetAtSend() {
+        // Five 2000-char embeds total 10000 chars: each is valid alone, but the message budget is 6000.
+        DiscordWebhook hook = new DiscordWebhook("https://discord.com/api/webhooks/1/abc");
+        List<DiscordEmbed> overBudget = java.util.stream.IntStream.range(0, 5)
+                .mapToObj(i ->
+                        DiscordEmbed.builder().description("z".repeat(2000)).build())
+                .toList();
+        assertThatThrownBy(() -> hook.sendEmbeds(overBudget))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("combined");
+    }
+
+    @Test
     void retriesOnlyOnRateLimitWithinTheCap() {
         // 429 within the retry budget -> retry; any non-429, or a spent budget, -> no retry.
         assertThat(DiscordWebhook.shouldRetry(429, 1)).isTrue();

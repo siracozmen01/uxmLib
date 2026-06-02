@@ -126,6 +126,9 @@ public record WebhookMessage(
             for (DiscordEmbed embed : embeds) {
                 violations.addAll(EmbedLimits.violations(embed));
             }
+            // Discord's 6000-character budget is summed across every embed in the message, not just per embed,
+            // so a set of individually-valid embeds can still be rejected with a 400. Catch it here instead.
+            violations.addAll(EmbedLimits.messageViolations(embeds));
             return violations;
         }
     }

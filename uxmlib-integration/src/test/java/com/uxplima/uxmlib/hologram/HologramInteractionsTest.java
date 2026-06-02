@@ -4,12 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.plugin.Plugin;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockbukkit.mockbukkit.MockBukkit;
 import org.mockbukkit.mockbukkit.ServerMock;
+import org.mockbukkit.mockbukkit.entity.PlayerMock;
 
 /**
  * Tests the pure reach/world gate that {@link HologramInteractions} applies before firing a click. The
@@ -60,5 +62,21 @@ class HologramInteractionsTest {
         Location player = new Location(null, 0, 64, 0);
         Location holo = new Location(null, 1, 64, 1);
         assertThat(HologramInteractions.withinReach(player, holo)).isFalse();
+    }
+
+    @Test
+    void quitEvictsThePlayersDebounceEntry() {
+        Plugin plugin = MockBukkit.createMockPlugin();
+        HologramInteractions interactions = new HologramInteractions(plugin);
+        interactions.install();
+        PlayerMock player = server.addPlayer();
+        interactions.recordClickForTest(player.getUniqueId());
+        assertThat(interactions.trackedPlayerCount()).isEqualTo(1);
+
+        // disconnect() dispatches a real PlayerQuitEvent through the plugin manager, exercising the registered
+        // listener. Without the quit handler the timestamp would linger forever, one entry per ex-player.
+        player.disconnect();
+
+        assertThat(interactions.trackedPlayerCount()).isZero();
     }
 }

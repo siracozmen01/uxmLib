@@ -14,6 +14,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.Plugin;
 
 /**
@@ -67,6 +68,15 @@ public final class HologramInteractions implements Listener {
         callbacks.remove(hologram.interaction().getUniqueId());
     }
 
+    /**
+     * Drop a departed player's debounce timestamp so {@link #lastClick} does not accumulate one stale entry
+     * per player who ever clicked a hologram. Without this the map grows without bound on a high-churn server.
+     */
+    @EventHandler
+    void onQuit(PlayerQuitEvent event) {
+        lastClick.remove(event.getPlayer().getUniqueId());
+    }
+
     @EventHandler
     void onRightClick(PlayerInteractEntityEvent event) {
         if (event.getRightClicked() instanceof Interaction interaction) {
@@ -118,5 +128,15 @@ public final class HologramInteractions implements Listener {
         long now = System.currentTimeMillis();
         Long previous = lastClick.put(player, now);
         return previous == null || now - previous >= DEBOUNCE_MS;
+    }
+
+    // Test seam: the debounce map is otherwise only touched through native click events MockBukkit cannot
+    // synthesise without a spawned Interaction entity.
+    int trackedPlayerCount() {
+        return lastClick.size();
+    }
+
+    void recordClickForTest(UUID player) {
+        notDebounced(player);
     }
 }

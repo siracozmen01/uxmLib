@@ -80,6 +80,12 @@ public final class DiscordWebhook {
         if (embeds.size() > WebhookMessage.EMBEDS_MAX) {
             throw new IllegalArgumentException("a message carries at most " + WebhookMessage.EMBEDS_MAX + " embeds");
         }
+        // Discord rejects a message whose embeds' combined text exceeds 6000 characters, even when each embed
+        // is individually valid. Surface that as a clear exception here rather than a 400 after the round-trip.
+        List<String> overBudget = EmbedLimits.messageViolations(embeds);
+        if (!overBudget.isEmpty()) {
+            throw new IllegalArgumentException(String.join("; ", overBudget));
+        }
         return post(embedsBody(embeds));
     }
 

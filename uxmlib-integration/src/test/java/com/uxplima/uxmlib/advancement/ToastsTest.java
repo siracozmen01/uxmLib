@@ -2,12 +2,14 @@ package com.uxplima.uxmlib.advancement;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 
 import java.time.Duration;
 import java.util.function.Consumer;
 
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.advancement.Advancement;
 import org.bukkit.entity.Entity;
 import org.bukkit.plugin.Plugin;
 
@@ -89,8 +91,30 @@ class ToastsTest {
         assertThat(toast.icon()).isEqualTo(Material.STONE);
     }
 
-    /** Captures the one delayed cleanup task so a test could drive it; the native load never gets that far here. */
+    @Test
+    void cleanupRevokesOnThePlayersRegionAndRemovesOnTheGlobalRegion() {
+        // The native loadAdvancement boundary stops show() before cleanup under MockBukkit, so drive the
+        // cleanup seam directly. The revoke touches the live player and must hop onto the player's own region
+        // (entityLater); the registry removal touches global server state (globalLater). Routing the revoke on
+        // the global region instead would mutate the player off its owning region thread on Folia.
+        RecordingScheduler scheduler = new RecordingScheduler();
+        Toasts toasts = new Toasts(plugin, scheduler);
+        PlayerMock player = server.addPlayer();
+        Advancement advancement = mock(Advancement.class);
+
+        toasts.scheduleCleanup(new org.bukkit.NamespacedKey(plugin, "toast_x"), advancement, player);
+
+        assertThat(scheduler.entityLaterTarget).isSameAs(player);
+        assertThat(scheduler.entityLaterTask).isNotNull();
+        assertThat(scheduler.globalLaterTask).isNotNull();
+    }
+
+    /** Captures the cleanup hops so a test can assert which region each one targets. */
     private static final class RecordingScheduler implements Scheduler {
+
+        private @org.jspecify.annotations.Nullable Entity entityLaterTarget;
+        private @org.jspecify.annotations.Nullable Runnable entityLaterTask;
+        private @org.jspecify.annotations.Nullable Runnable globalLaterTask;
 
         private final TaskHandle handle = new TaskHandle() {
             private boolean cancelled;
@@ -108,6 +132,7 @@ class ToastsTest {
 
         @Override
         public TaskHandle globalLater(Duration delay, Runnable task) {
+            this.globalLaterTask = task;
             return handle;
         }
 
@@ -143,6 +168,8 @@ class ToastsTest {
 
         @Override
         public TaskHandle entityLater(Entity entity, Duration delay, Runnable task) {
+            this.entityLaterTarget = entity;
+            this.entityLaterTask = task;
             return handle;
         }
 

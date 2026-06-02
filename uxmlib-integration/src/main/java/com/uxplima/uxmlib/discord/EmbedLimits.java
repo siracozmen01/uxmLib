@@ -11,6 +11,8 @@ import java.util.List;
  *
  * <p>Limits per the Discord API reference: title 256, description 4096, up to 25 fields (name 256 / value
  * 1024), footer text 2048, author name 256, and a combined 6000-character budget across an embed's text.
+ * Discord also caps the summed text of every embed in one message at 6000 characters; that per-message
+ * budget is {@link #messageViolations(List)}, separate from the single-embed {@link #violations(DiscordEmbed)}.
  */
 final class EmbedLimits {
 
@@ -22,6 +24,13 @@ final class EmbedLimits {
     static final int FOOTER_MAX = 2048;
     static final int AUTHOR_NAME_MAX = 256;
     static final int EMBED_TOTAL_MAX = 6000;
+
+    /**
+     * Discord's combined character budget is per message, not per embed: the text of every embed in one
+     * message is summed and must stay within this cap. It shares the {@code 6000} value with the single-embed
+     * cap but is a distinct, separately-enforced limit.
+     */
+    static final int MESSAGE_TOTAL_MAX = 6000;
 
     private EmbedLimits() {}
 
@@ -41,6 +50,28 @@ final class EmbedLimits {
             out.add("embed total characters exceed " + EMBED_TOTAL_MAX);
         }
         return out;
+    }
+
+    /**
+     * The message-level violation, if any: Discord sums the text of every embed in one message against a
+     * single {@value #MESSAGE_TOTAL_MAX}-character budget, so ten individually-valid embeds can still blow the
+     * combined cap. Returns a one-element list naming the breach, or empty when the message is within bounds.
+     */
+    static List<String> messageViolations(List<DiscordEmbed> embeds) {
+        List<String> out = new ArrayList<>();
+        if (combinedLength(embeds) > MESSAGE_TOTAL_MAX) {
+            out.add("combined embed characters exceed " + MESSAGE_TOTAL_MAX);
+        }
+        return out;
+    }
+
+    /** The summed text length across every embed in a message. */
+    static int combinedLength(List<DiscordEmbed> embeds) {
+        int total = 0;
+        for (DiscordEmbed embed : embeds) {
+            total += totalLength(embed);
+        }
+        return total;
     }
 
     private static void checkFields(List<String> out, List<DiscordEmbed.Field> fields) {

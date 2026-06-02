@@ -2,6 +2,7 @@ package com.uxplima.uxmlib.advancement;
 
 import java.time.Duration;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.bukkit.Bukkit;
@@ -21,7 +22,8 @@ import com.uxplima.uxmlib.scheduler.Scheduler;
  * {@link org.bukkit.advancement.AdvancementProgress}.
  *
  * <p>Constructor-injected with the owning {@link Plugin} (its name namespaces the synthetic keys) and the
- * library {@link Scheduler} (the delayed cleanup runs on the global region, never on a Bukkit scheduler).
+ * library {@link Scheduler}. The player-touching revoke runs on the player's own region thread; the global
+ * registry removal hops onto the global region. Neither uses a Bukkit scheduler.
  */
 public final class Toasts {
 
@@ -33,6 +35,12 @@ public final class Toasts {
 
     // Per-instance counter so two toasts in the same tick get distinct keys; never static (no shared state).
     private final AtomicLong sequence = new AtomicLong();
+
+    // A per-instance prefix makes the synthetic keys globally unique within the JVM, so two Toasts instances
+    // (or one re-created across a /reload) can never mint the same key and collide on the advancement registry.
+    // base36 of a random long is [0-9a-z], all valid in a NamespacedKey value alongside the '_' separators.
+    private final String keyPrefix =
+            "toast_" + Long.toUnsignedString(UUID.randomUUID().getMostSignificantBits(), 36) + "_";
 
     public Toasts(Plugin plugin, Scheduler scheduler) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
@@ -47,7 +55,8 @@ public final class Toasts {
     /**
      * Pop {@code toast} for {@code player}. Registers the synthetic advancement, awards its criterion to fire
      * the toast, and schedules the revoke-and-remove cleanup. Must be called on the player's region thread
-     * (the registration and award touch the live player); the cleanup is scheduled onto the global region.
+     * (the registration and award touch the live player); the cleanup revoke hops back onto the player's
+     * region and the registry removal onto the global region.
      */
     @SuppressWarnings(
             "deprecation") // loadAdvancement/removeAdvancement are the only native, packet-free route on 1.21.
@@ -67,13 +76,16 @@ public final class Toasts {
         scheduleCleanup(key, advancement, player);
     }
 
-    private void scheduleCleanup(NamespacedKey key, Advancement advancement, Player player) {
-        scheduler.globalLater(CLEANUP_DELAY, () -> {
-            if (player.isOnline()) {
-                Advancements.revoke(player, advancement);
-            }
-            removeQuietly(key);
-        });
+    // Package-private so a test can assert the revoke is routed onto the player's region and the registry
+    // removal onto the global region without standing up a native advancement (which MockBukkit cannot do).
+    void scheduleCleanup(NamespacedKey key, Advancement advancement, Player player) {
+        // The revoke mutates the live player, so it must run on the player's own region thread (Folia routes
+        // entity tasks there); the entity scheduler silently drops it if the player has logged off, which is
+        // exactly the case where there is nothing left to revoke. The registry removal touches global server
+        // state, so it always runs on the global region and is scheduled independently of the player task —
+        // that way the synthetic advancement is unregistered even when the player is already gone.
+        scheduler.entityLater(player, CLEANUP_DELAY, () -> Advancements.revoke(player, advancement));
+        scheduler.globalLater(CLEANUP_DELAY, () -> removeQuietly(key));
     }
 
     @SuppressWarnings("deprecation") // removeAdvancement is internal but the only native un-register on 1.21.
@@ -85,6 +97,6 @@ public final class Toasts {
     }
 
     private NamespacedKey nextKey() {
-        return new NamespacedKey(plugin, "toast_" + sequence.getAndIncrement());
+        return new NamespacedKey(plugin, keyPrefix + sequence.getAndIncrement());
     }
 }

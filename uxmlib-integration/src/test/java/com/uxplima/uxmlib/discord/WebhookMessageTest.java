@@ -80,6 +80,19 @@ class WebhookMessageTest {
     }
 
     @Test
+    void rejectsEmbedsThatAreEachValidButTogetherExceedTheMessageBudget() {
+        // Five 2000-char embeds: each is well under the per-embed 6000 cap, but their 10000-char sum is over
+        // the per-message budget Discord enforces. build() must catch this rather than letting Discord 400.
+        WebhookMessage.Builder b = WebhookMessage.builder();
+        for (int i = 0; i < 5; i++) {
+            b.embed(DiscordEmbed.builder().description("z".repeat(2000)).build());
+        }
+        assertThatThrownBy(b::build)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("combined");
+    }
+
+    @Test
     void acceptsAValidContentPlusEmbedMessage() {
         assertThatCode(() -> WebhookMessage.builder()
                         .content("see report")

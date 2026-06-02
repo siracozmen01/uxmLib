@@ -24,12 +24,18 @@ import com.uxplima.uxmlib.hook.Hooks;
  * BUILD / INTERACT state flags are tested through a {@link RegionQuery}. The {@code com.sk89q} classes are
  * referenced only inside {@link #find()} past the presence guard and in the query methods, so a server
  * without WorldGuard still loads (the JVM resolves these classes lazily, on first use).
+ *
+ * <p>A {@link Location} with a null world is legal in Bukkit but cannot be adapted to WorldEdit; every query
+ * short-circuits such a point to a safe default (build/interact permitted, no regions, wilderness) instead of
+ * letting {@code BukkitAdapter.adapt} throw deep inside WorldEdit.
  */
 public final class WorldGuardRegionService implements RegionService {
 
     private static final String PLUGIN = "WorldGuard";
 
-    private WorldGuardRegionService() {}
+    // Package-private (not public) so the present-guard in find() stays the only public entry point, while a
+    // same-package test can still exercise the null-world short-circuits that return before any WorldGuard call.
+    WorldGuardRegionService() {}
 
     /** The WorldGuard region service, or empty when WorldGuard is not installed. */
     public static Optional<RegionService> find() {
@@ -62,6 +68,9 @@ public final class WorldGuardRegionService implements RegionService {
     @Override
     public Set<String> regionsAt(Location location) {
         Objects.requireNonNull(location, "location");
+        if (location.getWorld() == null) {
+            return Set.of();
+        }
         Set<String> ids = new HashSet<>();
         for (ProtectedRegion region : applicableRegions(location).getRegions()) {
             ids.add(region.getId());
@@ -72,12 +81,18 @@ public final class WorldGuardRegionService implements RegionService {
     @Override
     public boolean isWilderness(Location location) {
         Objects.requireNonNull(location, "location");
-        return applicableRegions(location).size() == 0;
+        // A world-less point belongs to no claim; treat it as wilderness rather than NPE inside WorldEdit.
+        return location.getWorld() == null || applicableRegions(location).size() == 0;
     }
 
     private boolean testFlag(Player player, Location location, com.sk89q.worldguard.protection.flags.StateFlag flag) {
         Objects.requireNonNull(player, "player");
         Objects.requireNonNull(location, "location");
+        // A Location with a null world is legal in Bukkit but makes BukkitAdapter.adapt NPE deep inside
+        // WorldEdit; there is no region to consult, so fall back to permitting the action rather than throwing.
+        if (location.getWorld() == null) {
+            return true;
+        }
         LocalPlayer wrapped = WorldGuardPlugin.inst().wrapPlayer(player);
         return query().testState(BukkitAdapter.adapt(location), wrapped, flag);
     }
