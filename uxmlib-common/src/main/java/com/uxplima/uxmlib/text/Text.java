@@ -62,6 +62,15 @@ public final class Text {
         return PlainTextComponentSerializer.plainText().serialize(component);
     }
 
+    /**
+     * Serialize a component back to a MiniMessage string, the inverse of {@link #mini(String)}. Used to
+     * write a styled component back to a config losslessly so it can be re-parsed on reload.
+     */
+    public static String serialize(Component component) {
+        Objects.requireNonNull(component, "component");
+        return MINI.serialize(component);
+    }
+
     /** Strip every MiniMessage tag from a string, leaving its literal text. */
     public static String stripTags(String input) {
         Objects.requireNonNull(input, "input");

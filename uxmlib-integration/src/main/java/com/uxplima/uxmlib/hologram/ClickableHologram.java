@@ -21,6 +21,13 @@ public final class ClickableHologram {
         this.interaction = interaction;
     }
 
+    /** Wrap an already-spawned text hologram and interaction box. Package-private (spawn + tests). */
+    static ClickableHologram of(Hologram hologram, Interaction interaction) {
+        Objects.requireNonNull(hologram, "hologram");
+        Objects.requireNonNull(interaction, "interaction");
+        return new ClickableHologram(hologram, interaction);
+    }
+
     static ClickableHologram spawn(HologramSpec spec, Location location, float width, float height) {
         Objects.requireNonNull(spec, "spec");
         Objects.requireNonNull(location, "location");
@@ -35,7 +42,7 @@ public final class ClickableHologram {
             entity.setResponsive(true);
             Markers.stamp(entity);
         });
-        return new ClickableHologram(text, box);
+        return of(text, box);
     }
 
     /** The text hologram (move/restyle it through this). */
@@ -46,6 +53,29 @@ public final class ClickableHologram {
     /** The backing interaction entity (its UUID keys the click router). */
     public Interaction interaction() {
         return interaction;
+    }
+
+    /** The current click-box width in blocks. */
+    public float width() {
+        return interaction.getInteractionWidth();
+    }
+
+    /** The current click-box height in blocks. */
+    public float height() {
+        return interaction.getInteractionHeight();
+    }
+
+    /**
+     * Resize the live click box to {@code width} by {@code height} blocks, so the clickable region can be
+     * grown past the text footprint (the text rarely matches where players expect to click) without a
+     * re-spawn. Must run on the interaction entity's region thread (Folia); route it through your scheduler.
+     */
+    public void resize(float width, float height) {
+        if (width <= 0 || height <= 0) {
+            throw new IllegalArgumentException("width and height must be positive");
+        }
+        interaction.setInteractionWidth(width);
+        interaction.setInteractionHeight(height);
     }
 
     /** Despawn both the text and the interaction entity. */

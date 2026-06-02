@@ -102,4 +102,53 @@ class VisibilityGateTest {
 
         assertThat(gate.shouldShow(eye, holo)).isTrue();
     }
+
+    @Test
+    void lineOfSightGateShowsWhenSightIsClear() {
+        World world = server.addSimpleWorld("gate");
+        VisibilityGate gate = VisibilityGate.rangeAndLineOfSight(20.0, (eye, holo) -> true);
+        Location holo = new Location(world, 0, 64, 5);
+        Location eye = new Location(world, 0, 64, 0);
+
+        assertThat(gate.shouldShow(eye, holo)).isTrue();
+    }
+
+    @Test
+    void lineOfSightGateHidesWhenSightIsBlocked() {
+        World world = server.addSimpleWorld("gate");
+        VisibilityGate gate = VisibilityGate.rangeAndLineOfSight(20.0, (eye, holo) -> false);
+        Location holo = new Location(world, 0, 64, 5);
+        Location eye = new Location(world, 0, 64, 0);
+
+        assertThat(gate.shouldShow(eye, holo)).isFalse();
+    }
+
+    @Test
+    void lineOfSightGateRangeCullsBeforeConsultingTheRayTrace() {
+        World world = server.addSimpleWorld("gate");
+        boolean[] consulted = {false};
+        VisibilityGate gate = VisibilityGate.rangeAndLineOfSight(4.0, (eye, holo) -> {
+            consulted[0] = true;
+            return true;
+        });
+        Location holo = new Location(world, 0, 64, 10); // beyond radius 4
+        Location eye = new Location(world, 0, 64, 0);
+
+        assertThat(gate.shouldShow(eye, holo)).isFalse();
+        assertThat(consulted[0])
+                .as("ray-trace must not run once range already culled")
+                .isFalse();
+    }
+
+    @Test
+    void fovAndLineOfSightGateRequiresBoth() {
+        World world = server.addSimpleWorld("gate");
+        VisibilityGate clear = VisibilityGate.rangeFovAndLineOfSight(20.0, 60.0, (eye, holo) -> true);
+        VisibilityGate blocked = VisibilityGate.rangeFovAndLineOfSight(20.0, 60.0, (eye, holo) -> false);
+        Location holo = new Location(world, 0, 64, 10); // dead ahead on +Z
+        Location eye = new Location(world, 0, 64, 0, 0f, 0f); // looking toward +Z
+
+        assertThat(clear.shouldShow(eye, holo)).isTrue();
+        assertThat(blocked.shouldShow(eye, holo)).isFalse();
+    }
 }

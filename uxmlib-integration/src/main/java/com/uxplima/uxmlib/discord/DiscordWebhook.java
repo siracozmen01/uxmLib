@@ -93,6 +93,25 @@ public final class DiscordWebhook {
         return post(message.body());
     }
 
+    /**
+     * Like {@link #sendContent(String)} but the future yields a {@link WebhookStatus}, which explains the
+     * raw HTTP code (delivered / bad payload / auth / unknown webhook / rate-limited). Kept separate from the
+     * {@code Integer}-returning methods so existing callers do not break.
+     */
+    public CompletableFuture<WebhookStatus> sendContentDetailed(String content) {
+        return sendContent(content).thenApply(WebhookStatus::of);
+    }
+
+    /** Like {@link #sendEmbed(DiscordEmbed)} but the future yields an explained {@link WebhookStatus}. */
+    public CompletableFuture<WebhookStatus> sendEmbedDetailed(DiscordEmbed embed) {
+        return sendEmbed(embed).thenApply(WebhookStatus::of);
+    }
+
+    /** Like {@link #send(WebhookMessage)} but the future yields an explained {@link WebhookStatus}. */
+    public CompletableFuture<WebhookStatus> sendDetailed(WebhookMessage message) {
+        return send(message).thenApply(WebhookStatus::of);
+    }
+
     /** The JSON request body for a plain-content message. Package-private so the encoding is testable. */
     static String contentBody(String content) {
         return "{\"content\":" + jsonString(content) + "," + ALLOWED_MENTIONS_NONE + "}";

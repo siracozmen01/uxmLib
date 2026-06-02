@@ -69,4 +69,52 @@ class HologramConfigTest {
         String hocon = "lines = [ \"x\" ]\nappearance { billboard = SIDEWAYS }";
         assertThatThrownBy(() -> HologramConfig.load(parse(hocon))).isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    void roundTripsAFullSpecLosslessly() throws Exception {
+        String hocon =
+                """
+                lines = [ "<gold>Spawn", "<gray>Welcome" ]
+                appearance {
+                  billboard = FIXED
+                  glow = "#ff5555"
+                  background = "#101010"
+                  lineWidth = 180
+                  viewRange = 2.0
+                  scale = 1.5
+                  rotation = 45.0
+                  seeThrough = true
+                  textShadow = true
+                }
+                """;
+        HologramSpec original = HologramConfig.load(parse(hocon));
+
+        CommentedConfigurationNode written = CommentedConfigurationNode.root();
+        HologramConfig.save(original, written);
+        HologramSpec reloaded = HologramConfig.load(written);
+
+        assertSpecsEqual(original, reloaded);
+    }
+
+    @Test
+    void roundTripsADefaultAppearanceSpec() throws Exception {
+        HologramSpec original = HologramConfig.load(parse("lines = [ \"<red>hi\", \"there\" ]"));
+
+        CommentedConfigurationNode written = CommentedConfigurationNode.root();
+        HologramConfig.save(original, written);
+        HologramSpec reloaded = HologramConfig.load(written);
+
+        assertSpecsEqual(original, reloaded);
+        assertThat(reloaded.appearance().transform()).isNull();
+        assertThat(reloaded.appearance().glow()).isNull();
+    }
+
+    private static void assertSpecsEqual(HologramSpec expected, HologramSpec actual) {
+        assertThat(actual.lines()).hasSameSizeAs(expected.lines());
+        for (int i = 0; i < expected.lines().size(); i++) {
+            assertThat(Text.serialize(actual.lines().get(i)))
+                    .isEqualTo(Text.serialize(expected.lines().get(i)));
+        }
+        assertThat(actual.appearance()).isEqualTo(expected.appearance());
+    }
 }

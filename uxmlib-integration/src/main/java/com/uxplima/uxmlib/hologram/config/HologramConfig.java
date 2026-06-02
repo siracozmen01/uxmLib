@@ -46,6 +46,57 @@ public final class HologramConfig {
         return new HologramSpec(lines, readAppearance(node.node("appearance")));
     }
 
+    /**
+     * Write {@code spec} back into {@code node} in the same shape {@link #load} reads, so an admin's
+     * edit-on-disk round-trips: {@code load(save(spec)) } reconstructs an equal spec. Lines are serialized
+     * back to MiniMessage and only non-default appearance fields are emitted, keeping the file tidy.
+     */
+    public static void save(HologramSpec spec, ConfigurationNode node) {
+        Objects.requireNonNull(spec, "spec");
+        Objects.requireNonNull(node, "node");
+        try {
+            List<String> lines = new ArrayList<>();
+            for (Component line : spec.lines()) {
+                lines.add(Text.serialize(line));
+            }
+            node.node("lines").setList(String.class, lines);
+            writeAppearance(spec.appearance(), node.node("appearance"));
+        } catch (SerializationException malformed) {
+            throw new IllegalArgumentException("could not serialize hologram spec", malformed);
+        }
+    }
+
+    private static void writeAppearance(Appearance look, ConfigurationNode node) throws SerializationException {
+        node.node("billboard").set(look.billboard().name());
+        node.node("seeThrough").set(look.seeThrough());
+        node.node("textShadow").set(look.textShadow());
+        if (look.glow() != null) {
+            node.node("glow").set(hex(look.glow()));
+        }
+        if (look.background() != null) {
+            node.node("background").set(hex(look.background()));
+        }
+        if (look.lineWidth() != null) {
+            node.node("lineWidth").set(look.lineWidth());
+        }
+        if (look.viewRange() != null) {
+            node.node("viewRange").set(look.viewRange());
+        }
+        writeTransform(look.transform(), node);
+    }
+
+    private static void writeTransform(@org.jspecify.annotations.Nullable Transform transform, ConfigurationNode node)
+            throws SerializationException {
+        if (transform != null) {
+            node.node("scale").set(transform.scaleX());
+            node.node("rotation").set(transform.yawDegrees());
+        }
+    }
+
+    private static String hex(Color color) {
+        return String.format("#%06x", color.asRGB() & 0xffffff);
+    }
+
     private static List<Component> readLines(ConfigurationNode linesNode) {
         List<Component> lines = new ArrayList<>();
         try {
