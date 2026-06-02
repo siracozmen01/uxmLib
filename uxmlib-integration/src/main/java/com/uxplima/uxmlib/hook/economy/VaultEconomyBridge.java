@@ -37,4 +37,25 @@ final class VaultEconomyBridge implements EconomyBridge {
     public boolean isPresent() {
         return true;
     }
+
+    @Override
+    public String format(double amount) {
+        return vault.format(amount);
+    }
+
+    @Override
+    public String currencySymbol() {
+        // Vault exposes no separate symbol; its singular currency name is the closest stable surface.
+        return vault.currencyNameSingular();
+    }
+
+    @Override
+    public String currencyNameSingular() {
+        return vault.currencyNameSingular();
+    }
+
+    @Override
+    public String currencyNamePlural() {
+        return vault.currencyNamePlural();
+    }
 }

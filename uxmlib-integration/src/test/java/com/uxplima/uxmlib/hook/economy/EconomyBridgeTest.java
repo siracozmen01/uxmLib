@@ -36,4 +36,15 @@ class EconomyBridgeTest {
         assertThat(economy.withdraw(player, 100)).isFalse();
         assertThat(economy.deposit(player, 100)).isFalse();
     }
+
+    @Test
+    void dummyFormatsAPlainNumberAndHasNoCurrencyNames() {
+        EconomyBridge economy = EconomyBridge.orDummy();
+
+        assertThat(economy.format(1234.5d)).isEqualTo("1234.5");
+        assertThat(economy.format(1000.0d)).isEqualTo("1000");
+        assertThat(economy.currencySymbol()).isEmpty();
+        assertThat(economy.currencyNameSingular()).isEmpty();
+        assertThat(economy.currencyNamePlural()).isEmpty();
+    }
 }

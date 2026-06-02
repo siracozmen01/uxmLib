@@ -27,6 +27,24 @@ public interface EconomyBridge {
     /** Whether this is a real economy (false for the dummy null-object). */
     boolean isPresent();
 
+    /**
+     * The provider's own rendering of {@code amount} (currency symbol/name included), e.g. {@code "$1,234.00"}.
+     * The dummy economy renders a plain number. The formatting is the backend's and is locale-naive.
+     */
+    String format(double amount);
+
+    /**
+     * The currency's symbol or short name (Vault has no separate symbol, so this is its singular name, e.g.
+     * {@code "Dollar"}); empty string on the dummy economy.
+     */
+    String currencySymbol();
+
+    /** The currency's singular name (e.g. {@code "Dollar"}); empty string on the dummy economy. */
+    String currencyNameSingular();
+
+    /** The currency's plural name (e.g. {@code "Dollars"}); empty string on the dummy economy. */
+    String currencyNamePlural();
+
     /** The best available economy backend, or empty when none is installed. */
     static Optional<EconomyBridge> find() {
         return VaultEconomy.find().map(VaultEconomyBridge::new);

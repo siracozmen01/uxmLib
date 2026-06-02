@@ -62,4 +62,20 @@ public final class VaultEconomy {
         Objects.requireNonNull(player, "player");
         return economy.depositPlayer(player, amount).transactionSuccess();
     }
+
+    /** The provider's own rendering of {@code amount}. */
+    public String format(double amount) {
+        // The unannotated Vault API can hand back null; a bridge must never propagate one.
+        return Objects.requireNonNullElse(economy.format(amount), "");
+    }
+
+    /** The currency's singular name. */
+    public String currencyNameSingular() {
+        return Objects.requireNonNullElse(economy.currencyNameSingular(), "");
+    }
+
+    /** The currency's plural name. */
+    public String currencyNamePlural() {
+        return Objects.requireNonNullElse(economy.currencyNamePlural(), "");
+    }
 }

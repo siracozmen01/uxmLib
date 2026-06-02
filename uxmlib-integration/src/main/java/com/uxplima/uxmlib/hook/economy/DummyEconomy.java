@@ -1,5 +1,7 @@
 package com.uxplima.uxmlib.hook.economy;
 
+import java.math.BigDecimal;
+
 import org.bukkit.OfflinePlayer;
 
 /**
@@ -32,5 +34,26 @@ final class DummyEconomy implements EconomyBridge {
     @Override
     public boolean isPresent() {
         return false;
+    }
+
+    @Override
+    public String format(double amount) {
+        // No provider to ask: render a bare, locale-stable number so call sites still get a usable string.
+        return BigDecimal.valueOf(amount).stripTrailingZeros().toPlainString();
+    }
+
+    @Override
+    public String currencySymbol() {
+        return "";
+    }
+
+    @Override
+    public String currencyNameSingular() {
+        return "";
+    }
+
+    @Override
+    public String currencyNamePlural() {
+        return "";
     }
 }

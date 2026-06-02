@@ -18,4 +18,7 @@ dependencies {
     testImplementation(libs.paper.api)
     testImplementation(libs.bundles.adventure)
     testImplementation(libs.luckperms.api)
+    // Vault on the test runtime lets a fake Economy service exercise the bridge's format/currency
+    // delegation and the service-register rebinding; production still treats Vault as compileOnly.
+    testImplementation(libs.vault.api)
 }
