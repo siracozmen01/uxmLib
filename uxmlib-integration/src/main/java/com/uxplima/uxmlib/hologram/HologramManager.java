@@ -1,9 +1,11 @@
 package com.uxplima.uxmlib.hologram;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.bukkit.Location;
 import org.bukkit.entity.TextDisplay;
@@ -22,6 +24,12 @@ import org.bukkit.plugin.Plugin;
 public final class HologramManager {
 
     private final Set<Hologram> tracked = ConcurrentHashMap.newKeySet();
+    private final List<HologramLifecycle> lifecycles = new CopyOnWriteArrayList<>();
+
+    /** Install the built-in lifecycle that keeps the tracked-hologram viewer caches honest. */
+    public HologramManager() {
+        registerLifecycle(new ViewerInvalidation());
+    }
 
     /** Spawn {@code builder} at {@code location} and track the result. Must run on the region thread. */
     public Hologram spawn(Holograms.Builder builder, Location location) {
@@ -51,15 +59,61 @@ public final class HologramManager {
     }
 
     /**
-     * Install the listener that keeps per-viewer state from leaking. On quit it drops the player from every
-     * tracked hologram's viewer set; on respawn and world-change it does the same so the cached visibility is
-     * not stale (the consumer re-shows on the next pass). Native entities don't need a packet re-send, but our
-     * {@code Set<UUID>} viewer cache would otherwise hold a departed UUID or a since-moved player forever.
-     * Call once on enable.
+     * Install the single Bukkit listener that drives the lifecycle SPI. It forwards every join / quit /
+     * respawn / world-change to the registered {@link HologramLifecycle} widgets (and the built-in viewer
+     * invalidation), so a consumer wires this once on enable and every widget gets its callbacks for free.
+     * Native entities don't need a packet re-send, but our {@code Set<UUID>} viewer caches and any per-player
+     * widget state would otherwise hold a departed UUID or stale visibility forever.
      */
     public void installLifecycleListener(Plugin plugin) {
         Objects.requireNonNull(plugin, "plugin");
         plugin.getServer().getPluginManager().registerEvents(new HologramLifecycleListener(this), plugin);
+    }
+
+    /**
+     * Register a widget's {@link HologramLifecycle} so the manager fans player events out to it. A widget
+     * (paged / leaderboard / switchable) calls this once when it is created and {@link #unregisterLifecycle}
+     * when it is removed, so its per-player state resets centrally without its own Bukkit listener.
+     */
+    public void registerLifecycle(HologramLifecycle lifecycle) {
+        lifecycles.add(Objects.requireNonNull(lifecycle, "lifecycle"));
+    }
+
+    /** Stop fanning player events out to {@code lifecycle}. A no-op if it was not registered. */
+    public void unregisterLifecycle(HologramLifecycle lifecycle) {
+        Objects.requireNonNull(lifecycle, "lifecycle");
+        lifecycles.remove(lifecycle);
+    }
+
+    /** Fan a join out to every registered lifecycle. Called by the Bukkit listener. */
+    public void dispatchJoin(UUID player) {
+        fanOut(player, HologramLifecycle::onJoin);
+    }
+
+    /** Fan a quit out to every registered lifecycle. Called by the Bukkit listener. */
+    public void dispatchQuit(UUID player) {
+        fanOut(player, HologramLifecycle::onQuit);
+    }
+
+    /** Fan a world-change out to every registered lifecycle. Called by the Bukkit listener. */
+    public void dispatchWorldChange(UUID player) {
+        fanOut(player, HologramLifecycle::onWorldChange);
+    }
+
+    /** Fan a respawn out to every registered lifecycle. Called by the Bukkit listener. */
+    public void dispatchRespawn(UUID player) {
+        fanOut(player, HologramLifecycle::onRespawn);
+    }
+
+    private void fanOut(UUID player, java.util.function.BiConsumer<HologramLifecycle, UUID> hook) {
+        Objects.requireNonNull(player, "player");
+        for (HologramLifecycle lifecycle : lifecycles) {
+            try {
+                hook.accept(lifecycle, player);
+            } catch (RuntimeException failure) {
+                // One widget's broken hook must never stop the others (or leak the viewer cache); isolate it.
+            }
+        }
     }
 
     /** Drop {@code viewer} from every tracked hologram's allowed-viewer set. */
@@ -67,6 +121,28 @@ public final class HologramManager {
         Objects.requireNonNull(viewer, "viewer");
         for (Hologram hologram : tracked) {
             hologram.forgetViewer(viewer);
+        }
+    }
+
+    /**
+     * The built-in lifecycle: a quit, respawn or world-change drops the player from every tracked hologram's
+     * viewer set so the per-UUID cache neither leaks a departed player nor holds a since-moved one. This is
+     * the behaviour the old standalone listener had, now expressed as a registered SPI member.
+     */
+    private final class ViewerInvalidation implements HologramLifecycle {
+        @Override
+        public void onQuit(UUID player) {
+            invalidateViewer(player);
+        }
+
+        @Override
+        public void onWorldChange(UUID player) {
+            invalidateViewer(player);
+        }
+
+        @Override
+        public void onRespawn(UUID player) {
+            invalidateViewer(player);
         }
     }
 

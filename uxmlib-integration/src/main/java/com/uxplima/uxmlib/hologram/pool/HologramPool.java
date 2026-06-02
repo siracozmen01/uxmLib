@@ -22,9 +22,9 @@ import org.jspecify.annotations.Nullable;
 /**
  * Auto show/hides each registered hologram per-player by distance, so a consumer registers a hologram and
  * forgets it — no manual viewer bookkeeping. On a repeating {@link Scheduler} task the pool snapshots the
- * online players in each hologram's world, asks {@link HologramVisibility} which of them should see it
- * (same world and within the registered radius), diffs that against the set it last showed, and calls the
- * hologram's existing {@code show}/{@code hide} only on the transition.
+ * online players in each hologram's world, asks the registered {@link VisibilityGate} which of them should
+ * see it (same world, within range, optionally inside the FOV cone), diffs that against the set it last
+ * showed, and calls the hologram's existing {@code show}/{@code hide} only on the transition.
  *
  * <p>The visibility pass runs on the global region (reading locations there is safe on Paper and Folia);
  * every {@code show}/{@code hide} is then bounced onto the hologram entity's own region thread through the
@@ -79,15 +79,19 @@ public final class HologramPool {
      * the visibility task if it was idle. {@code radius} must be positive.
      */
     public void register(Hologram hologram, double radius) {
+        register(hologram, VisibilityGate.range(radius));
+    }
+
+    /**
+     * Register {@code hologram} with an explicit {@link VisibilityGate} so the pool can also FOV-cull — show
+     * it only to players within range <em>and</em> looking toward it. Re-registering swaps the gate. Starts
+     * the visibility task if it was idle.
+     */
+    public void register(Hologram hologram, VisibilityGate gate) {
         Objects.requireNonNull(hologram, "hologram");
-        if (!(radius > 0) || !Double.isFinite(radius)) {
-            throw new IllegalArgumentException("radius must be a positive, finite number of blocks");
-        }
+        Objects.requireNonNull(gate, "gate");
         tracked.compute(
-                hologram,
-                (key, existing) -> existing == null
-                        ? new Tracked(key, radius * radius)
-                        : existing.withRadiusSquared(radius * radius));
+                hologram, (key, existing) -> existing == null ? new Tracked(key, gate) : existing.withGate(gate));
         ensureRunning();
     }
 
@@ -145,14 +149,15 @@ public final class HologramPool {
     }
 
     private void evaluate(Tracked entry) {
-        applyDelta(entry, nearby.desiredFor(entry.hologram(), entry.radiusSquared()));
+        applyDelta(entry, nearby.desiredFor(entry.hologram(), entry.gate()));
     }
 
     /**
      * Production {@link NearbyPlayers}: read the hologram's current world and the players in it, then keep
-     * the ones the pure predicate clears. A hologram with no world (despawned mid-tick) sees nobody.
+     * the ones the gate clears (same world, in range, and — if the gate has FOV — looking toward it). A
+     * hologram with no world (despawned mid-tick) sees nobody. The viewer's eye location feeds the cone.
      */
-    private static Set<UUID> desiredViewers(Hologram hologram, double radiusSquared) {
+    private static Set<UUID> desiredViewers(Hologram hologram, VisibilityGate gate) {
         Location origin = hologram.entity().getLocation();
         World world = origin.getWorld();
         if (world == null) {
@@ -160,8 +165,7 @@ public final class HologramPool {
         }
         Set<UUID> desired = new HashSet<>();
         for (Player player : new ArrayList<>(world.getPlayers())) {
-            Location at = player.getLocation();
-            if (at != null && HologramVisibility.shouldShow(at, origin, radiusSquared)) {
+            if (gate.shouldShow(player.getEyeLocation(), origin)) {
                 desired.add(player.getUniqueId());
             }
         }
@@ -180,19 +184,19 @@ public final class HologramPool {
         }
     }
 
-    /** A hologram under management plus its squared cull radius and the pool-owned set it is shown to. */
+    /** A hologram under management plus its visibility gate and the pool-owned set it is shown to. */
     private static final class Tracked {
         private final Hologram hologram;
-        private final double radiusSquared;
+        private final VisibilityGate gate;
         private final Set<UUID> viewers = ConcurrentHashMap.newKeySet();
 
-        Tracked(Hologram hologram, double radiusSquared) {
+        Tracked(Hologram hologram, VisibilityGate gate) {
             this.hologram = hologram;
-            this.radiusSquared = radiusSquared;
+            this.gate = gate;
         }
 
-        Tracked withRadiusSquared(double newRadiusSquared) {
-            Tracked copy = new Tracked(hologram, newRadiusSquared);
+        Tracked withGate(VisibilityGate newGate) {
+            Tracked copy = new Tracked(hologram, newGate);
             copy.viewers.addAll(viewers);
             return copy;
         }
@@ -201,8 +205,8 @@ public final class HologramPool {
             return hologram;
         }
 
-        double radiusSquared() {
-            return radiusSquared;
+        VisibilityGate gate() {
+            return gate;
         }
 
         Set<UUID> snapshotViewers() {

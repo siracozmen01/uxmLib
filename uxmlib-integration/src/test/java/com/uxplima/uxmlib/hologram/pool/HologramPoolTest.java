@@ -139,7 +139,7 @@ class HologramPoolTest {
         }
 
         @Override
-        public Set<UUID> desiredFor(Hologram hologram, double radiusSquared) {
+        public Set<UUID> desiredFor(Hologram hologram, VisibilityGate gate) {
             return desired;
         }
     }
