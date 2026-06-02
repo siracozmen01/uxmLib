@@ -254,6 +254,26 @@ public final class HoconConfig {
         return ConfigSections.section(node(path), path, type);
     }
 
+    /**
+     * Map the list at {@code path} into a {@code List<T>}, skipping any element that fails to deserialize
+     * rather than aborting the whole read. The returned {@link LenientResult} carries the good elements and
+     * a {@link ConfigViolation} for each one skipped, so one malformed row never wipes the rest.
+     */
+    public <T> LenientResult<List<T>> getListLenient(String path, Class<T> element) {
+        Objects.requireNonNull(element, "element");
+        return ConfigSections.listLenient(node(path), path, element);
+    }
+
+    /**
+     * Map each child of the section at {@code path} onto {@code type}, skipping any child that fails to
+     * deserialize rather than aborting the whole read. See {@link #getSection(String, Class)} for the strict
+     * variant; this one keeps every well-formed entry and reports the rest in the {@link LenientResult}.
+     */
+    public <T> LenientResult<java.util.Map<String, T>> getSectionLenient(String path, Class<T> type) {
+        Objects.requireNonNull(type, "type");
+        return ConfigSections.sectionLenient(node(path), path, type);
+    }
+
     /** The child key names directly under {@code path} (a section's entries). */
     public List<String> keys(String path) {
         return ConfigSections.keys(node(path));
