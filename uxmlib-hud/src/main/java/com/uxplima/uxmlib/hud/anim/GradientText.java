@@ -23,7 +23,11 @@ public final class GradientText implements TextAnimator {
     private final String text;
     private final List<TextColor> stops;
     private final int steps;
-    private int step;
+
+    // Volatile so a frame() read on one region/entity thread never tears against an advance() on the shared
+    // global tick under Folia. The animator is still single-writer (one advancer); volatile only guards the
+    // cross-thread read from seeing a torn or stale phase.
+    private volatile int step;
 
     private GradientText(String text, List<TextColor> stops, int steps) {
         this.text = text;

@@ -37,7 +37,9 @@ public final class ActionBarManager {
     private @Nullable TaskHandle task;
 
     public ActionBarManager(Scheduler scheduler, Server server) {
-        this(scheduler, server, System::currentTimeMillis);
+        // A monotonic source: a sticky bar's deadline must not stall (or expire early) when the OS wall clock
+        // steps over an NTP correction, so we measure against System.nanoTime rather than currentTimeMillis.
+        this(scheduler, server, () -> System.nanoTime() / 1_000_000L);
     }
 
     ActionBarManager(Scheduler scheduler, Server server, LongSupplier clock) {
@@ -68,6 +70,23 @@ public final class ActionBarManager {
     /** How many players currently have a sticky action bar. Exposed for tests and metrics. */
     public int tracked() {
         return entries.size();
+    }
+
+    /**
+     * Stop tracking every sticky bar and cancel the shared timer. Call this on plugin disable so the repeating
+     * re-send task does not outlive the manager; the lines fade out on their own within the vanilla fade
+     * window. The manager is reusable afterward (a later {@link #show} restarts the timer).
+     */
+    public void close() {
+        entries.clear();
+        cancelTimer();
+    }
+
+    private synchronized void cancelTimer() {
+        if (task != null) {
+            task.cancel();
+            task = null;
+        }
     }
 
     private synchronized void startIfIdle() {

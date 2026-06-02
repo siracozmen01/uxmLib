@@ -42,7 +42,9 @@ public final class BossBarManager {
     private @Nullable TaskHandle task;
 
     public BossBarManager(Scheduler scheduler, Server server) {
-        this(scheduler, server, System::currentTimeMillis);
+        // A monotonic source: timed bars must not freeze or finish early when the OS wall clock steps over
+        // an NTP correction, so we derive elapsed time from System.nanoTime rather than currentTimeMillis.
+        this(scheduler, server, () -> System.nanoTime() / 1_000_000L);
     }
 
     BossBarManager(Scheduler scheduler, Server server, LongSupplier clock) {
@@ -114,6 +116,27 @@ public final class BossBarManager {
     /** How many players currently have a managed boss bar. Exposed for tests and metrics. */
     public int tracked() {
         return entries.size();
+    }
+
+    /**
+     * Hide every tracked bar from its still-online player and cancel the shared timer. Call this on plugin
+     * disable so bars do not linger on screen and the repeating task does not outlive the manager; the manager
+     * is reusable afterward (a later {@link #show} restarts the timer).
+     */
+    public void close() {
+        for (Iterator<Map.Entry<UUID, Entry>> it = entries.entrySet().iterator(); it.hasNext(); ) {
+            Map.Entry<UUID, Entry> e = it.next();
+            removeFrom(e.getKey(), e.getValue().bar());
+            it.remove();
+        }
+        cancelTimer();
+    }
+
+    private synchronized void cancelTimer() {
+        if (task != null) {
+            task.cancel();
+            task = null;
+        }
     }
 
     private void track(Player player, Entry entry) {

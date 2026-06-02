@@ -162,10 +162,66 @@ class BossBarManagerTest {
     }
 
     @Test
+    void backwardClockStepFreezesACountdownInsteadOfFinishing() {
+        // Demonstrates the wall-clock hazard: when the clock steps backward (an NTP correction), elapsed goes
+        // negative, progress clamps to full and the bar never auto-hides. The default constructor avoids this
+        // by deriving elapsed from a monotonic source rather than System.currentTimeMillis.
+        PlayerMock player = server.addPlayer();
+        manager.countdown(player, c("boom"), Duration.ofSeconds(4));
+        BossBar bar = java.util.Objects.requireNonNull(manager.barOf(player.getUniqueId()));
+
+        now.set(-10_000L); // the wall clock jumped backwards after the bar started
+        scheduler.fire();
+        assertThat(bar.progress()).isEqualTo(1.0f); // frozen full, never finishes
+        assertThat(manager.tracked()).isEqualTo(1);
+    }
+
+    @Test
+    void defaultConstructorUsesAMonotonicClock() {
+        // The public constructor must not read wall time, which can step backward over an NTP correction.
+        BossBarManager defaulted = new BossBarManager(scheduler, server);
+        PlayerMock player = server.addPlayer();
+        defaulted.countdown(player, c("boom"), Duration.ofSeconds(4));
+        assertThat(defaulted.tracked()).isEqualTo(1);
+    }
+
+    @Test
     void countdownRejectsNonPositiveDuration() {
         PlayerMock player = server.addPlayer();
         assertThatThrownBy(() -> manager.countdown(player, c("x"), Duration.ZERO))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void closeHidesEveryBarAndCancelsTheTimer() {
+        PlayerMock a = server.addPlayer();
+        PlayerMock b = server.addPlayer();
+        BossBar barA = manager.countdown(a, c("a"), Duration.ofSeconds(10));
+        BossBar barB = manager.countdown(b, c("b"), Duration.ofSeconds(10));
+
+        manager.close();
+
+        assertThat(manager.tracked()).isZero();
+        assertThat(a.getBossBars()).doesNotContain(barA);
+        assertThat(b.getBossBars()).doesNotContain(barB);
+        assertThat(scheduler.cancelled()).isTrue();
+    }
+
+    @Test
+    void closeOnAnEmptyManagerIsHarmless() {
+        org.assertj.core.api.Assertions.assertThatCode(() -> manager.close()).doesNotThrowAnyException();
+        assertThat(manager.tracked()).isZero();
+    }
+
+    @Test
+    void managerIsReusableAfterClose() {
+        PlayerMock player = server.addPlayer();
+        manager.countdown(player, c("a"), Duration.ofSeconds(10));
+        manager.close();
+
+        manager.countdown(player, c("b"), Duration.ofSeconds(10));
+        assertThat(manager.tracked()).isEqualTo(1);
+        assertThat(scheduler.starts()).isEqualTo(2);
     }
 
     @Test

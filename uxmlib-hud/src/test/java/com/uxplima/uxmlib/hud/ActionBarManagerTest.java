@@ -94,6 +94,36 @@ class ActionBarManagerTest {
     }
 
     @Test
+    void closeStopsTrackingAndCancelsTheTimer() {
+        PlayerMock a = server.addPlayer();
+        PlayerMock b = server.addPlayer();
+        manager.show(a, c("a"), Duration.ofSeconds(5));
+        manager.show(b, c("b"), Duration.ofSeconds(5));
+
+        manager.close();
+
+        assertThat(manager.tracked()).isZero();
+        assertThat(scheduler.cancelled()).isTrue();
+    }
+
+    @Test
+    void closeOnAnEmptyManagerIsHarmless() {
+        org.assertj.core.api.Assertions.assertThatCode(() -> manager.close()).doesNotThrowAnyException();
+        assertThat(manager.tracked()).isZero();
+    }
+
+    @Test
+    void managerIsReusableAfterClose() {
+        PlayerMock player = server.addPlayer();
+        manager.show(player, c("a"), Duration.ofSeconds(5));
+        manager.close();
+
+        manager.show(player, c("b"), Duration.ofSeconds(5));
+        assertThat(manager.tracked()).isEqualTo(1);
+        assertThat(scheduler.starts()).isEqualTo(2);
+    }
+
+    @Test
     void rejectsNonPositiveDuration() {
         PlayerMock player = server.addPlayer();
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> manager.show(player, c("x"), Duration.ZERO))

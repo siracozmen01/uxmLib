@@ -77,6 +77,27 @@ class UpdateBatchTest {
     }
 
     @Test
+    void crossKeyMarkFromInsideTheFlushRendersThatKeyNextFlush() {
+        // Rendering "a" legitimately invalidates a different surface "b"; that mark must not be swallowed.
+        List<String> seen = new ArrayList<>();
+        feedbackRef = new UpdateBatch<>(scheduler, key -> {
+            seen.add(key);
+            if (key.equals("a")) {
+                feedback().mark("b"); // a render of A invalidates B, a different surface
+            }
+        });
+        feedback().mark("a");
+        scheduler.runLater();
+
+        // The cross-key mark armed a follow-up flush rather than being dropped.
+        assertThat(seen).containsExactly("a");
+        assertThat(scheduler.laters()).isEqualTo(2);
+
+        scheduler.runLater();
+        assertThat(seen).containsExactly("a", "b");
+    }
+
+    @Test
     void emptyFlushRendersNothing() {
         // Arming then a stray flush with nothing pending renders nothing and does not throw.
         batch.mark("a");

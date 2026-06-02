@@ -17,7 +17,11 @@ public final class ScrollingText implements TextAnimator {
     private final String ring;
     private final int width;
     private final boolean scrolling;
-    private int offset;
+
+    // Volatile so a frame() read on one region/entity thread never tears against an advance() on the shared
+    // global tick under Folia. The animator is still single-writer (one advancer); volatile only guards the
+    // cross-thread read from seeing a torn or stale offset.
+    private volatile int offset;
 
     private ScrollingText(String ring, int width, boolean scrolling) {
         this.ring = ring;
