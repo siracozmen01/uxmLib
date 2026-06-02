@@ -120,11 +120,55 @@ class ActionListTest {
     }
 
     @Test
+    void syncAndAsyncPartitionKeepsEachActionOnItsOwnLane() {
+        // A mixed list must NOT be routed wholesale onto an async lane: [console]/[close] are sync-only and
+        // would be illegal off the main thread. The partition lets a scheduler-aware driver run each subset on
+        // the right lane while preserving per-subset declaration order.
+        ActionList mixed = ActionList.parse(List.of("[message] a", "[console] say b", "[close]", "[actionbar] c"));
+
+        assertThat(mixed.asyncActions()).hasSize(2);
+        assertThat(mixed.asyncActions()).allMatch(Action::async);
+        assertThat(mixed.syncActions()).hasSize(2);
+        assertThat(mixed.syncActions()).noneMatch(Action::async);
+    }
+
+    @Test
+    void runHonoursEachActionsOwnLaneOnTheCallingThread() {
+        // run() executes every action regardless of flag (the pure path); the flag is a routing hint, not a
+        // promise that the whole list may run async. Mixed sync+async actions all still fire.
+        CapturingAudience target = new CapturingAudience();
+        List<String> consoleCommands = new ArrayList<>();
+        ActionContext context = ActionContext.builder(OperandResolver.identity())
+                .target(target)
+                .consoleSink(consoleCommands::add)
+                .build();
+
+        ActionList.parse(List.of("[message] hi", "[console] say hi")).run(context);
+
+        assertThat(target.messages).hasSize(1);
+        assertThat(consoleCommands).containsExactly("say hi");
+    }
+
+    @Test
     void emptyListRunsWithoutEffect() {
         CapturingAudience target = new CapturingAudience();
         ActionContext context =
                 ActionContext.builder(OperandResolver.identity()).target(target).build();
         ActionList.of(List.of()).run(context);
         assertThat(target.messages).isEmpty();
+    }
+
+    @Test
+    void aMalformedSoundKeyIsSkippedWithoutThrowingOrAbortingLaterActions() {
+        // The key resolves to an uppercase/garbage value Key.key would reject; the action must fail soft so the
+        // following [message] still fires (the Action no-throw contract ActionList.run relies on).
+        CapturingAudience target = new CapturingAudience();
+        OperandResolver resolver = mapResolver(Map.of("%sound%", "NOT A VALID KEY"));
+        ActionContext context = ActionContext.builder(resolver).target(target).build();
+
+        ActionList.parse(List.of("[sound] %sound%", "[message] still here")).run(context);
+
+        assertThat(target.messages).hasSize(1);
+        assertThat(Text.plain(target.messages.get(0))).isEqualTo("still here");
     }
 }

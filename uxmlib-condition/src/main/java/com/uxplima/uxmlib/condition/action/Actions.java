@@ -66,15 +66,23 @@ public final class Actions {
         return context -> context.player().ifPresent(player -> player.closeInventory());
     }
 
-    /** {@code [sound] <key> [volume] [pitch]} — play the parsed sound to the target. */
+    /**
+     * {@code [sound] <key> [volume] [pitch]} — play the parsed sound to the target. The key is resolved at run
+     * time from a placeholder template, so it can be malformed (an uppercase letter, an empty or garbage
+     * resolution). {@link Action} must not throw on delivery, so an unparseable key is skipped rather than
+     * letting {@link Key#key(String)} raise {@link net.kyori.adventure.key.InvalidKeyException} and abort the
+     * remaining actions in the list.
+     */
     public static Action sound(SoundSpec spec) {
         Objects.requireNonNull(spec, "spec");
-        return asyncText(context -> context.target()
-                .playSound(Sound.sound(
-                        Key.key(context.resolve(spec.keyTemplate())),
-                        Sound.Source.MASTER,
-                        spec.volume(),
-                        spec.pitch())));
+        return asyncText(context -> {
+            String resolved = context.resolve(spec.keyTemplate());
+            if (!Key.parseable(resolved)) {
+                return;
+            }
+            context.target()
+                    .playSound(Sound.sound(Key.key(resolved), Sound.Source.MASTER, spec.volume(), spec.pitch()));
+        });
     }
 
     private static Component render(ActionContext context, String template) {

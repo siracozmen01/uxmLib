@@ -97,4 +97,47 @@ class ComparisonTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("no comparison operator");
     }
+
+    @Test
+    void parseIgnoresOperatorCharactersInsideAPlaceholderBody() {
+        // The '<' lives inside %math_2<3%; the real operator is the '==' that follows the placeholder.
+        Comparison.ParsedComparison parsed = Comparison.parse("%math_2<3% == true");
+        assertThat(parsed.comparison().operator()).isEqualTo(Operator.EQUAL);
+        assertThat(parsed.left()).isEqualTo("%math_2<3%");
+        assertThat(parsed.right()).isEqualTo("true");
+    }
+
+    @Test
+    void parseIgnoresEqualsAndGreaterInsideAPlaceholderBody() {
+        Comparison.ParsedComparison parsed = Comparison.parse("%a>=b% != %c==d%");
+        assertThat(parsed.comparison().operator()).isEqualTo(Operator.NOT_EQUAL);
+        assertThat(parsed.left()).isEqualTo("%a>=b%");
+        assertThat(parsed.right()).isEqualTo("%c==d%");
+    }
+
+    @Test
+    void parseStillSplitsOnAnOperatorAfterAnUnterminatedPlaceholder() {
+        // A lone '%' with no closing '%' must not swallow the rest of the line, or no operator is ever found.
+        Comparison.ParsedComparison parsed = Comparison.parse("50% == 50%");
+        assertThat(parsed.comparison().operator()).isEqualTo(Operator.EQUAL);
+        assertThat(parsed.left()).isEqualTo("50%");
+        assertThat(parsed.right()).isEqualTo("50%");
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        // Java float-literal suffixes must be treated as plain strings, not numbers.
+        "EQUAL, 1d, 1, false",
+        "EQUAL, 10F, 10, false",
+        "EQUAL, 5f, 5, false",
+        // Hex float forms must not parse as numbers (0x1p4 == 16.0 under Double.valueOf).
+        "EQUAL, 0x1p4, 16, false",
+        // NaN/Infinity must compare as strings, not as numbers.
+        "EQUAL, NaN, NaN, true",
+        "GREATER, Infinity, 5, false",
+        "LESS, -Infinity, 5, false",
+    })
+    void leadingLenientNumericFormsAreTreatedAsStrings(Operator operator, String left, String right, boolean expected) {
+        assertThat(Comparison.of(operator).test(left, right)).isEqualTo(expected);
+    }
 }

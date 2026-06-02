@@ -77,4 +77,17 @@ class PlaceholderConditionTest {
         PlaceholderCondition condition = PlaceholderCondition.of("5", Operator.LESS, "10");
         assertThat(condition.test(requestWith(OperandResolver.identity()))).isTrue();
     }
+
+    @Test
+    void parseKeepsAComparisonOperatorInsideAPlaceholderOutOfTheSplit() {
+        // %math_2<3% must stay whole; the real operator is the '==' after it, not the '<' in its body.
+        PlaceholderCondition condition = PlaceholderCondition.parse("%math_2<3% == true");
+        assertThat(condition.leftTemplate()).isEqualTo("%math_2<3%");
+        assertThat(condition.rightTemplate()).isEqualTo("true");
+        assertThat(condition.operator()).isEqualTo(Operator.EQUAL);
+
+        Map<String, String> values = new HashMap<>();
+        values.put("%math_2<3%", "true");
+        assertThat(condition.test(requestWith(mapResolver(values)))).isTrue();
+    }
 }

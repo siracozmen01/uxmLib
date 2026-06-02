@@ -1,6 +1,7 @@
 package com.uxplima.uxmlib.condition;
 
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 import org.jspecify.annotations.Nullable;
 
@@ -10,8 +11,11 @@ import org.jspecify.annotations.Nullable;
  * <p>Evaluation rules, fixed and documented so config authors can rely on them:
  *
  * <ul>
- *   <li>If <b>both</b> operands parse as numbers (via {@link Double#parseDouble}), the comparison is numeric
- *       — so {@code "1.0" == "1"} and {@code "10" >= "9"} are both true.
+ *   <li>If <b>both</b> operands parse as <em>finite</em> decimal numbers, the comparison is numeric — so
+ *       {@code "1.0" == "1"} and {@code "10" >= "9"} are both true. The numeric test is stricter than {@link
+ *       Double#parseDouble}: a Java float-literal suffix ({@code "1d"}, {@code "10F"}), a hex-float form
+ *       ({@code "0x1p4"}), and the {@code NaN}/{@code Infinity} tokens are <b>not</b> numbers and fall back to
+ *       the string rules below.
  *   <li>Otherwise {@link Operator#EQUAL}/{@link Operator#NOT_EQUAL} fall back to case-sensitive string
  *       equality after trimming surrounding whitespace.
  *   <li>An ordering operator ({@code >=}, {@code >}, {@code <=}, {@code <}) with a non-numeric operand on
@@ -24,6 +28,12 @@ import org.jspecify.annotations.Nullable;
  * validators) that already have both literals in hand.
  */
 public final class Comparison {
+
+    // A strict decimal/scientific grammar: optional sign, digits with an optional fractional part (or a
+    // leading-dot fraction), and an optional base-10 exponent. This deliberately rejects what Double.valueOf
+    // accepts but config authors do not mean as numbers: the d/D/f/F suffixes ("1d", "10F"), hex floats
+    // ("0x1p4"), and the NaN/Infinity tokens.
+    private static final Pattern STRICT_NUMBER = Pattern.compile("[+-]?(\\d+\\.?\\d*|\\.\\d+)([eE][+-]?\\d+)?");
 
     private final Operator operator;
 
@@ -77,11 +87,12 @@ public final class Comparison {
 
     private static @Nullable Double asNumber(String value) {
         String trimmed = value.strip();
-        if (trimmed.isEmpty()) {
+        if (trimmed.isEmpty() || !STRICT_NUMBER.matcher(trimmed).matches()) {
             return null;
         }
         try {
-            return Double.valueOf(trimmed);
+            double parsed = Double.parseDouble(trimmed);
+            return Double.isFinite(parsed) ? parsed : null;
         } catch (NumberFormatException notANumber) {
             return null;
         }
@@ -89,12 +100,21 @@ public final class Comparison {
 
     /**
      * Parse a {@code left <op> right} expression where the operator is one of {@link Operator}'s symbols.
-     * The first operator symbol found by a longest-match scan splits the two operands. Throws {@link
+     * The first operator symbol found by a longest-match scan splits the two operands. A {@code %...%}
+     * placeholder span — a pair of {@code %} markers with no whitespace between them, the PlaceholderAPI
+     * shape — is skipped whole, so an operator character inside a placeholder body (such as the {@code <} in
+     * {@code %math_2<3%}) never splits the expression. A bare {@code %} that is not part of such a span (a
+     * literal percent sign like {@code 50%}) is treated as an ordinary character. Throws {@link
      * IllegalArgumentException} if no known operator appears.
      */
     public static ParsedComparison parse(String expression) {
         Objects.requireNonNull(expression, "expression");
         for (int i = 0; i < expression.length(); i++) {
+            int placeholderEnd = placeholderEnd(expression, i);
+            if (placeholderEnd > i) {
+                i = placeholderEnd; // jump to the closing '%'; the loop step moves past it
+                continue;
+            }
             Operator operator = operatorAt(expression, i);
             if (operator != null) {
                 String left = expression.substring(0, i).strip();
@@ -104,6 +124,28 @@ public final class Comparison {
             }
         }
         throw new IllegalArgumentException("no comparison operator in: " + expression);
+    }
+
+    /**
+     * If {@code index} opens a PlaceholderAPI-shaped {@code %...%} span (a closing {@code %} with no
+     * whitespace in between), return the index of that closing {@code %}; otherwise return {@code index} so the
+     * character is treated literally. This keeps an operator symbol inside a placeholder body out of the split
+     * while leaving a literal percent sign (no balanced, whitespace-free partner) to be scanned normally.
+     */
+    private static int placeholderEnd(String expression, int index) {
+        if (expression.charAt(index) != '%') {
+            return index;
+        }
+        for (int j = index + 1; j < expression.length(); j++) {
+            char c = expression.charAt(j);
+            if (c == '%') {
+                return j;
+            }
+            if (Character.isWhitespace(c)) {
+                return index;
+            }
+        }
+        return index;
     }
 
     private static @Nullable Operator operatorAt(String expression, int index) {
