@@ -20,28 +20,64 @@ import net.kyori.adventure.text.Component;
  * menu.set(13, GuiItem.button(icon, e -> e.getWhoClicked().sendMessage("clicked")));
  * menu.open(player);
  * }</pre>
+ *
+ * <p>{@link #install} is idempotent: a second call registers no second listener, so a host with several
+ * menu-using modules can install once in its bootstrap without double-handling events. {@link #uninstall}
+ * removes the listener (and clears the animation registry) for a clean disable or a reload reinstall.
  */
 public final class Guis {
 
     private Guis() {}
 
+    private static @org.jspecify.annotations.Nullable GuiListener listener;
     private static @org.jspecify.annotations.Nullable GuiRegistry registry;
 
-    /** Register the single {@link GuiListener} so menu events are routed. Call once per plugin enable. */
+    /**
+     * Register the single {@link GuiListener} so menu events are routed. Call once per plugin enable; a
+     * repeat call is a no-op (the first install wins), so it is safe to call from each menu-using module.
+     */
     public static void install(Plugin plugin) {
         Objects.requireNonNull(plugin, "plugin");
-        Bukkit.getPluginManager().registerEvents(new GuiListener(), plugin);
+        register(plugin);
     }
 
     /**
      * Install the listener and wire a {@link com.uxplima.uxmlib.scheduler.Scheduler} so menus with
-     * animated items or {@code autoRefresh} can tick. Use this overload to enable animation.
+     * animated items or {@code autoRefresh} can tick. Use this overload to enable animation. Idempotent in
+     * the same way as {@link #install(Plugin)}; the scheduler is adopted on the call that first installs.
      */
     public static void install(Plugin plugin, com.uxplima.uxmlib.scheduler.Scheduler scheduler) {
         Objects.requireNonNull(plugin, "plugin");
         Objects.requireNonNull(scheduler, "scheduler");
-        Bukkit.getPluginManager().registerEvents(new GuiListener(), plugin);
-        registry = new GuiRegistry(scheduler);
+        if (register(plugin)) {
+            registry = new GuiRegistry(scheduler);
+        }
+    }
+
+    /** Register the listener once. Returns {@code true} if this call performed the registration. */
+    private static boolean register(Plugin plugin) {
+        if (listener != null) {
+            return false; // already installed; a second registration would handle every event twice
+        }
+        GuiListener installed = new GuiListener();
+        Bukkit.getPluginManager().registerEvents(installed, plugin);
+        listener = installed;
+        return true;
+    }
+
+    /** Unregister the menu listener and drop the animation registry. Safe to call when not installed. */
+    public static void uninstall() {
+        GuiListener installed = listener;
+        if (installed != null) {
+            org.bukkit.event.HandlerList.unregisterAll(installed);
+            listener = null;
+        }
+        registry = null;
+    }
+
+    /** Whether the menu listener is currently installed. */
+    public static boolean isInstalled() {
+        return listener != null;
     }
 
     /** The animation registry, present only when {@link #install(Plugin, com.uxplima.uxmlib.scheduler.Scheduler)} was used. */
