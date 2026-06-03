@@ -3,6 +3,7 @@ package com.uxplima.uxmlib.common;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -49,6 +50,20 @@ public final class SemanticVersion implements Comparable<SemanticVersion> {
             pre = splitIdentifiers(text.substring(dash + 1));
         }
         return new SemanticVersion(parseCore(core), pre);
+    }
+
+    /**
+     * Parse a version string, or {@link Optional#empty()} when it is blank or its numeric core is unreadable.
+     * The non-throwing counterpart of {@link #parse(String)}, for fail-safe callers that treat an unparseable
+     * version as "cannot compare" rather than an error (e.g. an update check that must never break startup).
+     */
+    public static Optional<SemanticVersion> tryParse(String raw) {
+        Objects.requireNonNull(raw, "raw");
+        try {
+            return Optional.of(parse(raw));
+        } catch (IllegalArgumentException malformed) {
+            return Optional.empty();
+        }
     }
 
     private static List<String> splitIdentifiers(String tail) {

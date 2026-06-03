@@ -1,11 +1,32 @@
 package com.uxplima.uxmlib.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
+@org.jspecify.annotations.NullUnmarked
 class SemanticVersionTest {
+
+    @Test
+    void tryParseReturnsTheVersionOrEmptyInsteadOfThrowing() {
+        // The non-throwing counterpart of parse, for fail-safe callers (e.g. an update check that must never
+        // break startup over a malformed version string): a good version is present, anything unreadable is
+        // empty rather than an exception.
+        assertThat(SemanticVersion.tryParse("1.4.0")).contains(SemanticVersion.parse("1.4.0"));
+        assertThat(SemanticVersion.tryParse("v2.0.0-rc.1")).isPresent();
+        assertThat(SemanticVersion.tryParse("garbage")).isEmpty();
+        assertThat(SemanticVersion.tryParse("not-a-version")).isEmpty();
+        assertThat(SemanticVersion.tryParse("x.y.z")).isEmpty();
+        assertThat(SemanticVersion.tryParse("")).isEmpty();
+        assertThat(SemanticVersion.tryParse("   ")).isEmpty();
+    }
+
+    @Test
+    void tryParseRejectsNull() {
+        assertThatNullPointerException().isThrownBy(() -> SemanticVersion.tryParse(null));
+    }
 
     @Test
     void parsesPlainTriple() {
