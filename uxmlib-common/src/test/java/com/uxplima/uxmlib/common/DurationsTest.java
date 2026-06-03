@@ -1,12 +1,14 @@
 package com.uxplima.uxmlib.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
 
 import org.junit.jupiter.api.Test;
 
+@org.jspecify.annotations.NullUnmarked
 class DurationsTest {
 
     @Test
@@ -40,6 +42,23 @@ class DurationsTest {
         assertThatThrownBy(() -> Durations.parse("abc")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> Durations.parse("10x")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> Durations.parse("1h2x")).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void rejectsWhitespaceOnlyLeadingGarbageAndSignedInput() {
+        // The token match is anchored at each position, so a leading non-digit ("abc5m"), a sign ("-5m")
+        // and a whitespace-only string are all rejected rather than partially parsed — the strict-rejection
+        // contract a config loader relies on to surface a typo instead of silently using a wrong duration.
+        assertThatThrownBy(() -> Durations.parse("   ")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> Durations.parse("abc5m")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> Durations.parse("-5m")).isInstanceOf(IllegalArgumentException.class);
+        assertThat(Durations.tryParse("abc5m")).isEmpty();
+    }
+
+    @Test
+    void parseAndTryParseRejectNull() {
+        assertThatNullPointerException().isThrownBy(() -> Durations.parse(null));
+        assertThatNullPointerException().isThrownBy(() -> Durations.tryParse(null));
     }
 
     @Test
