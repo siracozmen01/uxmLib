@@ -7,6 +7,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import com.uxplima.uxmlib.common.SemanticVersion;
 import org.jspecify.annotations.Nullable;
 
 /**

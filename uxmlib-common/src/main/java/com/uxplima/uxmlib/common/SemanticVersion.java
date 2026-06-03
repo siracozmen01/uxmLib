@@ -1,4 +1,4 @@
-package com.uxplima.uxmlib.update;
+package com.uxplima.uxmlib.common;
 
 import java.util.ArrayList;
 import java.util.List;

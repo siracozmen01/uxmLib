@@ -1,4 +1,4 @@
-package com.uxplima.uxmlib.update;
+package com.uxplima.uxmlib.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

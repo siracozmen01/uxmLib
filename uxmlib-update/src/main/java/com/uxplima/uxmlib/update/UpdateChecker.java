@@ -6,6 +6,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
+import com.uxplima.uxmlib.common.SemanticVersion;
 import com.uxplima.uxmlib.scheduler.Scheduler;
 import org.jspecify.annotations.Nullable;
 
