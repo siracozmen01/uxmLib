@@ -140,4 +140,28 @@ class SqlTest {
         assertThatThrownBy(() -> sql.execute("SELECT * FROM table_that_does_not_exist"))
                 .isInstanceOf(StorageException.class);
     }
+
+    @Test
+    void writeBuildersRoundTripAgainstSqlite() {
+        long id = sql.insertReturningKey(
+                InsertBuilder.into("accounts").set("name", "Steve").build());
+        assertThat(id).isEqualTo(1L);
+
+        int updated = sql.update(UpdateBuilder.table("accounts")
+                .set("name", "Alex")
+                .where("id", id)
+                .build());
+        assertThat(updated).isEqualTo(1);
+
+        List<String> afterUpdate =
+                sql.query(SelectBuilder.from("accounts").columns("name").build(), row -> row.getString("name"));
+        assertThat(afterUpdate).containsExactly("Alex");
+
+        int deleted = sql.update(DeleteBuilder.from("accounts").where("id", id).build());
+        assertThat(deleted).isEqualTo(1);
+
+        List<String> afterDelete =
+                sql.query(SelectBuilder.from("accounts").columns("name").build(), row -> row.getString("name"));
+        assertThat(afterDelete).isEmpty();
+    }
 }

@@ -156,6 +156,12 @@ public final class Sql {
         }
     }
 
+    /** Run a builder-built write ({@link UpdateBuilder} / {@link DeleteBuilder}) and return the affected row count. */
+    public int update(Query query) {
+        Objects.requireNonNull(query, "query");
+        return update(query.sql(), query.binder());
+    }
+
     /**
      * Run an INSERT and return the auto-generated key it produced (typically an auto-increment id), via
      * {@link java.sql.Statement#RETURN_GENERATED_KEYS}. Works across SQLite, H2, MySQL/MariaDB and Postgres
@@ -180,6 +186,12 @@ public final class Sql {
         } catch (SQLException failure) {
             throw new StorageException("insert failed: " + sql, failure);
         }
+    }
+
+    /** Run an {@link InsertBuilder}-built insert and return the auto-generated key it produced. */
+    public long insertReturningKey(Query query) {
+        Objects.requireNonNull(query, "query");
+        return insertReturningKey(query.sql(), query.binder());
     }
 
     /** Run a parameterless statement (typically DDL). */
