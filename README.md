@@ -17,7 +17,7 @@ Each module is published separately; pull only what you use.
 
 | Module | What it gives you |
 | --- | --- |
-| `uxmlib-common` | Folia-ready `Scheduler`, MiniMessage `Text`, typed `HoconConfig`, an i18n message catalog + retargetable `Message`, `Durations`/`Numbers`/`Sounds`/particle helpers |
+| `uxmlib-common` | Folia-ready `Scheduler`, MiniMessage `Text`, node-based `HoconConfig` + typed-record `RecordConfig`, an i18n message catalog + retargetable `Message`, a ReDoS-guarded `TimedRegex`, `Durations`/`Numbers`/`Sounds`/`SemanticVersion`/particle helpers |
 | `uxmlib-item` | A fluent `ItemBuilder` (name/lore/enchants/flags/banner/map/components, with removers), sealed `SkullData`, registry lookups, component-safe + gzip serialization, single-key `isSimilar`, typed PDC + UUID codec, HOCON→item loader, async skull resolver |
 | `uxmlib-gui` | Inventory-menu framework — simple/paginated/scrolling/storage/typed menus, per-viewer & animated items, fillers, interaction control, navigation, config-driven state menus, an in-game config editor, click audit log, async/declarative click pipeline, unified anvil/chat/sign input, server-side Dialogs |
 | `uxmlib-command` | A Brigadier facade + annotation DSL over a platform-neutral node IR: args/suggestions/permissions, `@Range`/`@Length`, `@Cooldown`, `@CommandPriority`, flags & switches, orphan args, async execution, validator/context/condition + annotation-replacer SPIs |
