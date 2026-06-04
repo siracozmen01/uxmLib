@@ -18,6 +18,7 @@ include(
     ":uxmlib-command",
     ":uxmlib-gui",
     ":uxmlib-storage",
+    ":uxmlib-redis",
     ":uxmlib-integration",
     ":uxmlib-hud",
     ":uxmlib-update",
