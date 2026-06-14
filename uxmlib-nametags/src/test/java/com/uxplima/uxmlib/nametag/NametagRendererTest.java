@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.bukkit.entity.Player;
 
@@ -180,10 +181,185 @@ class NametagRendererTest {
         assertThat(packets.sends).isEmpty();
     }
 
+    // --- multi-line --------------------------------------------------------------------------------------
+
+    @Test
+    void threeLineTextSpawnsThreeDisplaysAndOneMountWithAllIds() {
+        Player target = server.addPlayer("Target");
+        Player a = server.addPlayer("Alice");
+
+        renderer.show(target, Appearance.defaults(), Set.of(a.getUniqueId()), threeLines());
+
+        // Three distinct entity ids were allocated for the stack.
+        assertThat(packets.allocations()).isEqualTo(3);
+        List<Object> frame = bundlesTo(a).get(0).packets();
+        assertThat(frame.stream().filter(FakeNametagPackets.Spawn.class::isInstance))
+                .hasSize(3);
+        assertThat(frame.stream().filter(FakeNametagPackets.Metadata.class::isInstance))
+                .hasSize(3);
+        List<FakeNametagPackets.Mount> mounts = frame.stream()
+                .filter(FakeNametagPackets.Mount.class::isInstance)
+                .map(FakeNametagPackets.Mount.class::cast)
+                .toList();
+        assertThat(mounts).hasSize(1);
+        assertThat(mounts.get(0).passengerIds()).hasSize(3).doesNotHaveDuplicates();
+    }
+
+    @Test
+    void stackedLinesCarryDescendingYTranslationTopLineHighest() {
+        Player target = server.addPlayer("Target");
+        Player a = server.addPlayer("Alice");
+
+        renderer.show(target, Appearance.defaults(), Set.of(a.getUniqueId()), threeLines());
+
+        List<FakeNametagPackets.Metadata> meta = metadataInBundleTo(a);
+        // The bundle is built top line first, so index 0 must sit highest and Y must strictly decrease.
+        assertThat(meta).hasSize(3);
+        float top = meta.get(0).translation().y();
+        float mid = meta.get(1).translation().y();
+        float bottom = meta.get(2).translation().y();
+        assertThat(top).isGreaterThan(mid);
+        assertThat(mid).isGreaterThan(bottom);
+        // Even step between adjacent lines.
+        assertThat(top - mid).isEqualTo(mid - bottom);
+    }
+
+    @Test
+    void lineIdsAreStableAcrossUpdatesWhenLineCountIsUnchanged() {
+        Player target = server.addPlayer("Target");
+        Player a = server.addPlayer("Alice");
+        renderer.show(target, Appearance.defaults(), Set.of(a.getUniqueId()), threeLines());
+        List<Integer> spawnIds = metadataInBundleTo(a).stream()
+                .map(FakeNametagPackets.Metadata::entityId)
+                .toList();
+        packets.sends.clear();
+
+        scheduler.tick();
+
+        // A refresh of an unchanged 3-line stack re-sends three standalone metadata packets on the same ids.
+        List<Integer> refreshIds = metadataPacketsTo(a).stream()
+                .map(FakeNametagPackets.Metadata::entityId)
+                .toList();
+        assertThat(packets.allocations()).isEqualTo(3);
+        assertThat(refreshIds).containsExactlyElementsOf(spawnIds);
+    }
+
+    @Test
+    void lineCountChangeOnUpdateRemovesOldIdsAndRespawns() {
+        Player target = server.addPlayer("Target");
+        Player a = server.addPlayer("Alice");
+        NametagHandle handle = renderer.show(target, Appearance.defaults(), Set.of(a.getUniqueId()), threeLines());
+        packets.sends.clear();
+
+        handle.update(Set.of(a.getUniqueId()), v -> line("only"), Appearance.defaults());
+
+        // The shrink tears down the three old line ids, then respawns the new single-line stack.
+        assertThat(removesTo(a)).hasSize(1);
+        assertThat(removesTo(a).get(0).entityIds()).hasSize(3);
+        assertThat(bundlesTo(a)).hasSize(1);
+        assertThat(metadataInBundleTo(a)).hasSize(1);
+    }
+
+    // --- animation ---------------------------------------------------------------------------------------
+
+    @Test
+    void refreshTickReResolvesTextAndReSendsMetadataForUnchangedViewerSet() {
+        Player target = server.addPlayer("Target");
+        Player a = server.addPlayer("Alice");
+        AtomicInteger calls = new AtomicInteger();
+        PerViewerText animated = v -> List.of(Component.text("frame-" + calls.incrementAndGet()));
+        renderer.show(target, Appearance.defaults(), Set.of(a.getUniqueId()), animated);
+        int callsAfterShow = calls.get();
+        packets.sends.clear();
+
+        scheduler.tick();
+
+        // The provider was re-invoked on the tick, and the new component reached the viewer as metadata.
+        assertThat(calls.get()).isGreaterThan(callsAfterShow);
+        assertThat(metadataPacketsTo(a)).hasSize(1);
+        assertThat(metadataPacketsTo(a).get(0).text()).isEqualTo(Component.text("frame-" + calls.get()));
+    }
+
+    // --- line of sight -----------------------------------------------------------------------------------
+
+    @Test
+    void obstructedViewerFadesWhileClearViewerStaysFullOpacityWhenHideThroughBlocksOn() {
+        Player target = server.addPlayer("Target");
+        Player a = server.addPlayer("Alice");
+        Player b = server.addPlayer("Bob");
+        FakeLineOfSight los = new FakeLineOfSight().obstruct(a.getUniqueId());
+        NametagRenderer fading = new NametagRenderer(packets, scheduler, los);
+        Appearance hiding = hideThroughBlocks(true);
+
+        fading.show(target, hiding, Set.of(a.getUniqueId(), b.getUniqueId()), v -> line("x"));
+
+        assertThat(metadataTo(a).opacity()).isEqualTo(hiding.obscuredOpacity());
+        assertThat(metadataTo(b).opacity()).isEqualTo(Appearance.FULL_OPACITY);
+    }
+
+    @Test
+    void lineOfSightIsIgnoredWhenHideThroughBlocksOff() {
+        Player target = server.addPlayer("Target");
+        Player a = server.addPlayer("Alice");
+        FakeLineOfSight los = new FakeLineOfSight().obstruct(a.getUniqueId());
+        NametagRenderer fading = new NametagRenderer(packets, scheduler, los);
+
+        fading.show(target, hideThroughBlocks(false), Set.of(a.getUniqueId()), v -> line("x"));
+
+        assertThat(metadataTo(a).opacity()).isEqualTo(Appearance.FULL_OPACITY);
+    }
+
+    @Test
+    void removeRemovesEveryLineIdForEveryViewer() {
+        Player target = server.addPlayer("Target");
+        Player a = server.addPlayer("Alice");
+        Player b = server.addPlayer("Bob");
+        NametagHandle handle =
+                renderer.show(target, Appearance.defaults(), Set.of(a.getUniqueId(), b.getUniqueId()), threeLines());
+        packets.sends.clear();
+
+        handle.remove();
+
+        assertThat(removesTo(a)).hasSize(1);
+        assertThat(removesTo(a).get(0).entityIds()).hasSize(3);
+        assertThat(removesTo(b)).hasSize(1);
+        assertThat(removesTo(b).get(0).entityIds()).hasSize(3);
+    }
+
     // --- helpers -----------------------------------------------------------------------------------------
 
     private static List<Component> line(String text) {
         return List.of(Component.text(text));
+    }
+
+    private static PerViewerText threeLines() {
+        return v -> List.of(Component.text("top"), Component.text("mid"), Component.text("bottom"));
+    }
+
+    /** A defaults-shaped appearance with the line-of-sight fade flag toggled. */
+    private static Appearance hideThroughBlocks(boolean hide) {
+        Appearance d = Appearance.defaults();
+        return new Appearance(
+                d.billboard(),
+                d.backgroundArgb(),
+                d.textShadow(),
+                d.seeThrough(),
+                d.alignment(),
+                d.lineWidth(),
+                d.viewRange(),
+                d.translation(),
+                d.scale(),
+                d.interpolationDurationTicks(),
+                hide,
+                d.obscuredOpacity());
+    }
+
+    /** The metadata packets carried inside the spawn bundle this viewer received, in bundle order. */
+    private List<FakeNametagPackets.Metadata> metadataInBundleTo(Player viewer) {
+        return bundlesTo(viewer).get(0).packets().stream()
+                .filter(FakeNametagPackets.Metadata.class::isInstance)
+                .map(FakeNametagPackets.Metadata.class::cast)
+                .toList();
     }
 
     private List<FakeNametagPackets.Bundle> bundlesTo(Player viewer) {
