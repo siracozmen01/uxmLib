@@ -91,7 +91,10 @@ testing   = ["junit-jupiter", "assertj", "mockito-core", "mockito-jupiter"]
 adventure = ["adventure-api", "adventure-mini"]
 
 [plugins]
-shadow          = { id = "com.gradleup.shadow",   version.ref = "shadow" }
-spotless        = { id = "com.diffplug.spotless",  version.ref = "spotless" }
-errorprone      = { id = "net.ltgt.errorprone",    version = "4.4.0" }
-nullaway-plugin = { id = "net.ltgt.nullaway",      version = "3.0.0" }
+shadow            = { id = "com.gradleup.shadow",   version.ref = "shadow" }
+spotless          = { id = "com.diffplug.spotless",  version.ref = "spotless" }
+errorprone        = { id = "net.ltgt.errorprone",    version = "4.4.0" }
+nullaway-plugin   = { id = "net.ltgt.nullaway",      version = "3.0.0" }
+# paperweight userdev — supplies the Mojang-mapped dev bundle (Paper API + net.minecraft / craftbukkit)
+# the packet-nametag renderer compiles against. Only uxmlib-nametags applies it; quarantined to one module.
+paperweight-userdev = { id = "io.papermc.paperweight.userdev", version = "2.0.0-beta.21" }

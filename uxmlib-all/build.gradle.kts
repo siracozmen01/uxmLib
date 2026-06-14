@@ -18,6 +18,7 @@ dependencies {
     api(project(":uxmlib-update"))
     api(project(":uxmlib-condition"))
     api(project(":uxmlib-npc"))
+    api(project(":uxmlib-nametags"))
     compileOnly(libs.paper.api)
 
     // Architecture guards analyse every module's bytecode (all are api deps, so they're on the test
