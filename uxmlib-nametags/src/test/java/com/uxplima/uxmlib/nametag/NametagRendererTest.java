@@ -260,6 +260,61 @@ class NametagRendererTest {
         assertThat(metadataInBundleTo(a)).hasSize(1);
     }
 
+    // --- dynamic viewer supplier -------------------------------------------------------------------------
+
+    @Test
+    void supplierGainingAViewerBetweenTicksSpawnsForTheNewcomerWithoutAPush() {
+        Player target = server.addPlayer("Target");
+        Player a = server.addPlayer("Alice");
+        Player late = server.addPlayer("Late");
+        MutableViewers viewers = new MutableViewers(Set.of(a.getUniqueId()));
+        renderer.show(target, Appearance.defaults(), viewers, v -> line("x"));
+        packets.sends.clear();
+
+        // The newcomer joins the supplied set; the loop must notice on the next tick on its own.
+        viewers.set(Set.of(a.getUniqueId(), late.getUniqueId()));
+        scheduler.tick();
+
+        assertThat(bundlesTo(late)).hasSize(1);
+        assertThat(bundlesTo(a)).isEmpty();
+        assertThat(metadataPacketsTo(a)).hasSize(1);
+    }
+
+    @Test
+    void supplierLosingAViewerBetweenTicksRemovesTheDepartedWithoutAPush() {
+        Player target = server.addPlayer("Target");
+        Player stay = server.addPlayer("Stay");
+        Player leave = server.addPlayer("Leave");
+        MutableViewers viewers = new MutableViewers(Set.of(stay.getUniqueId(), leave.getUniqueId()));
+        renderer.show(target, Appearance.defaults(), viewers, v -> line("x"));
+        packets.sends.clear();
+
+        // The viewer drops out of the supplied set; the loop must send it a remove on the next tick.
+        viewers.set(Set.of(stay.getUniqueId()));
+        scheduler.tick();
+
+        assertThat(removesTo(leave)).hasSize(1);
+        assertThat(metadataPacketsTo(stay)).hasSize(1);
+    }
+
+    /** A supplier whose returned set a test can swap between ticks, mimicking players entering/leaving range. */
+    private static final class MutableViewers implements java.util.function.Supplier<Set<UUID>> {
+        private volatile Set<UUID> current;
+
+        MutableViewers(Set<UUID> initial) {
+            this.current = initial;
+        }
+
+        void set(Set<UUID> next) {
+            this.current = next;
+        }
+
+        @Override
+        public Set<UUID> get() {
+            return current;
+        }
+    }
+
     // --- animation ---------------------------------------------------------------------------------------
 
     @Test

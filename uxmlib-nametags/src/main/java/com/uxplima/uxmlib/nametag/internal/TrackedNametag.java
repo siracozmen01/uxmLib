@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 import org.bukkit.entity.Player;
 
@@ -47,7 +48,13 @@ public final class TrackedNametag implements NametagHandle {
     private final Map<UUID, Integer> viewerLineCounts = new HashMap<>();
 
     private @Nullable TaskHandle refreshTask;
+
+    /** Recomputed every refresh tick; must be cheap and safe to call on the target's region thread. */
+    private Supplier<Set<UUID>> viewerSource;
+
+    /** The viewer set reconciled on the last cycle — the baseline the next tick diffs the supplier against. */
     private Set<UUID> viewers;
+
     private PerViewerText text;
     private Appearance appearance;
     private boolean removed;
@@ -56,22 +63,25 @@ public final class TrackedNametag implements NametagHandle {
             NametagPackets packets,
             LineOfSight lineOfSight,
             Player target,
-            Set<UUID> viewers,
+            Supplier<Set<UUID>> viewerSource,
             PerViewerText text,
             Appearance appearance) {
         this.packets = Objects.requireNonNull(packets, "packets");
         this.lineOfSight = Objects.requireNonNull(lineOfSight, "lineOfSight");
         this.target = Objects.requireNonNull(target, "target");
-        this.viewers = new HashSet<>(Objects.requireNonNull(viewers, "viewers"));
+        this.viewerSource = Objects.requireNonNull(viewerSource, "viewerSource");
+        this.viewers = new HashSet<>();
         this.text = Objects.requireNonNull(text, "text");
         this.appearance = Objects.requireNonNull(appearance, "appearance");
     }
 
-    /** Send the full spawn bundle to each resolvable viewer in the initial set. */
+    /** Send the full spawn bundle to each resolvable viewer in the supplier's current set. */
     public void spawnAll() {
-        for (UUID viewer : viewers) {
+        Set<UUID> initial = new HashSet<>(resolveViewers());
+        for (UUID viewer : initial) {
             spawnFor(viewer);
         }
+        this.viewers = initial;
     }
 
     /** Attach the refresh task so {@link #remove()} can cancel it. */
@@ -81,7 +91,7 @@ public final class TrackedNametag implements NametagHandle {
 
     @Override
     public void update() {
-        update(viewers, text, appearance);
+        reconcile(resolveViewers());
     }
 
     @Override
@@ -89,12 +99,25 @@ public final class TrackedNametag implements NametagHandle {
         Objects.requireNonNull(nextViewers, "nextViewers");
         Objects.requireNonNull(nextText, "nextText");
         Objects.requireNonNull(nextAppearance, "nextAppearance");
+        this.text = nextText;
+        this.appearance = nextAppearance;
+        Set<UUID> snapshot = Set.copyOf(nextViewers);
+        this.viewerSource = () -> snapshot;
+        reconcile(snapshot);
+    }
+
+    /** Pull the current viewer set off the supplier; never returns the supplier's instance directly. */
+    private Set<UUID> resolveViewers() {
+        Set<UUID> supplied = viewerSource.get();
+        return supplied == null ? Set.of() : supplied;
+    }
+
+    /** Diff {@code nextViewers} against the last-reconciled set: spawn newcomers, drop departed, refresh the rest. */
+    private void reconcile(Set<UUID> nextViewers) {
         if (removed) {
             return;
         }
         Set<UUID> previous = this.viewers;
-        this.text = nextText;
-        this.appearance = nextAppearance;
         Set<UUID> next = new HashSet<>(nextViewers);
         for (UUID viewer : next) {
             reconcileViewer(viewer, previous.contains(viewer));
