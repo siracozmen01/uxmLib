@@ -18,7 +18,8 @@ import java.util.Objects;
  * decides whether that one movement is allowed.
  *
  * <p>Bukkit-free by design, like every {@code spec/} type: the {@code ItemStack}s that fill the region and the
- * click gestures that move them live in the runtime, which is the only place allowed to touch Bukkit.
+ * click gestures that move them live in the runtime. The rule is about this package, not about that one: nothing in
+ * {@code spec/} imports {@code org.bukkit}.
  *
  * @param id the id the region's provider is registered under
  * @param slots the slots the provider owns, in declared order (index 0 of its contents fills the first slot)

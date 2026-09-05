@@ -34,6 +34,21 @@ class ArchitectureTest {
             .haveFullyQualifiedName("org.bukkit.command.TabCompleter")
             .because("commands use Brigadier via the command module, not CommandExecutor/TabCompleter");
 
+    /**
+     * The menu engine's pure model stays platform-free. {@code spec/} is the type model a HOCON menu parses into and
+     * {@code eval/} is the expression language over it, and both are documented as Bukkit-free so they can be
+     * unit-tested without a server. The documentation said that boundary was enforced before anything enforced it;
+     * this is the enforcement.
+     */
+    @ArchTest
+    static final ArchRule theMenuModelTouchesNoPlatform = noClasses()
+            .that()
+            .resideInAnyPackage("com.uxplima.uxmlib.menu.spec..", "com.uxplima.uxmlib.menu.eval..")
+            .should()
+            .dependOnClassesThat()
+            .resideInAnyPackage("org.bukkit..", "net.minecraft..")
+            .because("a menu's model and expression language are plain values, testable without a server");
+
     /** The common module is the root: it must not depend on any feature module. */
     @ArchTest
     static final ArchRule commonDependsOnNoFeatureModule = noClasses()

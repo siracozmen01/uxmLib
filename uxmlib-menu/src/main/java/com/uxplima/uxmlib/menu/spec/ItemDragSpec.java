@@ -12,7 +12,8 @@ import java.util.Objects;
  * left untouched: a silent deny, since a "wrong item" message would spam a mis-drop.
  *
  * <p>Bukkit-free by design, like every {@code spec/} type: the {@code ItemStack} matching and the cursor mutation
- * live in the runtime listener, which is the only place allowed to touch Bukkit.
+ * live in the runtime listener. The rule is about this package, not about that one: nothing in {@code spec/} imports
+ * {@code org.bukkit}.
  */
 public record ItemDragSpec(ItemRuleSpec rules, boolean consume, List<Ref> actions) {
 
