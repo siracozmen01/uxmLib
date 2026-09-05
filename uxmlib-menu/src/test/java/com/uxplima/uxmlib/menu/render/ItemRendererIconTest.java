@@ -35,6 +35,14 @@ import org.mockbukkit.mockbukkit.MockBukkit;
  * The stack an operator's item block builds. Almost every decision here is fail-soft on purpose: a spec is written by
  * hand in a file, so a typo has to cost one wrong-looking icon rather than a menu that will not open. These tests are
  * about which wrong value is tolerated and what it degrades to.
+ *
+ * <p>The {@code hidden-components} branch of {@code hiddenFor} is deliberately not covered, and not because it is
+ * awkward. It reads the data component registry through {@code fromRegistry}, which catches {@link RuntimeException}.
+ * MockBukkit's {@code UnimplementedOperationException} is a {@code TestAbortedException}, which is a
+ * {@code RuntimeException}, so an unimplemented registry call there is swallowed and handed back as an empty optional:
+ * the test does not abort and does not skip, it <em>passes</em>. {@code verifyNoAbortedTests} cannot see it either,
+ * because nothing was ever recorded as a skip. A green test on that branch would not be evidence about the branch.
+ * Covering it means first pinning, separately, that the registry answers at all.
  */
 class ItemRendererIconTest {
 

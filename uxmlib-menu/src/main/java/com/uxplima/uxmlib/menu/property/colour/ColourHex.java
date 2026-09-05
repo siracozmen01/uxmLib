@@ -36,12 +36,26 @@ public final class ColourHex {
         if (hex.length() != RRGGBB && hex.length() != AARRGGBB) {
             return Optional.empty();
         }
-        try {
-            long bits = Long.parseLong(hex, HEX_RADIX);
-            int argb = hex.length() == RRGGBB ? (OPAQUE_ALPHA << 24 | (int) bits) : (int) bits;
-            return Optional.of(argb);
-        } catch (NumberFormatException notHex) {
+        if (!isHexDigits(hex)) {
             return Optional.empty();
         }
+        long bits = Long.parseLong(hex, HEX_RADIX);
+        int argb = hex.length() == RRGGBB ? (OPAQUE_ALPHA << 24 | (int) bits) : (int) bits;
+        return Optional.of(argb);
+    }
+
+    /**
+     * Whether every character is a hex digit. Checked here rather than left to {@link Long#parseLong}, which accepts a
+     * leading {@code +} or {@code -} and would have read {@code #-12345} as a colour: the sign is not a hex digit, it
+     * fits the six-character length, and the negative value casts to a plausible-looking ARGB int. With the length and
+     * the digits both settled the parse cannot fail, so there is nothing left to catch.
+     */
+    private static boolean isHexDigits(String hex) {
+        for (int at = 0; at < hex.length(); at++) {
+            if (Character.digit(hex.charAt(at), HEX_RADIX) < 0) {
+                return false;
+            }
+        }
+        return true;
     }
 }
