@@ -155,7 +155,8 @@ class LoreTest {
     @Test
     void aWiderGlyphMovesTheColumnWithIt() throws ConfigurateException {
         ConfigurationNode node = CommentedConfigurationNode.root();
-        node.node("glyphs", "details").set("Æ"); // 10 pixels, where the shipped one is 7
+        node.node("glyphs", "details").set("Æ"); // 10 pixels, where the set our own menus use spends 7
+        node.node("glyphs", "row").set("•"); // the library draws no bullet, so the file names this one too
 
         Component lore = Lore.of(Theme.from(node))
                 .details(Component.text("Details"))
@@ -265,6 +266,7 @@ class LoreTest {
     /** A width nobody could write a sentence into is a defect in the caller, not a tooltip of empty lines. */
     @Test
     void aWidthThatIsNotPositiveIsRefused() {
-        assertThatThrownBy(() -> Lore.of(TestThemes.withGlyphs()).width(0)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> Lore.of(TestThemes.withGlyphs()).width(0))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

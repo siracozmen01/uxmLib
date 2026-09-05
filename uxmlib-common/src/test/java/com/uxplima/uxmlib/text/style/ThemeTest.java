@@ -33,11 +33,10 @@ class ThemeTest {
         Theme theme = Theme.defaults();
 
         assertThat(List.of(
-                        "accent", "body", "subtext", "muted", "dim", "icon", "crumb", "value", "good", "bad",
-                        "warn", "money", "level", "cta", "info", "rank", "event"))
-                .allSatisfy(role -> assertThat(theme.hasColour(role))
-                        .describedAs(role)
-                        .isTrue());
+                        "accent", "body", "subtext", "muted", "dim", "icon", "crumb", "value", "good", "bad", "warn",
+                        "money", "level", "cta", "info", "rank", "event"))
+                .allSatisfy(role ->
+                        assertThat(theme.hasColour(role)).describedAs(role).isTrue());
         assertThat(theme.hasColour("nonsense")).isFalse();
         assertThat(theme.colour("nonsense")).isEqualTo(theme.colour("body"));
     }

@@ -52,8 +52,7 @@ class StyleTokensTest {
         ConfigurationNode node = CommentedConfigurationNode.root();
         node.node("prefix", "categories", "shop").set("good");
 
-        assertThat(StyleTokens.expand("<tag:'shop'>", Theme.from(node), false))
-                .contains("<color:#55ff55>shop</color>");
+        assertThat(StyleTokens.expand("<tag:'shop'>", Theme.from(node), false)).contains("<color:#55ff55>shop</color>");
     }
 
     /** A category the file says nothing about reads in the accent, which is a prefix and not a mistake. */
@@ -64,8 +63,7 @@ class StyleTokensTest {
 
     @Test
     void aDenialReadsInTheFailureColourWhicheverFeatureRaisedIt() {
-        assertThat(StyleTokens.expand("<etag:'ERROR'>", theme, true))
-                .startsWith("<b><color:#ff5555>ᴇʀʀᴏʀ</color></b>");
+        assertThat(StyleTokens.expand("<etag:'ERROR'>", theme, true)).startsWith("<b><color:#ff5555>ᴇʀʀᴏʀ</color></b>");
     }
 
     @Test

@@ -128,8 +128,7 @@ public final class Theme {
      * colour, and nothing else is decided. It is a theme a plugin can ship with and read, not a look.
      */
     public static Theme defaults() {
-        return new Theme(
-                DEFAULT_ROLES, List.of(), Map.of(), DEFAULT_GLYPHS, DEFAULT_CATEGORIES, DEFAULT_SMALL_CAPS);
+        return new Theme(DEFAULT_ROLES, List.of(), Map.of(), DEFAULT_GLYPHS, DEFAULT_CATEGORIES, DEFAULT_SMALL_CAPS);
     }
 
     /**
