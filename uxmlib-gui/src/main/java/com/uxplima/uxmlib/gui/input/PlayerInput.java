@@ -51,10 +51,28 @@ public final class PlayerInput implements Listener {
         this(plugin, null, DEFAULT_CANCEL_KEYWORD);
     }
 
+    /**
+     * A {@code PlayerInput} that applies no cancel keyword: every line the player types comes back as a
+     * submission, and only a structural dismissal (the prompt closed, a disconnect, a backend that would not
+     * open) is a cancellation.
+     *
+     * <p>This is what a caller uses when it owns the cancel policy itself. A seam that reads a configurable
+     * list of cancel words from an operator's file has to be the only floor that applies them: if this class
+     * also applied one, a word the operator deliberately left out would still cancel, and nothing would say
+     * why. The library owns the mechanism and the caller owns the words.
+     */
+    public static PlayerInput withoutCancelKeyword(Plugin plugin, @Nullable Scheduler scheduler) {
+        return new PlayerInput(plugin, scheduler, new InputRouter(null));
+    }
+
     public PlayerInput(Plugin plugin, @Nullable Scheduler scheduler, String cancelKeyword) {
+        this(plugin, scheduler, new InputRouter(Objects.requireNonNull(cancelKeyword, "cancelKeyword")));
+    }
+
+    private PlayerInput(Plugin plugin, @Nullable Scheduler scheduler, InputRouter router) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
         this.scheduler = scheduler;
-        this.router = new InputRouter(Objects.requireNonNull(cancelKeyword, "cancelKeyword"));
+        this.router = router;
         this.anvil = new AnvilInput(plugin);
     }
 
