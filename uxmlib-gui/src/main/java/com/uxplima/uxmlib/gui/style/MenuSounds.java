@@ -87,8 +87,13 @@ public record MenuSounds(Sound open, Sound click, Sound page, Sound denied) {
      * casing alone gives {@code block_note_block_pling}: both are well formed keys, both name no sound, and both play
      * silence with no diagnostic. Only the sound registry can answer it, which is why {@link com.uxplima.uxmlib.gui.config.MenuAction} defers a
      * constant until the moment it plays. Nothing here reads a registry, because that is what lets a configuration
-     * file be tested with no server under it, so the constant form falls back to the shipped tone: an operator hears
-     * the wrong click and has something to report, rather than hearing nothing and having nothing to search for.
+     * file be tested with no server under it, so the constant form falls back to the shipped tone.
+     *
+     * <p>The fallback is audible but not yet diagnosable. It is silent: an operator who wrote a constant hears the
+     * shipped click and is told nothing, so they can only report it if they already know what their own click sounds
+     * like. That is better than the silence it replaced, and it is not the whole job. This record has no logger and
+     * inventing one for it would cost more than the bug does, but the host that calls {@link #from} does have one, so
+     * the version that finishes this is {@code from} being able to say which names it refused.
      */
     private static Sound sound(String name, String fallback, float volume, float pitch) {
         return Sound.sound(keyOrFallback(name, fallback), Sound.Source.MASTER, volume, pitch);

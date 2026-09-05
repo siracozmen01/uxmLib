@@ -49,6 +49,10 @@ public final class ColourHex {
      * leading {@code +} or {@code -} and would have read {@code #-12345} as a colour: the sign is not a hex digit, it
      * fits the six-character length, and the negative value casts to a plausible-looking ARGB int. With the length and
      * the digits both settled the parse cannot fail, so there is nothing left to catch.
+     *
+     * <p>{@link Character#digit} is what {@link Long#parseLong} itself uses, so the two agree on what a digit is,
+     * Unicode forms included: a fullwidth digit passes here and parses there. That agreement is the point. A stricter
+     * ASCII test here without the matching change to the parse would leave the guard and the parser disagreeing.
      */
     private static boolean isHexDigits(String hex) {
         for (int at = 0; at < hex.length(); at++) {
