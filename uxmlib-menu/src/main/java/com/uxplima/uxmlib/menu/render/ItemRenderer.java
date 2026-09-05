@@ -685,12 +685,18 @@ public final class ItemRenderer {
         }));
     }
 
-    /** Map the spec's raw flag tokens to Bukkit {@link ItemFlag}s, skipping any token that is not a flag name. */
+    /**
+     * Map the spec's raw flag tokens to Bukkit {@link ItemFlag}s, skipping any token that is not a flag name. The
+     * token is trimmed and upper-cased first, because every other enum-valued name in this block (a dye, a rarity,
+     * an attribute operation, a slot group) is read without regard to case, and a flag has no reason to be the one
+     * that is not. The fold is lossless: a flag constant holds only letters and underscores, and none of those
+     * underscores stands for another character.
+     */
     private ItemFlag[] resolveFlags(List<String> tokens) {
         List<ItemFlag> flags = new ArrayList<>(tokens.size());
         for (String token : tokens) {
             try {
-                flags.add(ItemFlag.valueOf(token));
+                flags.add(ItemFlag.valueOf(token.trim().toUpperCase(Locale.ROOT)));
             } catch (IllegalArgumentException unknownFlag) {
                 // A spec naming a flag that does not exist on this server should not abort the render.
             }
