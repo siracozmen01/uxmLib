@@ -77,6 +77,42 @@ class GuiTextTest {
                 .isEmpty();
     }
 
+    /** Text that is legitimately empty is not a loss, so the guard must not report it. */
+    @Test
+    void anEmptyStringIsNotReportedAsALoss() {
+        GuiText empty = new GuiText() {
+            @Override
+            public Component text(Player viewer, String key, Map<String, String> placeholders) {
+                return Component.text("");
+            }
+
+            @Override
+            public Component render(String raw) {
+                return Component.text(raw);
+            }
+        };
+
+        assertThat(empty.plain(player(), "menu.blank", Map.of())).isEmpty();
+    }
+
+    /** A translatable nested under a text parent loses everything just the same, so the guard looks down. */
+    @Test
+    void aNestedTranslatableIsFoundToo() {
+        GuiText nested = new GuiText() {
+            @Override
+            public Component text(Player viewer, String key, Map<String, String> placeholders) {
+                return Component.text("").append(Component.translatable(key));
+            }
+
+            @Override
+            public Component render(String raw) {
+                return Component.text(raw);
+            }
+        };
+
+        assertThat(nested.plain(player(), "uxmlib.test.nested.key", Map.of())).isEmpty();
+    }
+
     private static String plain(Component component) {
         return net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
                 .serialize(component);

@@ -69,12 +69,15 @@ public interface GuiText {
      * what makes it worth the warning: the same text renders correctly in a lore line, because that keeps
      * the component and lets the client translate it, and comes out blank everywhere this method is used.
      * An implementation that cannot rely on a registered translator resolves its own text before returning
-     * it. {@code GuiTextTest} pins this behaviour.
+     * it. {@code GuiTextTest} pins this behaviour, and a loss is logged once per key rather than passing
+     * silently, because an invisible failure is not one documentation can fix.
      */
     default String plain(Player viewer, String key, Map<String, String> placeholders) {
         Objects.requireNonNull(viewer, "viewer");
         Objects.requireNonNull(key, "key");
         Objects.requireNonNull(placeholders, "placeholders");
-        return PlainTextComponentSerializer.plainText().serialize(text(viewer, key, placeholders));
+        Component words = text(viewer, key, placeholders);
+        return FlattenLoss.checked(
+                key, words, PlainTextComponentSerializer.plainText().serialize(words));
     }
 }
