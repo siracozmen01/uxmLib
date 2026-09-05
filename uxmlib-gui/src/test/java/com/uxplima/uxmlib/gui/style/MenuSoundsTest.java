@@ -5,8 +5,10 @@ import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import com.uxplima.uxmlib.config.HoconConfig;
+import com.uxplima.uxmlib.gui.config.MenuAction;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -136,6 +138,33 @@ class MenuSoundsTest {
 
         assertThat(sounds.click().name().asString()).isEqualTo("minecraft:block.note_block.pling");
         assertThat(sounds.click().volume()).isEqualTo(0.2f);
+    }
+
+    /**
+     * The two classes that read a sound name disagree on the constant spelling, and this pins the disagreement rather
+     * than the agreement. MenuAction accepts a constant and resolves it against the registry when the sound plays;
+     * this record has no registry and refuses it. Their character class is identical today, which is exactly why it
+     * is worth asking: a shared helper would weld two questions into one, and a widening on either side would move
+     * the other without saying so. Teach MenuAction a third accepted spelling and this goes red, and whoever did it
+     * decides what happens here rather than a server deciding later by playing the wrong click.
+     */
+    @Test
+    void everyConstantMenuActionAcceptsIsOneThisRecordRefuses(@TempDir Path dir) throws Exception {
+        for (String constant : List.of("ITEM_BOOK_PAGE_TURN", "BLOCK_NOTE_BLOCK_PLING", "UI_BUTTON_CLICK", "A1_B2")) {
+            assertThat(MenuAction.read("sound:" + constant, id -> false))
+                    .as("MenuAction stores the constant and resolves it later: " + constant)
+                    .isEqualTo(new MenuAction.PlaySound(constant, 1.0F, 1.0F));
+
+            Path file = dir.resolve(constant + ".conf");
+            Files.writeString(file, "menu { sounds { click { name = \"" + constant + "\" } } }\n");
+
+            assertThat(MenuSounds.from(HoconConfig.load(file), "menu.sounds")
+                            .click()
+                            .name()
+                            .asString())
+                    .as("this record cannot resolve it without a registry, so it refuses: " + constant)
+                    .isEqualTo("minecraft:block.note_block.pling");
+        }
     }
 
     @Test

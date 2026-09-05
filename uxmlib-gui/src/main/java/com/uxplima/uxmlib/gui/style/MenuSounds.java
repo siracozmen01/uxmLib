@@ -7,7 +7,6 @@ import net.kyori.adventure.key.Key;
 import net.kyori.adventure.sound.Sound;
 
 import com.uxplima.uxmlib.config.HoconConfig;
-import com.uxplima.uxmlib.gui.config.MenuAction;
 
 /**
  * The four sounds a menu plays: opening, a click that acts, turning a page, and a click that is refused.
@@ -79,14 +78,14 @@ public record MenuSounds(Sound open, Sound click, Sound page, Sound denied) {
      *
      * <p>The name is trimmed and lower-cased first, because the key grammar holds lower case only and an operator who
      * writes {@code MINECRAFT:BLOCK.BELL.USE} is writing the same sound in the case the server prints. That much is
-     * pure case, and {@link Sounds} already reads a name that way.
+     * pure case, and {@link com.uxplima.uxmlib.common.Sounds} already reads a name that way.
      *
      * <p>The constant spelling, {@code BLOCK_NOTE_BLOCK_PLING}, is a different question and this record answers it by
      * refusing rather than guessing. It cannot be translated by string work: the key is
      * {@code block.note_block.pling}, so some of those underscores are dots and one is an underscore, and nothing in
      * the constant says which. Replacing every underscore with a dot gives {@code block.note.block.pling}, and lower-
      * casing alone gives {@code block_note_block_pling}: both are well formed keys, both name no sound, and both play
-     * silence with no diagnostic. Only the sound registry can answer it, which is why {@link MenuAction} defers a
+     * silence with no diagnostic. Only the sound registry can answer it, which is why {@link com.uxplima.uxmlib.gui.config.MenuAction} defers a
      * constant until the moment it plays. Nothing here reads a registry, because that is what lets a configuration
      * file be tested with no server under it, so the constant form falls back to the shipped tone: an operator hears
      * the wrong click and has something to report, rather than hearing nothing and having nothing to search for.
@@ -105,10 +104,18 @@ public record MenuSounds(Sound open, Sound click, Sound page, Sound denied) {
     }
 
     /**
-     * Whether the name is the constant form: upper case letters, digits and underscores only. The same rule {@link
-     * MenuAction} tests, held separately because the two classes answer it differently on purpose. MenuAction accepts
-     * a constant and resolves it against the registry when the sound plays; this record has no registry and refuses
-     * it. If the rule ever moves to one place, both must keep those two answers.
+     * Whether the name is the constant form: upper case letters, digits and underscores only.
+     *
+     * <p>{@link com.uxplima.uxmlib.gui.config.MenuAction} spells the same character class, and the copy is deliberate.
+     * They are not one rule in two places. That one is an accept gate, asking whether a string may be stored as a
+     * sound name at all; this one is a refuse gate, asking whether a name is one this record provably cannot resolve
+     * without a registry. The two coincide today by arithmetic rather than by meaning, and a shared helper would weld
+     * them: teach that one a third accepted spelling and this one would silently start refusing it in the same edit,
+     * with nothing saying that was a decision.
+     *
+     * <p>What holds the two apart is not this note. MenuSoundsTest runs a table of constant spellings through both
+     * public seams and asserts they disagree, so widening either side turns that test red and the widening has to say
+     * what this record does with the new spelling.
      */
     private static boolean isConstant(String name) {
         if (name.isEmpty()) {
