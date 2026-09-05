@@ -1,7 +1,9 @@
 package com.uxplima.uxmlib.gui.style;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -134,5 +136,75 @@ class TilesTest {
 
         assertThat(PlainTextComponentSerializer.plainText().serialize(byPosition))
                 .isEqualTo(PlainTextComponentSerializer.plainText().serialize(byName));
+    }
+
+    @Test
+    void aListFormTileOpensWithTheGlyphAndClosesWithAir() {
+        List<Component> lore = List.of(Component.text("a line"), Component.text("another"));
+
+        List<Component> titled = Tiles.titled(theme, Component.text("Tags"), lore);
+
+        assertThat(plain(titled.get(0))).contains("\u25c6").contains("Tags");
+        assertThat(titled).hasSize(4);
+        assertThat(plain(titled.get(3))).isBlank();
+        assertThat(titled.subList(1, 3)).isEqualTo(lore);
+    }
+
+    /** A page arrow or a filler pane carries no lore, so it is a button and keeps the name it was written with. */
+    @Test
+    void loreWithNoLinesComesBackUntitled() {
+        assertThat(Tiles.titled(theme, Component.text("Tags"), List.of())).isEmpty();
+    }
+
+    @Test
+    void aBlankTitleHasNothingToMoveSoTheLoreComesBackAsItWas() {
+        List<Component> lore = List.of(Component.text("a line"));
+
+        assertThat(Tiles.titled(theme, Tiles.blankName(), lore)).isEqualTo(lore);
+    }
+
+    /**
+     * A list holding one blank line is a caller asking for a blank line, not a caller with no lore, so it is
+     * titled like any other. The empty test is about how many lines there are and never about what is in them.
+     */
+    @Test
+    void aListHoldingOneBlankLineIsALoreAndNotAButton() {
+        List<Component> titled = Tiles.titled(theme, Component.text("Tags"), List.of(Component.text(" ")));
+
+        assertThat(titled).hasSize(2);
+        assertThat(plain(titled.get(0))).contains("Tags");
+    }
+
+    /** Lore that closes its own box must not end on two blank lines, which would sit the tile a line high. */
+    @Test
+    void aLoreThatAlreadyEndsBlankIsNotClosedTwice() {
+        List<Component> lore = List.of(Component.text("a line"), Component.text(" "));
+
+        List<Component> titled = Tiles.titled(theme, Component.text("Tags"), lore);
+
+        assertThat(titled).hasSize(3);
+        assertThat(plain(titled.get(2))).isBlank();
+    }
+
+    @Test
+    void theListComesBackUnmodifiableWhetherItWasTitledOrNot() {
+        List<Component> lore = new ArrayList<>(List.of(Component.text("a line")));
+
+        assertThatThrownBy(
+                        () -> Tiles.titled(theme, Component.text("Tags"), lore).add(Component.empty()))
+                .isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(() -> Tiles.titled(theme, Tiles.blankName(), lore).add(Component.empty()))
+                .isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    @Test
+    void aListTileByPositionKeepsTheShapeOfOneNamedByGradient() {
+        List<Component> lore = List.of(Component.text("a line"));
+
+        List<Component> byPosition = Tiles.titled(theme, Component.text("SHOP"), lore, 0);
+        List<Component> byName = Tiles.titled(theme, Component.text("SHOP"), lore, "header");
+
+        assertThat(byPosition.stream().map(TilesTest::plain).toList())
+                .isEqualTo(byName.stream().map(TilesTest::plain).toList());
     }
 }
