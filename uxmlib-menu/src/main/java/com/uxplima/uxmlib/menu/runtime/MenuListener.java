@@ -14,6 +14,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
+import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -40,6 +41,7 @@ import org.bukkit.plugin.Plugin;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
+import com.uxplima.uxmlib.gui.style.MenuSounds;
 import com.uxplima.uxmlib.menu.EntityListSpec;
 import com.uxplima.uxmlib.menu.GridCaptureHandler;
 import com.uxplima.uxmlib.menu.GridHandlers;
@@ -100,6 +102,8 @@ public final class MenuListener implements Listener {
 
     /** Operator diagnostics for a paged list flip (an overflowing source, or a query that threw): logged, page kept. */
     private static final Logger LOG = Logger.getLogger(MenuListener.class.getName());
+
+    private final MenuFeedback feedback;
 
     private final MenuRenderer renderer;
     private final ActionRegistry actions;
@@ -339,6 +343,50 @@ public final class MenuListener implements Listener {
             PagedListSourceRegistry pagedLists,
             @Nullable MenuTextPrompt textPrompt,
             @Nullable ContentProviderRegistry contents) {
+        this(
+                renderer,
+                actions,
+                conditions,
+                scheduler,
+                plugin,
+                editorRenderer,
+                selectorOpener,
+                confirmOpener,
+                defaultClickCooldownMs,
+                clock,
+                pagedLists,
+                textPrompt,
+                contents,
+                MenuSounds.defaults(),
+                MenuFeedback.SUPPRESSES_NOTHING);
+    }
+
+    /**
+     * The canonical constructor, carrying on top of everything above the sounds a menu plays and the rule that decides
+     * when the engine keeps quiet because a gesture already speaks for itself. Every shorter form delegates to the one
+     * above with the engine's own shipped sounds and a rule that suppresses nothing, so a host that wires neither
+     * sounds exactly as it did.
+     *
+     * <p>{@code speaksForItself} is asked of a gesture's own action list. The engine cannot answer it, because an
+     * action id belongs to the vocabulary a host registered and a library holding a copy of one consumer's action
+     * names would go quietly wrong the day that consumer adds or renames one.
+     */
+    public MenuListener(
+            MenuRenderer renderer,
+            ActionRegistry actions,
+            ConditionRegistry conditions,
+            Scheduler scheduler,
+            Plugin plugin,
+            @Nullable EditorRenderer editorRenderer,
+            @Nullable SelectorOpener selectorOpener,
+            @Nullable ConfirmOpener confirmOpener,
+            long defaultClickCooldownMs,
+            LongSupplier clock,
+            PagedListSourceRegistry pagedLists,
+            @Nullable MenuTextPrompt textPrompt,
+            @Nullable ContentProviderRegistry contents,
+            MenuSounds sounds,
+            Predicate<List<Ref>> speaksForItself) {
         this.renderer = Objects.requireNonNull(renderer, "renderer");
         this.actions = Objects.requireNonNull(actions, "actions");
         this.conditions = Objects.requireNonNull(conditions, "conditions");
@@ -355,6 +403,7 @@ public final class MenuListener implements Listener {
         this.pagedLists = Objects.requireNonNull(pagedLists, "pagedLists");
         this.textPrompt = textPrompt;
         this.contents = contents;
+        this.feedback = new MenuFeedback(sounds, speaksForItself);
     }
 
     /** Registers this listener with the server. Called once when the menu engine starts. */
@@ -1108,7 +1157,7 @@ public final class MenuListener implements Listener {
     private void handleClick(MenuHolder holder, RenderedSlot rs, ClickType click) {
         ItemType type = rs.item().type();
         if (type == ItemType.NEXT || type == ItemType.PREVIOUS || type == ItemType.JUMP) {
-            MenuFeedback.page(holder);
+            feedback.page(holder, rs.item().click().actionsFor(kindOf(click)));
             navigate(holder, type);
             return;
         }
@@ -1123,7 +1172,7 @@ public final class MenuListener implements Listener {
         RequirementSpec requirement = rs.item().click().requirementFor(kind);
         if (!evaluateRequirements(holder, base, kind, requirement)) {
             Optional<ClickBranch> elseChain = rs.item().click().elseFor(kind);
-            MenuFeedback.deny(holder);
+            feedback.deny(holder);
             if (elseChain.isPresent()) {
                 evaluateBranch(holder, base, kind, elseChain.get());
             } else {
@@ -1132,7 +1181,7 @@ public final class MenuListener implements Listener {
             return;
         }
         List<Ref> actions = rs.item().click().actionsFor(kind);
-        MenuFeedback.click(holder, actions);
+        feedback.click(holder, actions);
         runChain(holder, base, kind, actions, 0);
     }
 
