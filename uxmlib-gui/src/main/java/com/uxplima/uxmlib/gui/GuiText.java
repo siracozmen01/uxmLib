@@ -6,6 +6,7 @@ import java.util.Objects;
 import org.bukkit.entity.Player;
 
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TranslatableComponent;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 /**
@@ -81,21 +82,49 @@ public interface GuiText {
      * is a flat string, and so is an inventory title on some paths. Formatting is dropped, not stripped from
      * the source, so the same key reads the same in both places.
      *
-     * <p><strong>Do not return a translatable component from {@link #text} unless a translator is
-     * registered for it.</strong> Flattening one that no translator holds produces the empty string, not the
-     * key, so the label vanishes rather than degrading to something readable. It fails narrowly, which is
-     * what makes it worth the warning: the same text renders correctly in a lore line, because that keeps
-     * the component and lets the client translate it, and comes out blank everywhere this method is used.
-     * An implementation that cannot rely on a registered translator resolves its own text before returning
-     * it. {@code GuiTextTest} pins this behaviour, and a loss is logged once per key rather than passing
-     * silently, because an invisible failure is not one documentation can fix.
+     * <p>Never blank where the words were not, and that is the whole reason this method is not one line.
+     * Flattening a translatable component that no translator holds produces the empty string rather than the
+     * key, so a label built from one does not degrade, it disappears: the player gets a blank button, and the
+     * same text is correct in a lore line, which keeps the component and lets the client translate it. When
+     * that is what happened, this returns {@code key} instead.
+     *
+     * <p>Only when that is what happened. Text an implementation meant to be empty comes back empty, because a
+     * blank label somebody asked for is not a failure. The two are told apart by looking for the translatable
+     * the loss requires, which is a question about the component in hand and needs no memory of earlier ones.
+     *
+     * <p>Returning the key is what the client already does with a translation it does not have, and it is the
+     * better half of the fix: the failure lands on the screen, in words, attached to the thing that is wrong.
+     * A log line would have said it once and then needed somewhere to remember that it had, and a library
+     * holding that memory decides for every consumer sharing its classloader.
+     *
+     * <p>Total loss is what this catches, and only total loss. A component of {@code text("Yes: ")} followed by
+     * a translatable flattens to {@code "Yes: "}, which is not empty, so nothing is substituted and the
+     * translatable half is gone without a trace. That is left alone deliberately: splicing a key into text that
+     * survived would read worse than either half. So do not read {@code hasTranslatable} below as translatables
+     * being handled. The only way to avoid both losses is not to return one from {@link #text}.
+     *
+     * <p>An implementation that cannot rely on a registered translator should still resolve its own text
+     * before returning it, and {@code GuiTextTest} pins both halves.
      */
     default String plain(Player viewer, String key, Map<String, String> placeholders) {
         Objects.requireNonNull(viewer, "viewer");
         Objects.requireNonNull(key, "key");
         Objects.requireNonNull(placeholders, "placeholders");
         Component words = text(viewer, key, placeholders);
-        return FlattenLoss.checked(
-                key, words, PlainTextComponentSerializer.plainText().serialize(words));
+        String flattened = PlainTextComponentSerializer.plainText().serialize(words);
+        return flattened.isEmpty() && hasTranslatable(words) ? key : flattened;
+    }
+
+    /** Whether {@code component} carries a translatable anywhere in it, which is what flattening can lose whole. */
+    private static boolean hasTranslatable(Component component) {
+        if (component instanceof TranslatableComponent) {
+            return true;
+        }
+        for (Component child : component.children()) {
+            if (hasTranslatable(child)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

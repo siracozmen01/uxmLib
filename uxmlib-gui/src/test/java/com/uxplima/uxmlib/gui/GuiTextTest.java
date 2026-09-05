@@ -7,6 +7,7 @@ import java.util.Map;
 import org.bukkit.entity.Player;
 
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,17 +51,17 @@ class GuiTextTest {
     }
 
     /**
-     * The narrow failure the javadoc warns about, and it is worse than losing the words. A translatable
-     * component that no translator holds flattens to the <strong>empty string</strong>, not to its key. So a
-     * Bedrock form label goes blank while the same text renders normally in a lore line, which keeps the
-     * component and lets the client translate it. A blank label tells the player nothing and tells whoever
-     * wrote the menu nothing either.
+     * The narrow failure the javadoc warns about. Adventure flattens a translatable component that no
+     * translator holds to the <strong>empty string</strong>, not to its key, so a Bedrock form label would go
+     * blank while the same text renders normally in a lore line. Both readings of that were wrong before it
+     * was run: the guess was that the key survives, so the flattening itself is pinned below.
      *
-     * <p>Pinned here because both readings of this were wrong before it was run: the guess was that the key
-     * survives.
+     * <p>{@code plain} therefore hands back the key, which is what the client does with a translation it does
+     * not have. A player sees {@code menu.confirm.yes} on the button, which is ugly and is the point: it names
+     * itself, so whoever wrote the menu can find it.
      */
     @Test
-    void aTranslatableComponentFlattensToNothingWhenNoTranslatorHoldsIt() {
+    void aTranslatableWithNoTranslatorDegradesToItsKeyRatherThanVanishing() {
         GuiText translatable = new GuiText() {
             @Override
             public Component text(Player viewer, String key, Map<String, String> placeholders) {
@@ -73,11 +74,16 @@ class GuiTextTest {
             }
         };
 
-        assertThat(translatable.plain(player(), "uxmlib.test.absent.key", Map.of()))
+        assertThat(PlainTextComponentSerializer.plainText()
+                        .serialize(translatable.text(player(), "uxmlib.test.absent.key", Map.of())))
+                .as("Adventure loses the whole component, which is the failure being guarded")
                 .isEmpty();
+        assertThat(translatable.plain(player(), "uxmlib.test.absent.key", Map.of()))
+                .as("so plain names the key instead of handing back a blank label")
+                .isEqualTo("uxmlib.test.absent.key");
     }
 
-    /** Text that is legitimately empty is not a loss, so the guard must not report it. */
+    /** Text an implementation meant to be empty is not a loss, so it is not replaced by the key. */
     @Test
     void anEmptyStringIsNotReportedAsALoss() {
         GuiText empty = new GuiText() {
@@ -95,7 +101,11 @@ class GuiTextTest {
         assertThat(empty.plain(player(), "menu.blank", Map.of())).isEmpty();
     }
 
-    /** A translatable nested under a text parent loses everything just the same, so the guard looks down. */
+    /**
+     * A translatable nested under an empty text parent still loses everything, so the walk looks down rather than
+     * testing the top component alone. Note the parent is empty: a parent with words in it is partial loss, which
+     * this does not detect and does not claim to.
+     */
     @Test
     void aNestedTranslatableIsFoundToo() {
         GuiText nested = new GuiText() {
@@ -110,7 +120,32 @@ class GuiTextTest {
             }
         };
 
-        assertThat(nested.plain(player(), "uxmlib.test.nested.key", Map.of())).isEmpty();
+        assertThat(nested.plain(player(), "uxmlib.test.nested.key", Map.of())).isEqualTo("uxmlib.test.nested.key");
+    }
+
+    /**
+     * Partial loss is not detected, and that is pinned rather than left to the javadoc. Text beside a translatable
+     * survives the flatten, so the result is not empty and no key is substituted: half the line is simply gone. It
+     * is left alone because splicing a key into the surviving words would read worse than either half, but a
+     * reader who sees the walk in {@code plain} must not conclude that translatables are handled.
+     */
+    @Test
+    void wordsBesideATranslatableSurviveAndTheTranslatableHalfIsLostSilently() {
+        GuiText partial = new GuiText() {
+            @Override
+            public Component text(Player viewer, String key, Map<String, String> placeholders) {
+                return Component.text("Yes: ").append(Component.translatable(key));
+            }
+
+            @Override
+            public Component render(String raw) {
+                return Component.text(raw);
+            }
+        };
+
+        assertThat(partial.plain(player(), "uxmlib.test.partial.key", Map.of()))
+                .as("the surviving words come back and the key does not, which is the loss being documented")
+                .isEqualTo("Yes: ");
     }
 
     /** A catalog with no chat decoration answers both questions the same way, and needs to override nothing. */
