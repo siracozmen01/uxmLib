@@ -158,11 +158,23 @@ public final class MenuBindings {
 
     /**
      * The id catalog the in-game editor's pickers render from: the sorted action / condition / placeholder / list-
-     * source ids these four registries currently hold. A picker reads this one export, so it offers exactly the
-     * bindings that are wired. Built on demand from the live registries, so a feature that registered late is included.
+     * source ids the registries currently hold. A picker reads this one export, so it offers exactly the bindings
+     * that are wired. Built on demand from the live registries, so a feature that registered late is included.
      */
     public MenuSchema schema() {
-        return new MenuSchema(actions.ids(), conditions.ids(), placeholders.ids(), lists.ids());
+        return new MenuSchema(actions.ids(), conditions.ids(), placeholders.ids(), listSourceIds());
+    }
+
+    /**
+     * Every id a spec may name as a list source, sorted: the in-memory sources and the paged ones together. A spec
+     * writes both at the same position and {@link #validate} accepts either there, so a picker that offered only the
+     * in-memory half would hide every streaming source from the author while the engine ran them happily. The two
+     * registries cannot collide, because {@link #list} and {@link #pagedList} each refuse an id the other holds.
+     */
+    private List<String> listSourceIds() {
+        List<String> ids = new ArrayList<>(lists.ids());
+        ids.addAll(pagedLists.ids());
+        return ids.stream().sorted().toList();
     }
 
     /**

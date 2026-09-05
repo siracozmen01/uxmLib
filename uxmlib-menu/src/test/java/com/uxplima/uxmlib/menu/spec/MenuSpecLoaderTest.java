@@ -596,8 +596,8 @@ class MenuSpecLoaderTest {
 
     @Test
     void aChestSlotBeyondTheSixRowMaximumIsAFailFastConfigError() {
-        // A chest renders at most six rows (54 slots); a slot past that can never be shown, so: consistent with the
-        // loader's fail-fast slot check and the six-row ceiling the auto-sizer parses against: it is a loud error.
+        // A chest renders at most six rows (54 slots); a slot past that can never be shown, so, consistent with the
+        // loader's fail-fast slot check and the six-row ceiling the auto-sizer parses against, it is a loud error.
         assertThatThrownBy(() -> new MenuSpecLoader().parse("items { a { slot = 60, material = STONE } }"))
                 .isInstanceOf(MenuSpecException.class);
     }

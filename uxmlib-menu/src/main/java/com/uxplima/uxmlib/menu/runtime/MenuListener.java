@@ -98,7 +98,7 @@ import org.jspecify.annotations.Nullable;
 @NullMarked
 public final class MenuListener implements Listener {
 
-    /** Operator diagnostics for a paged list flip: an overflowing source, or a query that threw: logged, page kept. */
+    /** Operator diagnostics for a paged list flip (an overflowing source, or a query that threw): logged, page kept. */
     private static final Logger LOG = Logger.getLogger(MenuListener.class.getName());
 
     private final MenuRenderer renderer;
