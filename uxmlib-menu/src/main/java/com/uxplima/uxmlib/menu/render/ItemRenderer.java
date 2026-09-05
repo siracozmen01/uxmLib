@@ -303,13 +303,19 @@ public final class ItemRenderer {
     }
 
     /**
-     * The resolved material spec string: a {@code %token%} spec expands through its placeholder, a literal spec is
-     * itself. This is the string the icon providers and the material fallback both read: so {@code %head%} → {@code
-     * skull:Notch} reaches the skull provider, and {@code DIAMOND} reaches the material lookup.
+     * The resolved material spec string: every {@code %token%} expands through its placeholder and the rest of the
+     * line is kept. This is the string the icon providers and the material fallback both read, so {@code %head%}
+     * naming a whole spec reaches the skull provider as {@code skull:Notch}, {@code skull:%player%} reaches it as
+     * that entry's head, and {@code DIAMOND} reaches the material lookup unchanged.
+     *
+     * <p>It substitutes per token rather than replacing the whole value with the first token's expansion, which is
+     * what every other operator-written string in a spec does. The whole-value form silently dropped the part of the
+     * line around the token, so {@code skull:%player%} resolved to a bare player name, no provider claimed it, and a
+     * list of heads rendered as a list of stone. A spec whose material is one bare token is unaffected: substituting
+     * it is the same string.
      */
     private String resolveMaterialSpec(String raw, MenuContext ctx) {
-        Matcher matcher = PLACEHOLDER.matcher(raw);
-        return matcher.find() ? resolveToken(matcher.group(1), ctx) : raw;
+        return substitutePlaceholders(raw, ctx);
     }
 
     /**
