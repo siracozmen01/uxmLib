@@ -1,4 +1,4 @@
-package com.uxplima.uxmlib.menu.property;
+package com.uxplima.uxmlib.menu.support;
 
 import java.time.Duration;
 import java.util.function.Consumer;
@@ -10,14 +10,18 @@ import com.uxplima.uxmlib.scheduler.Scheduler;
 import com.uxplima.uxmlib.scheduler.TaskHandle;
 
 /**
- * A scheduler that runs everything inline and counts the hops, so a property's write-then-redraw order is observable
- * without a server. Only the two methods the editable properties use are implemented; anything else throws rather
- * than quietly running on the wrong thread, so a property that starts using a third hop fails here instead of
+ * A scheduler that runs everything inline and counts the hops, so a write-then-redraw order is observable without a
+ * server. Only the two methods the editable properties and the menu facade use are implemented; anything else throws
+ * rather than quietly running on the wrong thread, so code that starts taking a third hop fails here instead of
  * passing for the wrong reason.
+ *
+ * <p>Shared rather than copied per package. A caller that legitimately needs a hop this refuses subclasses it and
+ * overrides that one method, so the refusal stays the default and the exception is named where it is taken.
  */
-final class SameThreadScheduler implements Scheduler {
+public class SameThreadScheduler implements Scheduler {
 
-    private static final TaskHandle FINISHED = new TaskHandle() {
+    /** The handle every implemented hop hands back: the work is already done by the time the caller sees it. */
+    protected static final TaskHandle FINISHED = new TaskHandle() {
 
         @Override
         public void cancel() {}
@@ -28,9 +32,9 @@ final class SameThreadScheduler implements Scheduler {
         }
     };
 
-    int asyncHops;
+    public int asyncHops;
 
-    int entityHops;
+    public int entityHops;
 
     @Override
     public TaskHandle async(Runnable task) {

@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 
+import com.uxplima.uxmlib.menu.support.SameThreadScheduler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
