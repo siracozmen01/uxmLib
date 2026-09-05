@@ -9,6 +9,10 @@ plugins {
 // menus may say and do through MenuBindings, and the words come from that consumer's own catalogue.
 dependencies {
     api(project(":uxmlib-gui"))
+    // implementation rather than api: a menu builds items and reads item tokens (an icon spec may be a captured
+    // item rather than a material name), but no public menu signature names an item type. A consumer that wants
+    // those types still gets them, because uxmlib-gui exposes the module as api.
+    implementation(project(":uxmlib-item"))
     api(project(":uxmlib-bedrock"))
     compileOnly(libs.paper.api)
     compileOnly(libs.bundles.adventure)
