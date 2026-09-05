@@ -25,7 +25,7 @@ import com.uxplima.uxmlib.packet.Components;
 import com.uxplima.uxmlib.packet.EntityIds;
 import com.uxplima.uxmlib.packet.GameProfiles;
 import com.uxplima.uxmlib.packet.Reflect;
-import com.uxplima.uxmlib.packet.ServerCompats;
+import com.uxplima.uxmlib.packet.ServerInternals;
 import com.uxplima.uxmlib.packet.VanillaEntityTypes;
 import com.uxplima.uxmlib.packet.npc.ArmorStandPart;
 import com.uxplima.uxmlib.packet.npc.ByteAngle;
@@ -1101,7 +1101,7 @@ public final class NmsNpcPackets implements NpcPackets {
         // PlayerTeam needs a Scoreboard only to construct.
         PlayerTeam team = new PlayerTeam(new Scoreboard(), teamName);
         if (color != null) {
-            ServerCompats.current().applyTeamColor(team, color.name());
+            ServerInternals.applyTeamColor(team, color.name());
         }
         team.getPlayers().add(memberName);
         return ClientboundSetPlayerTeamPacket.createAddOrModifyPacket(team, true);
@@ -1130,7 +1130,7 @@ public final class NmsNpcPackets implements NpcPackets {
         team.setCollisionRule(collidable ? Team.CollisionRule.ALWAYS : Team.CollisionRule.NEVER);
         team.setNameTagVisibility(hideNametag ? Team.Visibility.NEVER : Team.Visibility.ALWAYS);
         if (color != null) {
-            ServerCompats.current().applyTeamColor(team, color.name());
+            ServerInternals.applyTeamColor(team, color.name());
         }
         team.getPlayers().add(memberName);
         return ClientboundSetPlayerTeamPacket.createAddOrModifyPacket(team, true);

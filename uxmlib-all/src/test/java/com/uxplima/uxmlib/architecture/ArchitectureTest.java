@@ -65,21 +65,6 @@ class ArchitectureTest {
             .resideInAPackage("com.uxplima.uxmlib.gui..")
             .because("gui depends on item, never the reverse");
 
-    /**
-     * The per-line adapters are an implementation detail of one class. If anything else named one directly it
-     * would link a single line's server internals into code that has to run on all of them.
-     */
-    @ArchTest
-    static final ArchRule onlyTheDispatcherNamesAServerLine = noClasses()
-            .that()
-            .haveNameNotMatching("com\\.uxplima\\.uxmlib\\.packet\\.ServerCompats.*")
-            .and()
-            .resideOutsideOfPackage("com.uxplima.uxmlib.packet.compat..")
-            .should()
-            .dependOnClassesThat()
-            .resideInAnyPackage("com.uxplima.uxmlib.packet.compat.mc1_21..", "com.uxplima.uxmlib.packet.compat.mc26..")
-            .because("the running server picks an adapter through ServerCompats; nothing else may name one");
-
     /** The gui module stays UI-only: PlaceholderAPI/integration glue is an injected seam, not a dependency. */
     @ArchTest
     static final ArchRule guiDoesNotDependOnIntegration = noClasses()

@@ -1,19 +1,14 @@
 [versions]
 # language / platform
 # The toolchain must be 25: paper-api 26.x ships Java 25 class files, which a Java 21 compiler cannot
-# read. The *output* stays at Java 21 bytecode (see java-release) so one jar runs on both server lines.
+# read. The *output* stays at Java 21 bytecode (see java-release), which the server has no opinion about:
+# a Java 25 runtime reads Java 21 class files. It is what lets the parts of this library that never touch
+# a server, the config reader, the storage layer, the Redis bus, be used from an ordinary Java 21 project.
 java-toolchain = "25"
 java-release   = "21"
 
 # Paper 26.x dropped the "-R0.1-SNAPSHOT" scheme for build-stamped release artifacts.
 paper       = "26.2.build.112-stable"
-# The oldest server line this library still supports. `-PmcTarget=1.21` rebuilds and retests against it so
-# the "one jar serves both lines" promise stays verified rather than assumed. The NMS modules are pinned to
-# one line's Mojang mappings and sit outside that run.
-legacy-paper     = "1.21.11-R0.1-SNAPSHOT"
-# 4.26.1, not 4.21: that is what paper-api 1.21.11 actually imports through adventure-bom, and a lower
-# pin here compiles against an API narrower than the server really offers.
-legacy-adventure = "4.26.1"
 
 # Match the Adventure version Paper 26.2 bundles at runtime, so compileOnly == runtime. The 4.x -> 5.x
 # bump dropped net.kyori.examination and reworked ClickEvent; neither is on any code path here, and the
@@ -56,8 +51,7 @@ floodgate      = "2.2.5-20260809.110940-20"
 junit    = "5.12.1"
 assertj  = "3.27.3"
 mockito  = "5.20.0"
-mockbukkit        = "4.116.1"   # org.mockbukkit.mockbukkit:mockbukkit-v26.2
-legacy-mockbukkit = "4.116.3"   # org.mockbukkit.mockbukkit:mockbukkit-v1.21 (the -PmcTarget=1.21 run)
+mockbukkit = "4.116.1"   # org.mockbukkit.mockbukkit:mockbukkit-v26.2
 archunit = "1.3.0"
 jqwik    = "1.9.3"
 
@@ -68,7 +62,7 @@ spotless     = "7.0.2"
 palantir-fmt = "2.52.0"
 shadow       = "9.4.1"
 
-# Netty: the channel/pipeline types for the experimental uxmlib-npc packet layer. compileOnly: Paper bundles
+# Netty: the channel/pipeline types for the experimental uxmlib-pipeline module. compileOnly: Paper bundles
 # Netty at runtime but paper-api's POM does not export it, so it must be pinned here to match what the server
 # ships (4.2.x, Paper 26.2). Infra dependency, never shaded.
 netty        = "4.2.15.Final"
@@ -78,13 +72,10 @@ lettuce = "7.6.0.RELEASE"   # io.lettuce:lettuce-core
 
 [libraries]
 paper-api         = { module = "io.papermc.paper:paper-api",            version.ref = "paper" }
-# The Mojang-mapped dev bundle, one entry per server line the library builds against. Naming them here
-# rather than assembling the coordinate in a build script keeps this file the only place a line is pinned.
+# The Mojang-mapped dev bundle. Naming it here rather than assembling the coordinate in a build script
+# keeps this file the only place the server line is pinned.
 devbundle-modern  = { module = "io.papermc.paper:dev-bundle",           version.ref = "paper" }
-devbundle-legacy  = { module = "io.papermc.paper:dev-bundle",           version.ref = "legacy-paper" }
 adventure-api     = { module = "net.kyori:adventure-api",                     version.ref = "adventure" }
-# The BOM pins every core Adventure artifact at once; only the older line needs it named explicitly.
-adventure-bom-legacy = { module = "net.kyori:adventure-bom",                  version.ref = "legacy-adventure" }
 adventure-mini    = { module = "net.kyori:adventure-text-minimessage",        version.ref = "adventure" }
 adventure-plain   = { module = "net.kyori:adventure-text-serializer-plain",   version.ref = "adventure" }
 configurate-hocon = { module = "org.spongepowered:configurate-hocon",   version.ref = "configurate" }

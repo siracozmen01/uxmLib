@@ -11,12 +11,6 @@ plugins {
 // Netty plumbing (channel resolve, packet send) comes from uxmlib-npc.
 dependencies {
     api(project(":uxmlib-npc"))
-    // The seam for the handful of server internals that are not the same on every supported line, plus one
-    // adapter per line. All of the adapters ship: only the one matching the running server is ever loaded,
-    // and each is compiled against its own line's server so neither side of the seam is taken on faith.
-    api(project(":uxmlib-packet-compat"))
-    implementation(project(":uxmlib-packet-compat-mc1_21"))
-    implementation(project(":uxmlib-packet-compat-mc26"))
 
     // The Mojang-mapped dev bundle supplies the Paper API *and* the server internals (net.minecraft,
     // org.bukkit.craftbukkit) the packet construction needs; it replaces the plain paper-api compile

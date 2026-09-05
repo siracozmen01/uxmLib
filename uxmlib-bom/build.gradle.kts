@@ -19,9 +19,6 @@ dependencies {
         api(project(":uxmlib-condition"))
         api(project(":uxmlib-npc"))
         api(project(":uxmlib-packet"))
-        api(project(":uxmlib-packet-compat"))
-        api(project(":uxmlib-packet-compat-mc1_21"))
-        api(project(":uxmlib-packet-compat-mc26"))
         api(project(":uxmlib-nametags"))
     }
 }
