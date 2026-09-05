@@ -328,8 +328,9 @@ ordered list of colours that decoration is taken from, so a screen of tiles can 
 any file naming a colour.
 
 ```java
-// One file for the whole server, with this plugin's own file on top of it, key by key.
-Theme theme = ThemeFiles.load(ThemeFiles.shared(dataFolder), dataFolder.resolve("theme.conf"));
+// One file for a suite of plugins, with this plugin's own file on top of it, key by key. The folder
+// the suite shares is your word, not the library's; a plugin that stands alone reads its own file.
+Theme theme = ThemeFiles.load(ThemeFiles.shared(dataFolder, "myTheme"), ThemeFiles.own(dataFolder));
 Styler styler = new Styler(theme);
 
 // A catalog line names a role, never a colour:
@@ -337,7 +338,7 @@ Styler styler = new Styler(theme);
 messages.reload(styler.style(catalog, MyKeys.values(), files, Locale.ENGLISH));
 
 // On a /reload, hand the same styler the new palette rather than building a second one:
-styler.reload(ThemeFiles.load(ThemeFiles.shared(dataFolder), dataFolder.resolve("theme.conf")));
+styler.reload(ThemeFiles.load(ThemeFiles.shared(dataFolder, "myTheme"), ThemeFiles.own(dataFolder)));
 
 // Text a plugin computes has no catalog entry to style at load, so style it per viewer, and ask
 // Messages which language that viewer is being served rather than reading the player's own locale,
@@ -386,6 +387,9 @@ the one palette that is neither ours nor invented. Nothing else is decided. No g
 takes a colour of its own, no gradient and no wheel exist, and no language is written in small capitals,
 until your file names them. A `gradients { header = [...] }` block paints every `<h:'…'>` header across
 those stops; leave it out and headers stay the flat accent colour.
+
+A plugin that stands alone wants one file and nothing beneath it, which is `ThemeFiles.load(file)`. The
+two-file form is for a suite that agrees on a folder name.
 
 A name that is not a heading takes `<g:'UXM Network':wheel>`: the same lookup as a heading, painted across
 every colour of the wheel in order, with no bold and in the letters the file wrote. That is the one token a
