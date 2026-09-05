@@ -7,13 +7,21 @@ import java.util.logging.Logger;
 import org.jspecify.annotations.NullMarked;
 
 /**
- * Reports, once per layout, that a list did not fit the slots an operator gave it.
+ * Reports, once per layout, that a list did not fit the slots it had to be drawn in.
  *
- * <p>Four places in the engine draw a code-sized list into an operator-sized set of slots: an editor's properties, a
- * list property's entries, an enum property's options, and a colour property's palette. Each stops at the shorter of
- * the two, which is the only thing it can do, because a slot that does not exist cannot be painted. What none of them
- * did was say so, and the operator's side is always the shorter one, so the whole class of miss looked to them like
- * nothing happening.
+ * <p>Five places in the engine do that: an editor's properties, a list property's entries, an enum property's
+ * options, a colour property's palette, and the stacks a content provider hands back for its region. Each stops at
+ * the shorter of the two, which is the only thing it can do, because a slot that does not exist cannot be painted.
+ * What none of them did was say so.
+ *
+ * <p>The message names no culprit, deliberately. In four of the five the short side is the operator's layout and the
+ * fix is to add slots. In the fifth the long side is a {@code ContentProvider}'s return value, which reaches the
+ * engine through the developer API, so the same overflow can equally mean a plugin returned more stacks than the
+ * region has room for. What is true in every case is that there are more things than places, so that is what it says,
+ * and it names both fixes rather than choosing between them.
+ *
+ * <p>Fewer things than slots is silent and always will be. A spare slot is not a mistake, and a report that cannot
+ * tell a mistake from a margin is one operators learn to skip.
  *
  * <p>Once per layout rather than once per draw, and keyed by the layout's <em>value</em>. An editor repaints on every
  * click and a picker reopens on every change, and the property objects themselves are rebuilt per draw, so neither a
@@ -52,8 +60,9 @@ public final class SlotFit {
             return items;
         }
         if (REPORTED.add(new Reported(what, layout))) {
-            LOG.warning(what + ": " + items + " to draw but the layout offers " + slots + " slots, so "
-                    + (items - slots) + " are not shown. Give the layout more slots to see them.");
+            LOG.warning(what + ": " + items + " to draw but only " + slots + " slots to draw them in, so "
+                    + (items - slots) + " are not shown. Either the list is longer than intended, or the layout"
+                    + " needs more slots.");
         }
         return slots;
     }

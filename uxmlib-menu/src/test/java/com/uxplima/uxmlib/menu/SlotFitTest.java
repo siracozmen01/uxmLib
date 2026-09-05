@@ -121,11 +121,18 @@ class SlotFitTest {
         assertThat(warnings).hasSize(2);
     }
 
-    /** The report names the layout the operator would edit, so it has to say how many slots to add. */
+    /**
+     * The report says how many are missing and names both fixes without choosing between them. At four of the five
+     * sites the short side is the operator's layout; at the fifth the long side is a content provider's return value,
+     * which is a plugin author's business. The only thing true everywhere is that there are more things than places.
+     */
     @Test
-    void theReportSaysHowManyAreMissingAndWhatToDoAboutIt() {
+    void theReportSaysHowManyAreMissingAndNamesBothFixes() {
         SlotFit.fit(9, 4, "colour palette", List.of(22, 23, 24, 25));
 
-        assertThat(warnings.get(0)).contains("5 are not shown").contains("more slots");
+        assertThat(warnings.get(0))
+                .contains("5 are not shown")
+                .contains("longer than intended")
+                .contains("needs more slots");
     }
 }
