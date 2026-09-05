@@ -376,12 +376,16 @@ own. A file that draws its own glyphs and its own margins goes through `Lore.ver
 the padding and the closing air and leaves the geometry alone, so a plugin can still let its buyer write a
 look that is nothing like this one.
 
-The library ships `uxmlib/theme.conf` as a starting file: the palette, the roles, the wheel, the glyphs,
-the category colours, named gradients and which languages take small capitals. A key it leaves out keeps the shipped answer, and naming
-one language never decides for the others. The shipped file turns nothing on that a look would notice: the
-small capitals block is an example, commented out. A `gradients { header = [...] }` block paints every `<h:'…'>`
-header across those stops; leave the block out and headers stay the flat accent colour, which is what the
-shipped file does.
+The library ships `uxmlib/theme.conf` as a starting file a consumer copies and then owns: a palette, the
+roles pointed at it, and every other block written out but commented, so what it turns on is visible and
+short. A key it leaves out keeps the shipped answer.
+
+What ships is the mechanism, and not a look. Every role answers, so `<value>` is a colour rather than seven
+characters a player reads, and each one falls back to one of the sixteen colours Minecraft has always had:
+the one palette that is neither ours nor invented. Nothing else is decided. No glyph is drawn, no category
+takes a colour of its own, no gradient and no wheel exist, and no language is written in small capitals,
+until your file names them. A `gradients { header = [...] }` block paints every `<h:'…'>` header across
+those stops; leave it out and headers stay the flat accent colour.
 
 A name that is not a heading takes `<g:'UXM Network':wheel>`: the same lookup as a heading, painted across
 every colour of the wheel in order, with no bold and in the letters the file wrote. That is the one token a
