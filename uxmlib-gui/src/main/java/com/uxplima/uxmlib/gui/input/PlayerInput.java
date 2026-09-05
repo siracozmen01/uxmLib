@@ -31,7 +31,8 @@ import org.jspecify.annotations.Nullable;
  * state lives on the instance via an {@link InputRouter}; there is no static mutable state.
  *
  * <p>Construct one per plugin, {@link #install()} it once on enable, then {@link #open} as needed, and
- * {@link #uninstall()} it on disable. A configurable cancel keyword aborts any backend, and pending requests
+ * {@link #uninstall()} it on disable. A configurable cancel keyword aborts any backend when the prompt was
+ * given one, and {@link #withoutCancelKeyword} builds one that was not, and pending requests
  * auto-clean on quit. When a {@link Scheduler} is supplied, results from the async chat backend are
  * marshalled back onto the player's region thread before the callback runs, so a callback may safely touch
  * the Bukkit API.
@@ -61,6 +62,11 @@ public final class PlayerInput implements Listener {
      * also applied one, a word the operator deliberately left out would still cancel, and nothing would say
      * why. The library owns the mechanism and the caller owns the words.
      */
+    public static PlayerInput withoutCancelKeyword(Plugin plugin) {
+        return withoutCancelKeyword(plugin, null);
+    }
+
+    /** The same, on a server whose caller has a {@link Scheduler} to hop the callback with. */
     public static PlayerInput withoutCancelKeyword(Plugin plugin, @Nullable Scheduler scheduler) {
         return new PlayerInput(plugin, scheduler, new InputRouter(null));
     }
