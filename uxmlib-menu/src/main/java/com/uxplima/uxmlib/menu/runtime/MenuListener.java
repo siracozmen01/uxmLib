@@ -1349,19 +1349,18 @@ public final class MenuListener implements Listener {
     private boolean evaluateRequirements(MenuHolder holder, MenuContext base, ClickKind kind, RequirementSpec spec) {
         int passes = 0;
         boolean mandatoryFail = false;
-        int min = spec.minimum();
-        int cap = Math.min(min, spec.requirements().size());
+        int cap = spec.effectiveMinimum();
         for (Requirement r : spec.requirements()) {
             if (evaluateOne(holder, base, kind, r)) {
                 passes++;
             } else if (!r.optional()) {
                 mandatoryFail = true;
             }
-            if (spec.stopAtSuccess() && min > 0 && passes >= cap) {
+            if (spec.stopAtSuccess() && spec.minimum() > 0 && passes >= cap) {
                 break;
             }
         }
-        return min <= 0 ? !mandatoryFail : passes >= cap;
+        return spec.satisfiedBy(passes, mandatoryFail);
     }
 
     /**

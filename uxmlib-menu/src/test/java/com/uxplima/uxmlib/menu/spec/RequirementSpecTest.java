@@ -177,4 +177,60 @@ class RequirementSpecTest {
         Set<String> hold = Set.of(ids);
         return r -> hold.contains(r.condition().id());
     }
+
+    // -- the verdict every caller asks for ---------------------------------------------------------------------
+
+    /**
+     * The combinator used to be written out at three sites, agreeing, with two javadocs explaining that they agreed.
+     * These drive the one method all three now ask, so the rule is pinned where it is decided rather than at each
+     * place that happens to need it.
+     */
+    @Test
+    void anAndBlockIsSatisfiedWhenNoMandatoryRequirementFailedHoweverManyPassed() {
+        RequirementSpec block = new RequirementSpec(List.of(req("a"), optional("b")), 0, List.of());
+
+        assertThat(block.satisfiedBy(2, false)).isTrue();
+        assertThat(block.satisfiedBy(1, false))
+                .as("the optional one failing does not block")
+                .isTrue();
+        assertThat(block.satisfiedBy(1, true)).isFalse();
+    }
+
+    @Test
+    void anOrBlockIsSatisfiedByOnePassEvenWhenAMandatoryOneFailed() {
+        RequirementSpec block = new RequirementSpec(List.of(req("a"), req("b")), 1, List.of());
+
+        assertThat(block.satisfiedBy(1, true)).isTrue();
+        assertThat(block.satisfiedBy(0, true)).isFalse();
+    }
+
+    @Test
+    void anNofMBlockCountsPassesRatherThanAskingWhichOnesTheyWere() {
+        RequirementSpec block = new RequirementSpec(List.of(req("a"), req("b"), req("c")), 2, List.of());
+
+        assertThat(block.satisfiedBy(2, true)).isTrue();
+        assertThat(block.satisfiedBy(1, false)).isFalse();
+    }
+
+    /** A minimum larger than the block means all of it, so passing every one satisfies a minimum it never could. */
+    @Test
+    void aMinimumLargerThanTheBlockIsCappedAtTheBlock() {
+        RequirementSpec block = new RequirementSpec(List.of(req("a"), req("b")), 9, List.of());
+
+        assertThat(block.effectiveMinimum()).isEqualTo(2);
+        assertThat(block.satisfiedBy(2, false)).isTrue();
+    }
+
+    @Test
+    void anEmptyBlockIsSatisfiedByNothingAtAll() {
+        assertThat(RequirementSpec.NONE.satisfiedBy(0, false)).isTrue();
+    }
+
+    /** The pure predicate walk and the tally verdict are the same rule, which is now the same code. */
+    @Test
+    void theWalkAgreesWithTheVerdictItAsksFor() {
+        RequirementSpec block = new RequirementSpec(List.of(req("a"), optional("b")), 0, List.of());
+
+        assertThat(block.passes(requirement -> !requirement.optional())).isEqualTo(block.satisfiedBy(1, false));
+    }
 }

@@ -16,8 +16,9 @@ import java.util.function.Predicate;
  *   <li>{@code minimum == 1}: ANY may pass (OR).</li>
  *   <li>otherwise: at least N of the M must pass (N-of-M).</li>
  * </ul>
- * {@link #effectiveMinimum()} folds those rules into the concrete count the runtime compares its pass tally against,
- * so the runtime carries no combinator logic of its own.
+ * {@link #effectiveMinimum()} folds those rules into the concrete count a pass tally is compared against, and
+ * {@link #satisfiedBy(int, boolean)} makes the comparison, so no caller carries the combinator itself. A caller
+ * decides only which individual requirements hold, which is the part that needs a condition registry.
  *
  * <p>{@code stopAtSuccess} short-circuits evaluation once the {@link #minimum} is met: the runtime stops evaluating
  * further requirements (and stops running their per-requirement actions) as soon as enough have passed. It only means
@@ -92,12 +93,12 @@ public record RequirementSpec(List<Requirement> requirements, int minimum, List<
     /**
      * Whether this block passes, given {@code holds}: the caller's decision on which individual requirements hold
      * right now (the caller owns the condition registry, so it evaluates each requirement's condition and hands the
-     * outcome back here). The pass rule mirrors the click runtime's {@code evaluateRequirements} exactly, minus its
-     * per-requirement side effects: with a non-positive {@link #minimum} every <em>mandatory</em> requirement must
+     * outcome back here). It is the click runtime's rule without its per-requirement side effects, because both ask
+     * the same method for the verdict: with a non-positive {@link #minimum} every <em>mandatory</em> requirement must
      * hold, an optional one failing does not block, though the caller may still react to it, and with a positive
-     * minimum at least {@link #effectiveMinimum()} of all requirements (optional included) must hold. A block with no
-     * requirements passes. A view gate uses this: visibility is a pure yes/no with no deny or success actions, so the
-     * boolean is all it needs.
+     * minimum at least {@link #effectiveMinimum()} of all requirements (optional included) must hold: the rule
+     * {@link #satisfiedBy(int, boolean)} states once for every caller. A block with no requirements passes. A view
+     * gate uses this: visibility is a pure yes/no with no deny or success actions, so the boolean is all it needs.
      */
     public boolean passes(Predicate<Requirement> holds) {
         Objects.requireNonNull(holds, "holds");
@@ -110,6 +111,22 @@ public record RequirementSpec(List<Requirement> requirements, int minimum, List<
                 mandatoryFail = true;
             }
         }
-        return minimum <= 0 ? !mandatoryFail : passes >= effectiveMinimum();
+        return satisfiedBy(passes, mandatoryFail);
+    }
+
+    /**
+     * Whether a tally satisfies this block: {@code passes} requirements held, and {@code mandatoryFailed} says
+     * whether any non-optional one did not. With a non-positive {@link #minimum} every mandatory requirement must
+     * hold and an optional one failing does not block; with a positive minimum at least {@link #effectiveMinimum()}
+     * of all requirements, optional included, must hold.
+     *
+     * <p>The one place the combinator is decided. {@link #passes(Predicate)} asks it after testing each requirement,
+     * and the click runtime asks it after evaluating each requirement with its per-requirement actions and its
+     * short-circuit, neither of which this record can express. Each of those used to carry the rule as well, with a
+     * javadoc explaining that the copies agreed: a comment maintaining an invariant between two pieces of code is a
+     * compiler that does not run.
+     */
+    public boolean satisfiedBy(int passes, boolean mandatoryFailed) {
+        return minimum <= 0 ? !mandatoryFailed : passes >= effectiveMinimum();
     }
 }
