@@ -584,6 +584,12 @@ reads every line from the catalog under the `CommandLine` keys (`command.player-
 the rest), so the command layer is translated and painted with everything else, and an operator can re-word any
 of it in their language file.
 
+The template each key ships is plain MiniMessage in the vanilla colours, and it is meant to be replaced. A
+default has to read correctly for a consumer who wires no style layer at all, and MiniMessage leaves a tag it
+does not know as literal text, so a default written in one plugin's own vocabulary would reach that consumer's
+players as the characters of a tag. Write your own template at these paths, in your own tokens, in your own
+language files: the catalog wins over the default for every key it holds.
+
 Each method receives the sender's locale and the *values*: the bad input, the allowed ones, the time left.
 Never a finished English sentence, since no other language puts those words in the same order. Every
 method has a default, so a plugin that ignores the seam keeps the English it always had.

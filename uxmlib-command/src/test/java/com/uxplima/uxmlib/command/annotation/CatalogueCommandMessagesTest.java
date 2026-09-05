@@ -36,9 +36,22 @@ class CatalogueCommandMessagesTest {
     void aLineTheFileDoesNotHoldFallsBackToTheKeyDefault() {
         CommandMessages messages = messagesHolding(Map.of());
 
-        // The default still carries its style tokens: a catalog is styled when it is loaded, and this one
-        // was never loaded through a Styler. What matters here is that the sentence is the key's own.
-        assertThat(Text.plain(messages.playerOnly(Locale.ENGLISH))).contains("Only a player can run this command.");
+        assertThat(Text.plain(messages.playerOnly(Locale.ENGLISH))).isEqualTo("Only a player can run this command.");
+    }
+
+    /**
+     * A shipped default has to read correctly with no style layer wired at all, because a consumer may take
+     * this module on its own. MiniMessage leaves a tag it does not know as literal text, so a default written
+     * in a style layer's vocabulary reaches a player as the characters of the tag instead of as a sentence.
+     * For the plugin that owns the style layer that is a colour it did not want; for everybody else it is a
+     * defect. This fails the day a token is written back into one.
+     */
+    @Test
+    void noShippedDefaultNamesATagOnlyAStyleLayerResolves() {
+        assertThat(CommandLine.values()).allSatisfy(line -> assertThat(line.defaultTemplate())
+                .describedAs(line.path())
+                .doesNotContain("<tag:", "<etag:", "<h:", "<g:", "<plain>", "<caps>")
+                .doesNotContain("<body>", "<accent>", "<value>", "<subtext>", "<dim>", "<muted>", "<good>", "<bad>"));
     }
 
     @Test
