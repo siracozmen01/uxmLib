@@ -2,12 +2,12 @@ package com.uxplima.uxmlib.hook.placeholder;
 
 import java.util.Objects;
 
-import com.uxplima.uxmlib.hook.Placeholders;
+import com.uxplima.uxmlib.hook.PlaceholderApi;
 
 /**
  * Registers the shared {@link UxmPlaceholderExpansion} with PlaceholderAPI, exposing a consumer's
  * {@link PlaceholderRegistry} as {@code %uxm_<prefix>_<params>%} placeholders. This is the write side of the
- * PAPI integration; {@link Placeholders} is the read side.
+ * PAPI integration; {@link PlaceholderApi} is the read side.
  *
  * <p>The expansion is created and registered only past {@link Placeholders#isAvailable()}, so the
  * {@code me.clip} classes are touched solely when PlaceholderAPI is present: a server without it still
@@ -48,7 +48,7 @@ public final class PlaceholderExpansions {
         if (identifier.isBlank()) {
             throw new IllegalArgumentException("identifier must not be blank");
         }
-        if (!Placeholders.isAvailable()) {
+        if (!PlaceholderApi.isAvailable()) {
             return false;
         }
         return new UxmPlaceholderExpansion(identifier, author, version, registry).register();
