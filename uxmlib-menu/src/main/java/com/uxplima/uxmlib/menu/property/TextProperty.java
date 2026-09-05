@@ -10,12 +10,11 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 
 import com.uxplima.uxmlib.gui.input.InputRequest;
-import com.uxplima.uxmlib.gui.input.TextInput;
 import com.uxplima.uxmlib.scheduler.Scheduler;
 import org.jspecify.annotations.NullMarked;
 
 /**
- * A property whose click opens a {@link TextInput} prompt (anvil or chat, per the operator's per-key config), validates
+ * A property whose click opens a {@link CatalogTextPrompt} prompt (anvil or chat, per the operator's per-key config), validates
  * the typed line, and hands the accepted value to a setter. The prompt's hint is a catalog line; the validator turns
  * the raw text into the accepted value or rejects it (an empty {@link Optional}), so a module can trim, length-check,
  * or pattern-match without the framework knowing the rules. An accepted value is written through the caller's setter
@@ -24,7 +23,7 @@ import org.jspecify.annotations.NullMarked;
  *
  * <p>The {@code inputKey} identifies this field to the input config: every text field in an entity editor shares the
  * one {@code editor.text-field} key, so an operator flips all editor text fields to chat (or anvil) with a single
- * override. The {@link TextInput} seam already hops the callback onto the viewer's region thread and handles the cancel
+ * override. The {@link CatalogTextPrompt} seam already hops the callback onto the viewer's region thread and handles the cancel
  * keywords, so this property only validates and sets.
  */
 @NullMarked
@@ -37,7 +36,7 @@ public final class TextProperty implements EditableProperty {
     private final Supplier<String> current;
     private final Function<String, Optional<String>> validator;
     private final Consumer<String> setter;
-    private final TextInput textInput;
+    private final CatalogTextPrompt textPrompt;
     private final Scheduler scheduler;
 
     public TextProperty(
@@ -48,7 +47,7 @@ public final class TextProperty implements EditableProperty {
             Supplier<String> current,
             Function<String, Optional<String>> validator,
             Consumer<String> setter,
-            TextInput textInput,
+            CatalogTextPrompt textPrompt,
             Scheduler scheduler) {
         this.inputKey = Objects.requireNonNull(inputKey, "inputKey");
         this.label = Objects.requireNonNull(label, "label");
@@ -57,7 +56,7 @@ public final class TextProperty implements EditableProperty {
         this.current = Objects.requireNonNull(current, "current");
         this.validator = Objects.requireNonNull(validator, "validator");
         this.setter = Objects.requireNonNull(setter, "setter");
-        this.textInput = Objects.requireNonNull(textInput, "textInput");
+        this.textPrompt = Objects.requireNonNull(textPrompt, "textPrompt");
         this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
     }
 
@@ -80,7 +79,7 @@ public final class TextProperty implements EditableProperty {
     @Override
     public void onClick(PropertyClick click) {
         Objects.requireNonNull(click, "click");
-        textInput.prompt(
+        textPrompt.prompt(
                 click.viewer(), InputRequest.of(inputKey, promptHint), raw -> applyInput(click, raw), click.reopen());
     }
 
@@ -89,12 +88,10 @@ public final class TextProperty implements EditableProperty {
      * rejection redraw without writing. The prompt callback delegates here, and it is public so the behaviour is
      * reachable without opening a live prompt.
      *
-     * <p>Reachable is not the same as covered, and this sentence used to claim the second. Constructing the property
-     * still costs a {@link TextInput}, a final class with no interface whose cheapest constructor takes six
-     * collaborators, none of which this method touches. So a caller wanting only the validate-then-set behaviour
-     * pays for a field it never reads. The asymmetry is real (this path needs the validator, the setter, the
-     * scheduler and the click; only the open path needs the input) and splitting on it would be a change to a public
-     * type rather than a tidy-up, so it is not made here.
+     * <p>Reachable used not to mean covered: the property named the concrete text-input seam, a final class with no
+     * interface whose cheapest constructor takes two package-private backends, so nothing outside that package could
+     * build one and this method could not be reached from a test at all. It now names {@link CatalogTextPrompt}, the
+     * capability it actually uses, which a test satisfies with a lambda.
      */
     public void applyInput(PropertyClick click, String raw) {
         Objects.requireNonNull(click, "click");

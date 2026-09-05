@@ -13,7 +13,6 @@ import org.bukkit.inventory.ItemStack;
 
 import com.uxplima.uxmlib.gui.GuiText;
 import com.uxplima.uxmlib.gui.input.InputRequest;
-import com.uxplima.uxmlib.gui.input.TextInput;
 import com.uxplima.uxmlib.gui.style.Tiles;
 import com.uxplima.uxmlib.item.ItemBuilder;
 import com.uxplima.uxmlib.menu.SlotFit;
@@ -52,7 +51,7 @@ public final class ListProperty implements EditableProperty {
     private final Consumer<List<String>> setter;
     private final ListPropertyText keys;
     private final ListPropertyLayout layout;
-    private final TextInput textInput;
+    private final CatalogTextPrompt textPrompt;
     private final Scheduler scheduler;
 
     public ListProperty(
@@ -65,7 +64,7 @@ public final class ListProperty implements EditableProperty {
             Consumer<List<String>> setter,
             ListPropertyText keys,
             ListPropertyLayout layout,
-            TextInput textInput,
+            CatalogTextPrompt textPrompt,
             Scheduler scheduler) {
         this.inputKey = Objects.requireNonNull(inputKey, "inputKey");
         this.label = Objects.requireNonNull(label, "label");
@@ -76,7 +75,7 @@ public final class ListProperty implements EditableProperty {
         this.setter = Objects.requireNonNull(setter, "setter");
         this.keys = Objects.requireNonNull(keys, "keys");
         this.layout = Objects.requireNonNull(layout, "layout");
-        this.textInput = Objects.requireNonNull(textInput, "textInput");
+        this.textPrompt = Objects.requireNonNull(textPrompt, "textPrompt");
         this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
     }
 
@@ -168,7 +167,7 @@ public final class ListProperty implements EditableProperty {
     }
 
     private void add(PropertyClick click) {
-        textInput.prompt(
+        textPrompt.prompt(
                 click.viewer(),
                 InputRequest.of(inputKey, keys.addPrompt()),
                 text -> applyAdd(click, text),
@@ -187,7 +186,7 @@ public final class ListProperty implements EditableProperty {
     }
 
     private void edit(PropertyClick click, int index, String existing) {
-        textInput.prompt(
+        textPrompt.prompt(
                 click.viewer(),
                 InputRequest.of(inputKey, keys.editPrompt(), Map.of("entry", existing)),
                 text -> applyEdit(click, index, text),

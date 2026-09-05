@@ -17,9 +17,9 @@ import org.bukkit.inventory.ItemStack;
 
 import com.uxplima.uxmlib.gui.GuiText;
 import com.uxplima.uxmlib.gui.input.InputRequest;
-import com.uxplima.uxmlib.gui.input.TextInput;
 import com.uxplima.uxmlib.item.ItemBuilder;
 import com.uxplima.uxmlib.menu.SlotFit;
+import com.uxplima.uxmlib.menu.property.CatalogTextPrompt;
 import com.uxplima.uxmlib.menu.property.EditableProperty;
 import com.uxplima.uxmlib.menu.property.PropertyClick;
 import com.uxplima.uxmlib.menu.property.SelectorButton;
@@ -62,7 +62,7 @@ public final class ColourProperty implements EditableProperty {
     private final GuiText guiText;
     private final ColourPickerText text;
     private final ColourPickerLayout layout;
-    private final TextInput textInput;
+    private final CatalogTextPrompt textPrompt;
     private final Scheduler scheduler;
 
     public ColourProperty(
@@ -76,7 +76,7 @@ public final class ColourProperty implements EditableProperty {
             GuiText guiText,
             ColourPickerText text,
             ColourPickerLayout layout,
-            TextInput textInput,
+            CatalogTextPrompt textPrompt,
             Scheduler scheduler) {
         this.label = Objects.requireNonNull(label, "label");
         this.icon = Objects.requireNonNull(icon, "icon");
@@ -88,7 +88,7 @@ public final class ColourProperty implements EditableProperty {
         this.guiText = Objects.requireNonNull(guiText, "guiText");
         this.text = Objects.requireNonNull(text, "text");
         this.layout = Objects.requireNonNull(layout, "layout");
-        this.textInput = Objects.requireNonNull(textInput, "textInput");
+        this.textPrompt = Objects.requireNonNull(textPrompt, "textPrompt");
         this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
     }
 
@@ -170,7 +170,7 @@ public final class ColourProperty implements EditableProperty {
     }
 
     private void openCustom(PropertyClick click) {
-        textInput.prompt(
+        textPrompt.prompt(
                 click.viewer(),
                 InputRequest.of(INPUT_KEY, text.customPrompt()),
                 raw -> applyCustom(click, raw),
