@@ -133,6 +133,28 @@ class GridSpecTest {
         assertThat(new GridSpec.Control(7, icon(), viewer -> {}).column()).isEqualTo(7);
     }
 
+    /**
+     * The two reserved columns are named once, on the spec, and both this guard and the renderer's brush read them
+     * from there. This is the test that would catch the two drifting apart: it names no column of its own, so it
+     * follows the constants wherever they go, and a column that stops being reserved stops being refused here. The
+     * tests above pin the columns the engine reserves today; this one pins that the guard and the brush read the same
+     * two.
+     */
+    @Test
+    void everyColumnOfTheRowTakesAControlExceptTheTwoTheSpecReserves() {
+        for (int column = 0; column < GridSpec.COLUMNS; column++) {
+            int here = column;
+            if (column == GridSpec.PREV_COLUMN || column == GridSpec.NEXT_COLUMN) {
+                assertThatIllegalArgumentException()
+                        .isThrownBy(() -> new GridSpec.Control(here, icon(), viewer -> {}))
+                        .withMessageContaining("page buttons");
+            } else {
+                assertThat(new GridSpec.Control(here, icon(), viewer -> {}).column())
+                        .isEqualTo(here);
+            }
+        }
+    }
+
     // -- where a shift-clicked item lands ---------------------------------------------------------------------
 
     @Test

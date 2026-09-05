@@ -41,6 +41,19 @@ public record GridSpec(
         ItemStack nextIcon,
         List<Control> controls) {
 
+    /** The slots in one inventory row: the width of the control row, and the divisor that sizes the canvas. */
+    public static final int COLUMNS = 9;
+
+    /**
+     * The control-row column the engine draws the previous-page button in. Public because the rule it carries is
+     * shared: the renderer paints the button here and {@link Control} refuses a caller button here. Two copies of a
+     * reserved column is how a renderer and a record come to disagree about which columns are free.
+     */
+    public static final int PREV_COLUMN = 0;
+
+    /** The control-row column the engine draws the next-page button in, reserved on the same terms as {@link #PREV_COLUMN}. */
+    public static final int NEXT_COLUMN = COLUMNS - 1;
+
     public GridSpec {
         Objects.requireNonNull(title, "title");
         if (menuRows < 1 || menuRows > 6) {
@@ -63,7 +76,7 @@ public record GridSpec(
      */
     public OptionalInt firstEmptySlot() {
         Map<Integer, MenuItemSpec> filled = content.get();
-        int capacity = menuRows * 9;
+        int capacity = menuRows * COLUMNS;
         for (int slot = 0; slot < capacity; slot++) {
             if (!filled.containsKey(slot)) {
                 return OptionalInt.of(slot);
@@ -73,25 +86,26 @@ public record GridSpec(
     }
 
     /**
-     * One button on the grid's bottom control row: the column {@code 1..7} it sits at within that row (the engine adds
-     * the row's base slot so the caller stays window-height agnostic), the already-built icon to place there, and the
-     * handler run with the live viewer when it is clicked.
+     * One button on the grid's bottom control row: the column it sits at within that row (the engine adds the row's
+     * base slot so the caller stays window-height agnostic), the already-built icon to place there, and the handler
+     * run with the live viewer when it is clicked.
      *
-     * <p>Columns {@code 0} and {@code 8} are the engine's previous / next pagination buttons and are refused here
-     * rather than left to the caller's care. A control there is painted after the nav button, so it covers the nav
+     * <p>{@link GridSpec#PREV_COLUMN} and {@link GridSpec#NEXT_COLUMN} are the engine's previous / next pagination
+     * buttons and are refused here rather than left to the caller's care. A control there is painted after the nav button, so it covers the nav
      * icon, while the click router asks about a page flip first: the viewer would see this button and get a page
      * turn. That only happens on a canvas tall enough to paginate, which is the one a caller is least likely to open
      * while testing, so the guard is uniform rather than page-count aware.
      *
-     * @param column the control-row column {@code 1..7} the button is drawn in
+     * @param column the control-row column the button is drawn in: any column of the row that is not a page button
      * @param icon the prepared icon to place (name/lore already applied by the caller)
      * @param onClick invoked with the live viewer when the button is clicked
      */
     public record Control(int column, ItemStack icon, Consumer<Player> onClick) {
 
         public Control {
-            if (column < 1 || column > 7) {
-                throw new IllegalArgumentException("column must be 1..7 (0 and 8 are the page buttons), was " + column);
+            if (column < 0 || column >= COLUMNS || column == PREV_COLUMN || column == NEXT_COLUMN) {
+                throw new IllegalArgumentException("column must be a control-row column other than the page buttons "
+                        + PREV_COLUMN + " and " + NEXT_COLUMN + ", was " + column);
             }
             Objects.requireNonNull(icon, "icon");
             Objects.requireNonNull(onClick, "onClick");
