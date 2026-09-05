@@ -1219,10 +1219,19 @@ public final class MenuListener implements Listener {
         }
     }
 
-    /** Dispatch one continuation step, handing it the refs that must run after it resolves. */
+    /**
+     * Dispatch one continuation step, handing it the refs that must run after it resolves.
+     *
+     * <p>{@code remaining} is held across a callback that arrives later, so it must not be able to change in the
+     * meantime. It cannot: both callers pass a slice of a list that is already immutable and privately held. A
+     * gesture's chain comes from {@link com.uxplima.uxmlib.menu.spec.ClickSpec#actionsFor}, which builds a fresh
+     * {@code List.copyOf} on every call, and a confirm branch comes from {@link
+     * com.uxplima.uxmlib.menu.spec.Continuation.Confirm}, whose compact constructor copies both its lists. A
+     * defensive copy here used to say the same thing a third time, where no test could reach it. A third caller
+     * passing a live list would have to satisfy this paragraph instead.
+     */
     private void beginContinuation(
-            MenuHolder holder, MenuContext base, ClickKind kind, Continuation continuation, List<Ref> rest) {
-        List<Ref> remaining = List.copyOf(rest);
+            MenuHolder holder, MenuContext base, ClickKind kind, Continuation continuation, List<Ref> remaining) {
         if (continuation instanceof Continuation.Input input) {
             promptInput(holder, base, kind, input, remaining);
         } else if (continuation instanceof Continuation.Confirm confirm) {
