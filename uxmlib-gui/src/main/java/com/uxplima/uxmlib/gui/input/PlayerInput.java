@@ -25,7 +25,11 @@ import com.uxplima.uxmlib.text.Text;
 import org.jspecify.annotations.Nullable;
 
 /**
- * One front door for asking a player to type a line of text, over three native backends: {@code ANVIL}
+ * The mechanism floor of this package: it opens one native prompt and reports what came back, and decides
+ * nothing about which prompt a given call should use. {@link TextInput} is the floor above, which reads an
+ * operator's configuration and chooses.
+ *
+ * <p>One front door for asking a player to type a line of text, over three native backends: {@code ANVIL}
  * (the existing {@link AnvilInput}), {@code CHAT} (the player's next chat message), {@code SIGN} (a
  * transient sign), all delivering the same {@link InputResult} through one callback. Per-player pending
  * state lives on the instance via an {@link InputRouter}; there is no static mutable state.

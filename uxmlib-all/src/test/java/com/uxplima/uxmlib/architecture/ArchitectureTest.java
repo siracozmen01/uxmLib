@@ -95,5 +95,10 @@ class ArchitectureTest {
                     "com.uxplima.uxmlib.hologram..",
                     "com.uxplima.uxmlib.discord..",
                     "com.uxplima.uxmlib.advancement..")
-            .because("gui is UI-only; the placeholder resolver is injected, so gui must not pull integration");
+            .because("those four are data sources, and gui is handed its data rather than fetching it: a GUI"
+                    + " module reaching into PlaceholderAPI to learn what a string should say is pulling in a"
+                    + " system it should have been given. uxmlib-bedrock is deliberately not on this list,"
+                    + " because it is a rendering target rather than a data source: asking what the viewer's"
+                    + " client can draw, and choosing an anvil, a dialog or a form, is the thing a GUI module"
+                    + " is for, and a UI library that cannot make that choice is not UI complete");
 }
