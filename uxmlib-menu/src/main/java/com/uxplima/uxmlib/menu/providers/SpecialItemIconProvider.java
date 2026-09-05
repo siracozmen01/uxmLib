@@ -19,7 +19,7 @@ import com.uxplima.uxmlib.menu.runtime.MenuContext;
  *
  * <ul> <li>{@code water_bottle}: a {@link Material#POTION} whose base potion type is {@link PotionType#WATER}, i.e. a
  * plain water bottle (there is no {@code WATER_BOTTLE} material). <li>{@code light:<0-15>}: a {@link Material#LIGHT}
- * block item with its light-block level set; the level is clamped to {@code 0..15} and a malformed or absent level
+ * block item with its light-block level set; the level is clamped to {@code 0..15}, and a level that is not a number
  * falls back to the full {@code 15}. </ul>
  *
  * <p>Both are best-effort: a runtime that cannot model the base potion type or block-data level still yields a plain
@@ -73,8 +73,17 @@ final class SpecialItemIconProvider implements IconProvider {
         return light;
     }
 
-    /** Parse the level token, clamping to {@code 0..15}; a malformed or out-of-range value falls back to full 15. */
-    private static int clampLevel(String token) {
+    /**
+     * Parse the level token to {@code 0..15}. A number outside that range is clamped to the end it passed, so
+     * {@code light:99} is 15 and {@code light:-4} is 0. A token that is not a number at all has no end to be clamped
+     * to, so it takes the full level, which is what an operator writing {@code light:} on its own most likely wanted.
+     *
+     * <p>Package-private rather than private so a test can drive it: the level cannot be read back off the finished
+     * stack in the test runtime, which models a {@code LIGHT} item with a plain {@code ItemMeta} and no
+     * {@code BlockDataMeta}, so {@code editMeta} above is a no-op there. Asserting that a {@code LIGHT} comes out
+     * proves nothing about the level, and would stay green with this method deleted.
+     */
+    static int clampLevel(String token) {
         try {
             return Math.max(0, Math.min(MAX_LIGHT, Integer.parseInt(token.trim())));
         } catch (NumberFormatException notANumber) {

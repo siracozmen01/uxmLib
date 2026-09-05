@@ -73,4 +73,34 @@ class SpecialItemIconProviderTest {
                 .isEmpty();
         assertThat(provider.icon("GLASS_BOTTLE", ctx())).isEmpty();
     }
+
+    /**
+     * The level is pinned on the parser rather than on the finished stack, because this runtime models a
+     * {@code LIGHT} item with a plain {@code ItemMeta} and no {@code BlockDataMeta}, so the provider's
+     * {@code editMeta} call is a no-op here and the level never reaches the item. The four assertions above check
+     * only that a {@code LIGHT} comes out, which is true whether the level was clamped, set wrongly, or never set
+     * at all: they would stay green with the clamp deleted. These do not.
+     */
+    @Test
+    void aLevelInsideTheRangeIsTakenAsWritten() {
+        assertThat(SpecialItemIconProvider.clampLevel("7")).isEqualTo(7);
+        assertThat(SpecialItemIconProvider.clampLevel(" 7 ")).isEqualTo(7);
+    }
+
+    /** Past either end the value is clamped to the end it passed, rather than refused or wrapped. */
+    @Test
+    void aLevelPastEitherEndIsClampedToThatEnd() {
+        assertThat(SpecialItemIconProvider.clampLevel("99")).isEqualTo(15);
+        assertThat(SpecialItemIconProvider.clampLevel("-4")).isZero();
+    }
+
+    /**
+     * A token that is not a number has no end to be clamped to, so it takes the full level. That is a different rule
+     * from the clamp above, and the javadoc used to state the two as one.
+     */
+    @Test
+    void aLevelThatIsNotANumberTakesTheFullLevelRatherThanZero() {
+        assertThat(SpecialItemIconProvider.clampLevel("bright")).isEqualTo(15);
+        assertThat(SpecialItemIconProvider.clampLevel("")).isEqualTo(15);
+    }
 }
