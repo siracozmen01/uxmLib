@@ -107,8 +107,9 @@ public final class ItemConfig {
         }
         List<net.kyori.adventure.text.Component> lines = new ArrayList<>();
         for (String entry : raw) {
-            for (String wrapped :
-                    wrapWidth > 0 ? Lore.wrap(entry, wrapWidth) : entry.lines().toList()) {
+            for (String wrapped : wrapWidth > 0
+                    ? LoreWrap.wrap(entry, wrapWidth)
+                    : entry.lines().toList()) {
                 lines.add(Text.mini(wrapped, tags));
             }
         }

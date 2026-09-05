@@ -14,10 +14,15 @@ import com.uxplima.uxmlib.text.Text;
  *
  * <p>This is a pure string transform with no Bukkit or Adventure rendering: {@link ItemConfig} feeds the
  * wrapped lines through MiniMessage afterwards.
+ *
+ * <p>Named for what it does rather than for what it operates on, because {@code gui.style.Lore} builds the
+ * lore of a menu tile and a caller building an item for a menu has both in scope. It is not the same
+ * arithmetic wearing two names: this one packs words of a MiniMessage string measured with its tags
+ * stripped, the other packs runs of an already parsed component and keeps each run's style.
  */
-public final class Lore {
+public final class LoreWrap {
 
-    private Lore() {}
+    private LoreWrap() {}
 
     /**
      * Split {@code line} on {@code \n} and greedily pack its words so each output line's visible width is

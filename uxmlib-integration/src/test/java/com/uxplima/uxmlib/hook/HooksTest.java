@@ -34,8 +34,8 @@ class HooksTest {
     @Test
     void placeholdersReturnTextUnchangedWhenApiAbsent() {
         var player = MockBukkit.getMock().addPlayer();
-        assertThat(Placeholders.isAvailable()).isFalse();
-        assertThat(Placeholders.apply(player, "hi %player_name%")).isEqualTo("hi %player_name%");
+        assertThat(PlaceholderApi.isAvailable()).isFalse();
+        assertThat(PlaceholderApi.apply(player, "hi %player_name%")).isEqualTo("hi %player_name%");
     }
 
     @Test

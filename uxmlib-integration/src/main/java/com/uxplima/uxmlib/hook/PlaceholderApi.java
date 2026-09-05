@@ -11,13 +11,17 @@ import me.clip.placeholderapi.PlaceholderAPI;
  * placeholders when PlaceholderAPI is installed and returns the text unchanged when it is not, so
  * callers can use it unconditionally. The {@code me.clip} classes are only touched inside the guarded
  * branch, so a server without PlaceholderAPI never resolves them.
+ *
+ * <p>Named after the plugin it bridges, not after the idea. {@code text.Placeholders} is the general one: a
+ * typed, lazy placeholder layer over any subject, needing no plugin at all. This module depends on that one,
+ * so both are in scope in the same file, and the specific of the two is the one that takes the specific name.
  */
-public final class Placeholders {
+public final class PlaceholderApi {
 
     /** The PlaceholderAPI plugin name, used for the presence guard. */
     public static final String PLUGIN = "PlaceholderAPI";
 
-    private Placeholders() {}
+    private PlaceholderApi() {}
 
     /** Whether PlaceholderAPI is installed and enabled. */
     public static boolean isAvailable() {
