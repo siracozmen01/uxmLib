@@ -28,7 +28,8 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
  * back something it was handed.
  *
  * <p>Implementations are called on the viewer's entity thread, once per item per render, so they should read
- * from memory and not from disk or a database.
+ * from memory and not from disk or a database. They also validate their own arguments: the two abstract
+ * methods cannot do it here, so the obligation is theirs and is stated rather than assumed.
  */
 public interface GuiText {
 
@@ -39,7 +40,17 @@ public interface GuiText {
      */
     Component text(Player viewer, String key, Map<String, String> placeholders);
 
-    /** Text an operator wrote, turned into a component. No key, no catalog, no lookup. */
+    /**
+     * Text an operator wrote, turned into a component. No key and no catalog: the string arrives as it was
+     * written in the file.
+     *
+     * <p>There is no viewer here on purpose. A line like {@code Hello %player%} is an ordinary thing to write
+     * in a menu file, and it is substituted <strong>before</strong> this is called, by whoever built the
+     * string. This runs once for every name and every lore line of every item, so a viewer parameter would
+     * invite a per-player lookup on the hottest path the engine has, and the caller already knows the viewer
+     * it is rendering for. Per-viewer substitution belongs to the caller, and the omission is a decision
+     * rather than an oversight.
+     */
     Component render(String raw);
 
     /** The same as {@link #text}, for the many keys that carry no placeholders. */
@@ -51,6 +62,14 @@ public interface GuiText {
      * {@link #text} flattened to a plain string, for the places a component cannot go: a Bedrock form label
      * is a flat string, and so is an inventory title on some paths. Formatting is dropped, not stripped from
      * the source, so the same key reads the same in both places.
+     *
+     * <p><strong>Do not return a translatable component from {@link #text} unless a translator is
+     * registered for it.</strong> Flattening one that no translator holds produces the empty string, not the
+     * key, so the label vanishes rather than degrading to something readable. It fails narrowly, which is
+     * what makes it worth the warning: the same text renders correctly in a lore line, because that keeps
+     * the component and lets the client translate it, and comes out blank everywhere this method is used.
+     * An implementation that cannot rely on a registered translator resolves its own text before returning
+     * it. {@code GuiTextTest} pins this behaviour.
      */
     default String plain(Player viewer, String key, Map<String, String> placeholders) {
         Objects.requireNonNull(viewer, "viewer");
