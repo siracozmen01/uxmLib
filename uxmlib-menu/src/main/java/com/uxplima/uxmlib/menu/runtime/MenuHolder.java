@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalLong;
 
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
@@ -67,12 +68,17 @@ public final class MenuHolder implements InventoryHolder {
     private @Nullable ItemStack @Nullable [] bottomSnapshot;
 
     /**
-     * The clock reading of the last click this menu let through the anti-spam window, or {@code 0} before the first. It
-     * lives on the holder (GC'd with the open menu on close) so the throttle needs no player-keyed side map and nothing
-     * leaks when a viewer quits. Read and written only on the viewer's own entity thread inside the click handler, so
-     * the check-and-stamp is single-threaded per holder and needs no lock.
+     * The clock reading of the last click this menu let through the anti-spam window, empty before the first. It lives
+     * on the holder (GC'd with the open menu on close) so the throttle needs no player-keyed side map and nothing leaks
+     * when a viewer quits. Read and written only on the viewer's own entity thread inside the click handler, so the
+     * check-and-stamp is single-threaded per holder and needs no lock.
+     *
+     * <p>Empty rather than zero. The clock is a {@link java.util.function.LongSupplier} the host supplies, and a
+     * monotonic one (the natural choice for a cooldown) starts near its own origin rather than near an epoch. Spelling
+     * "never clicked" as a reading would let such a clock imitate it, and the opening click of every menu would fall
+     * inside a window that had never opened.
      */
-    private long lastClickMs;
+    private OptionalLong lastClick = OptionalLong.empty();
 
     /**
      * Whether a paged list's page flip has fired its off-thread re-query and is still waiting for that page to land. A
@@ -242,14 +248,14 @@ public final class MenuHolder implements InventoryHolder {
         return Optional.ofNullable(gridView);
     }
 
-    /** The clock reading of the last click that passed this menu's anti-spam window, or {@code 0} before the first. */
-    public long lastClickMs() {
-        return lastClickMs;
+    /** The clock reading of the last click that passed this menu's anti-spam window, empty before the first. */
+    public OptionalLong lastClickMs() {
+        return lastClick;
     }
 
     /** Records the clock reading of a click the anti-spam window just let through. */
     public void lastClickMs(long now) {
-        this.lastClickMs = now;
+        this.lastClick = OptionalLong.of(now);
     }
 
     /** Whether a paged list's page-flip re-query is already in flight for this window. */
