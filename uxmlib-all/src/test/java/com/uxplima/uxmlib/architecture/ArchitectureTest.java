@@ -52,7 +52,9 @@ class ArchitectureTest {
                     "com.uxplima.uxmlib.storage..",
                     "com.uxplima.uxmlib.hook..",
                     "com.uxplima.uxmlib.hologram..",
-                    "com.uxplima.uxmlib.discord..")
+                    "com.uxplima.uxmlib.discord..",
+                    "com.uxplima.uxmlib.menu..",
+                    "com.uxplima.uxmlib.bedrock..")
             .because("common is the foundation; features build on it, not the other way around");
 
     /** The item module must not depend on the GUI that is built on top of it. */
@@ -64,6 +66,22 @@ class ArchitectureTest {
             .dependOnClassesThat()
             .resideInAPackage("com.uxplima.uxmlib.gui..")
             .because("gui depends on item, never the reverse");
+
+    /**
+     * The menu engine sits on the gui module, so the gui module must not reach back up into it.
+     *
+     * <p>Written in the same shape as {@link #itemDoesNotDependOnGui} and for the same reason: a consumer
+     * may want the inventory layer without the engine that reads menu files, and the day gui names a menu
+     * type that stops being possible without anything saying so.
+     */
+    @ArchTest
+    static final ArchRule guiDoesNotDependOnMenu = noClasses()
+            .that()
+            .resideInAPackage("com.uxplima.uxmlib.gui..")
+            .should()
+            .dependOnClassesThat()
+            .resideInAPackage("com.uxplima.uxmlib.menu..")
+            .because("menu depends on gui, never the reverse");
 
     /** The gui module stays UI-only: PlaceholderAPI/integration glue is an injected seam, not a dependency. */
     @ArchTest
