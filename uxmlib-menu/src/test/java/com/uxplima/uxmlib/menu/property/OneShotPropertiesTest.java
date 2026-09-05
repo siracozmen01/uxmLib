@@ -56,11 +56,11 @@ class OneShotPropertiesTest {
                 });
     }
 
-    // -- a typed line is not covered here ---------------------------------------------------------------------
+    // -- a typed line lives in its own file -------------------------------------------------------------------
     //
-    // TextProperty.applyInput is public so the validate-then-set behaviour is reachable without a live prompt, but
-    // constructing the property still costs a TextInput that none of these assertions would touch. The reason now
-    // lives in that method's own javadoc, which used to claim the coverage this comment would otherwise excuse.
+    // TextProperty is covered by TextPropertyTest. It used to be covered by nothing, because it named the concrete
+    // text-input seam and nothing outside that seam's package can construct one. It names CatalogTextPrompt now, so
+    // the file exists.
 
     // -- a one-shot action ------------------------------------------------------------------------------------
 
