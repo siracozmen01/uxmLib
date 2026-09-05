@@ -137,7 +137,8 @@ public final class MenuListener implements Listener {
     /**
      * The opener a property's click hook uses to gate a destructive step behind an engine confirm child, threaded into
      * the {@link PropertyClick} on the editor path alongside the selector opener. Null when the engine is wired without
-     * it, in which case a property that confirms a removal falls back to its uxmLib {@code ConfirmMenu}.
+     * it, in which case a {@code confirm:} step runs its {@code no} refs and says so on the console: there is no second
+     * confirm window to fall back to.
      */
     @Nullable private final ConfirmOpener confirmOpener;
 
@@ -809,8 +810,8 @@ public final class MenuListener implements Listener {
     /**
      * Route a click in a confirm window: the yes/no slot runs its decision exactly once. The single-fire guard on the
      * {@link ConfirmState} makes a stray second click in the same tick a no-op, and the window is closed before the
-     * decision runs (mirroring uxmLib's {@code ConfirmMenu}) so a decision that opens another menu is not clobbered by
-     * the close. The close funnels through the one {@code closeMenu}, so no second listener or teardown path is
+     * decision runs (the order the removed {@code uxmlib-gui} window used) so a decision that opens another menu is not
+     * clobbered by the close. The close funnels through the one {@code closeMenu}, so no second listener or teardown path is
      * introduced. A click on a non-button slot does nothing; the click is already cancelled.
      */
     private void handleConfirmClick(MenuHolder holder, ConfirmState confirm, int slot, Player clicker) {

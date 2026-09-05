@@ -7,8 +7,8 @@ import net.kyori.adventure.text.Component;
 import org.jspecify.annotations.NullMarked;
 
 /**
- * The capability a property uses to open a yes/no confirm as a menu-engine child window rather than a uxmLib {@code
- * ConfirmMenu}. Defined here, in the property package, so a property depends only on this small port and not on the
+ * The capability a property uses to open a yes/no confirm as a menu-engine child window rather than a window of its
+ * own. Defined here, in the property package, so a property depends only on this small port and not on the
  * engine that implements it; the engine supplies the implementation, mirroring {@link SelectorOpener} exactly.
  *
  * <p>An opener receives the viewer, a resolved title, and the two decisions ({@code onYes} run once if the viewer

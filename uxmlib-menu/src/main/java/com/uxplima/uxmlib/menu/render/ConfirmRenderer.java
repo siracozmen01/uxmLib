@@ -10,9 +10,9 @@ import com.uxplima.uxmlib.item.ItemBuilder;
 import org.jspecify.annotations.NullMarked;
 
 /**
- * Paints the engine's two-button confirm window, matching the geometry of the uxmLib {@code ConfirmMenu} it replaces: a
- * three-row inventory with a lime-wool yes button at slot 11 and a red-wool no button at slot 15, so a migrated caller
- * meets the same window it always did. The decision carried by each button (what yes and no run) is the {@code
+ * Paints the engine's two-button confirm window, keeping the geometry of the confirm window {@code uxmlib-gui} used
+ * to ship: a three-row inventory with a lime-wool yes button at slot 11 and a red-wool no button at slot 15, so a
+ * migrated caller meets the same window it always did. The decision carried by each button (what yes and no run) is the {@code
  * ConfirmState} on the holder; this renderer only places the icons and reports the two slots it used, which the façade
  * records onto that state so the one listener can route a click back to the right decision.
  *
@@ -25,10 +25,10 @@ public final class ConfirmRenderer {
     /** The three-row geometry the uxmLib confirm window used, so a migrated caller meets an identical layout. */
     public static final int ROWS = 3;
 
-    /** The yes (confirm) button slot, byte-for-byte the uxmLib {@code ConfirmMenu} confirm slot. */
+    /** The yes (confirm) button slot, byte-for-byte the slot the removed {@code uxmlib-gui} window confirmed on. */
     public static final int YES_SLOT = 11;
 
-    /** The no (cancel) button slot, byte-for-byte the uxmLib {@code ConfirmMenu} cancel slot. */
+    /** The no (cancel) button slot, byte-for-byte the slot the removed {@code uxmlib-gui} window cancelled on. */
     public static final int NO_SLOT = 15;
 
     public ConfirmRenderer() {}

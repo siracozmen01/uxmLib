@@ -656,7 +656,8 @@ public final class Menus {
     }
 
     /**
-     * Open a two-button confirm window for {@code viewer}: the engine's replacement for uxmLib's {@code ConfirmMenu}.
+     * Open a two-button confirm window for {@code viewer}: the engine's replacement for the confirm window
+     * {@code uxmlib-gui} used to ship.
      * It builds the same {@link MenuHolder} every other menu uses, so the one listener routes its clicks and the one
      * {@code closeMenu} tears it down: clicking the yes button runs {@code onYes} exactly once, clicking no runs {@code
      * onNo} exactly once, and either click closes the window first. Closing the window (or quitting) without a click
