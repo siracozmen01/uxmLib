@@ -554,9 +554,15 @@ public final class MenuListener implements Listener {
     }
 
     /**
-     * Move a shift-clicked stack from the viewer's own inventory into the first free slot of an editable region that
-     * accepts it. The event stays cancelled and the two inventories are written here instead, so the stack lands in
-     * the region rather than wherever vanilla would have spread it. When no region accepts it, nothing moves.
+     * Move a shift-clicked stack from the viewer's own inventory into the first free slot that accepts it, in the
+     * first editable region that has one. The event stays cancelled and the two inventories are written here instead,
+     * so the stack lands in the region rather than wherever vanilla would have spread it. When nothing accepts it,
+     * nothing moves.
+     *
+     * <p>A refusal skips that one slot rather than the whole region, because {@link ContentProvider#allows} is asked
+     * per movement everywhere else in this router: a provider that reserves its first slot and takes the rest is
+     * saying something the contract lets it say, and asking only once would silently turn it into a refusal of the
+     * region. The provider is asked at most once per free slot, which is bounded by the region's own size.
      */
     private void handleContentShiftInsert(MenuHolder holder, InventoryClickEvent event, int topSize) {
         ItemStack moved = emptyToNull(event.getCurrentItem());
@@ -576,7 +582,7 @@ public final class MenuListener implements Listener {
                 }
                 ContentClick click = new ContentClick(slot, index, ContentClick.Kind.INSERT, moved, null);
                 if (!provider.allows(holder.ctx(), region, click)) {
-                    break;
+                    continue;
                 }
                 top.setItem(slot, moved.clone());
                 event.setCurrentItem(null);
