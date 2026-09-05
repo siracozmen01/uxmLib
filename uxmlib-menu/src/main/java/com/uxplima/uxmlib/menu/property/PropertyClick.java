@@ -17,7 +17,7 @@ import org.jspecify.annotations.NullMarked;
  * behind an engine confirm child.
  *
  * <p>Both openers are always present: every editor runs on the menu-engine editor runtime, which builds this
- * context with the engine's selector and confirm openers. The enum/list/colour pickers ride the engine child-menu
+ * record with the engine's selector and confirm openers. The enum/list/colour pickers ride the engine child-menu
  * capability through them, so a property never needs to know which window system painted its parent.
  *
  * <p>A property never touches the raw {@link InventoryClickEvent}; the click kind is captured into the two
@@ -31,7 +31,7 @@ import org.jspecify.annotations.NullMarked;
  * @param confirmOpener opens a confirm as an engine child window
  */
 @NullMarked
-public record ClickContext(
+public record PropertyClick(
         Player viewer,
         boolean rightClick,
         boolean shiftClick,
@@ -39,7 +39,7 @@ public record ClickContext(
         SelectorOpener opener,
         ConfirmOpener confirmOpener) {
 
-    public ClickContext {
+    public PropertyClick {
         Objects.requireNonNull(viewer, "viewer");
         Objects.requireNonNull(reopen, "reopen");
         Objects.requireNonNull(opener, "opener");

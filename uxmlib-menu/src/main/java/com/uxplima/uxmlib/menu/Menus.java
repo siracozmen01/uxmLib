@@ -721,7 +721,7 @@ public final class Menus {
 
     /**
      * The opener a property hands its picker to: opening a selector through it shows a {@link MenuHolder} child window
-     * the one listener routes and the one {@code closeMenu} tears down. Threaded into the editor {@code ClickContext}
+     * the one listener routes and the one {@code closeMenu} tears down. Threaded into the editor {@code PropertyClick}
      * so an {@link com.uxplima.uxmlib.menu.property.EnumProperty} (and, as they migrate,
      * the list/colour pickers) opens an engine child rather than a uxmLib {@code SimpleGui} on the engine runtime.
      */
@@ -731,7 +731,7 @@ public final class Menus {
 
     /**
      * The opener a property hands a destructive step to: it gates the step behind a {@link MenuHolder} confirm child
-     * the one listener routes and the one {@code closeMenu} tears down. Threaded into the editor {@code ClickContext}
+     * the one listener routes and the one {@code closeMenu} tears down. Threaded into the editor {@code PropertyClick}
      * alongside {@link #selectorOpener()} so a {@link com.uxplima.uxmlib.menu.property.ListProperty}'s
      * remove gesture opens an engine confirm on the engine
      * runtime.

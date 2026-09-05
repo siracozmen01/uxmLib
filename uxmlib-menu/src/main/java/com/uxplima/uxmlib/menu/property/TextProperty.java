@@ -78,13 +78,10 @@ public final class TextProperty implements EditableProperty {
     }
 
     @Override
-    public void onClick(ClickContext context) {
-        Objects.requireNonNull(context, "context");
+    public void onClick(PropertyClick click) {
+        Objects.requireNonNull(click, "click");
         textInput.prompt(
-                context.viewer(),
-                InputRequest.of(inputKey, promptHint),
-                raw -> applyInput(context, raw),
-                context.reopen());
+                click.viewer(), InputRequest.of(inputKey, promptHint), raw -> applyInput(click, raw), click.reopen());
     }
 
     /**
@@ -92,18 +89,18 @@ public final class TextProperty implements EditableProperty {
      * rejection redraw without writing. The seam delegates here; it is also the seam a test drives to pin the
      * validate-then-set behaviour without opening a live prompt, the same pattern the home rename editor uses.
      */
-    public void applyInput(ClickContext context, String raw) {
-        Objects.requireNonNull(context, "context");
+    public void applyInput(PropertyClick click, String raw) {
+        Objects.requireNonNull(click, "click");
         Objects.requireNonNull(raw, "raw");
         Optional<String> accepted = validator.apply(raw);
         if (accepted.isEmpty()) {
-            context.reopen().run();
+            click.reopen().run();
             return;
         }
         String value = accepted.get();
         scheduler.async(() -> {
             setter.accept(value);
-            scheduler.entity(context.viewer(), context.reopen());
+            scheduler.entity(click.viewer(), click.reopen());
         });
     }
 }

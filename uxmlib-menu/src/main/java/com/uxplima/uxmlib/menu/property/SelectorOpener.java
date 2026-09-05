@@ -23,9 +23,9 @@ import org.jspecify.annotations.NullMarked;
  * serves any property that opens a flat picker (the enum selector now, and the list and colour pickers as they migrate)
  * so each builds {@link SelectorButton}s and lets the engine paint and route them.
  *
- * <p>A property only ever opens a selector when its {@link ClickContext} carries an opener (the engine editor runtime
- * threads one in); a context with no opener (the legacy {@code EntityEditorView} path) leaves the property on its
- * uxmLib fallback, so both runtimes coexist while editors migrate.
+ * <p>Every {@link PropertyClick} carries one, because the record requires it and the engine editor runtime is the
+ * only thing that builds one. A property therefore never asks whether it has a selector opener, and a picker is
+ * always an engine child window rather than a second window system a property has to know about.
  */
 @NullMarked
 public interface SelectorOpener {

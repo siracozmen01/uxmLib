@@ -6,8 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 
-import com.uxplima.uxmlib.menu.property.ClickContext;
 import com.uxplima.uxmlib.menu.property.EditableProperty;
+import com.uxplima.uxmlib.menu.property.PropertyClick;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -34,7 +34,7 @@ class EditorStateTest {
         }
 
         @Override
-        public void onClick(ClickContext context) {}
+        public void onClick(PropertyClick click) {}
     }
 
     private final EditorState state = new EditorState("an editor spec", "the subject");

@@ -33,7 +33,7 @@ import org.jspecify.annotations.NullMarked;
  * application use case wrapped as a {@link Consumer}; this property holds no domain logic.
  *
  * <p>The sub-menu opens as an engine child window the one menu listener routes (its entry/add/back buttons are {@link
- * SelectorButton}s and a removal gates through the context's {@link ConfirmOpener} confirm child) and each mutation
+ * SelectorButton}s and a removal gates through the click's {@link ConfirmOpener} confirm child) and each mutation
  * reopens the engine list, so the whole flow stays on a single holder and teardown.
  */
 @NullMarked
@@ -96,154 +96,154 @@ public final class ListProperty implements EditableProperty {
     }
 
     @Override
-    public void onClick(ClickContext context) {
-        Objects.requireNonNull(context, "context");
-        scheduler.entity(context.viewer(), () -> open(context));
+    public void onClick(PropertyClick click) {
+        Objects.requireNonNull(click, "click");
+        scheduler.entity(click.viewer(), () -> open(click));
     }
 
     /**
      * Open the list sub-menu as an engine child window: the per-entry/add/back buttons are handed to the engine opener
      * as {@link SelectorButton}s so the one menu listener routes them. The entry button is gesture-aware (left/right
      * move, shift-left edit, shift-right remove); the add and back buttons ignore the gesture. After any mutation the
-     * list reopens itself through this same method, so a change shows; back reopens the parent editor via the context.
+     * list reopens itself through this same method, so a change shows; back reopens the parent editor via the click.
      */
-    private void open(ClickContext context) {
+    private void open(PropertyClick click) {
         List<String> entries = current.get();
         List<Integer> slots = layout.entrySlots();
         List<SelectorButton> buttons = new ArrayList<>();
         for (int i = 0; i < entries.size() && i < slots.size(); i++) {
-            buttons.add(engineEntryButton(context, entries.get(i), i, slots.get(i)));
+            buttons.add(engineEntryButton(click, entries.get(i), i, slots.get(i)));
         }
-        buttons.add(SelectorButton.of(layout.addSlot(), addIcon(context), () -> add(context)));
+        buttons.add(SelectorButton.of(layout.addSlot(), addIcon(click), () -> add(click)));
         buttons.add(SelectorButton.of(
-                layout.backSlot(), backIcon(context), () -> context.reopen().run()));
-        context.opener()
+                layout.backSlot(), backIcon(click), () -> click.reopen().run()));
+        click.opener()
                 .openSelector(
-                        context.viewer(),
-                        guiText.text(context.viewer(), keys.title()),
+                        click.viewer(),
+                        guiText.text(click.viewer(), keys.title()),
                         layout.rows(),
                         layout.fillerIcon(),
                         buttons);
     }
 
     /** A gesture-aware engine entry button: shift-left edits, shift-right removes, left moves up, right moves down. */
-    private SelectorButton engineEntryButton(ClickContext context, String entry, int index, int slot) {
-        ItemStack icon = entryIcon(context, entry);
+    private SelectorButton engineEntryButton(PropertyClick click, String entry, int index, int slot) {
+        ItemStack icon = entryIcon(click, entry);
         ChildClickHandler handler = (rightClick, shiftClick) -> {
             if (shiftClick && !rightClick) {
-                edit(context, index, entry);
+                edit(click, index, entry);
             } else if (shiftClick) {
-                confirmRemove(context, index);
+                confirmRemove(click, index);
             } else if (rightClick) {
-                move(context, index, 1);
+                move(click, index, 1);
             } else {
-                move(context, index, -1);
+                move(click, index, -1);
             }
         };
         return new SelectorButton(slot, icon, handler);
     }
 
-    private ItemStack entryIcon(ClickContext context, String entry) {
+    private ItemStack entryIcon(PropertyClick click, String entry) {
         return ItemBuilder.of(layout.entryIcon())
                 .name(Tiles.blankName())
                 .lore(Tiles.titled(
                         theme.get(),
-                        guiText.text(context.viewer(), keys.entryName(), Map.of("entry", entry)),
-                        guiText.text(context.viewer(), keys.entryHints())))
+                        guiText.text(click.viewer(), keys.entryName(), Map.of("entry", entry)),
+                        guiText.text(click.viewer(), keys.entryHints())))
                 .build();
     }
 
-    private ItemStack addIcon(ClickContext context) {
+    private ItemStack addIcon(PropertyClick click) {
         return ItemBuilder.of(layout.addIcon())
-                .name(guiText.text(context.viewer(), keys.addName()))
+                .name(guiText.text(click.viewer(), keys.addName()))
                 .build();
     }
 
-    private ItemStack backIcon(ClickContext context) {
+    private ItemStack backIcon(PropertyClick click) {
         return ItemBuilder.of(layout.backIcon())
-                .name(guiText.text(context.viewer(), keys.backName()))
+                .name(guiText.text(click.viewer(), keys.backName()))
                 .build();
     }
 
-    private void add(ClickContext context) {
+    private void add(PropertyClick click) {
         textInput.prompt(
-                context.viewer(),
+                click.viewer(),
                 InputRequest.of(inputKey, keys.addPrompt()),
-                text -> applyAdd(context, text),
-                () -> open(context));
+                text -> applyAdd(click, text),
+                () -> open(click));
     }
 
     /** Append a non-blank submitted line; a blank line reopens the list unchanged. Package-private for unit tests. */
-    void applyAdd(ClickContext context, String text) {
+    void applyAdd(PropertyClick click, String text) {
         if (text.isBlank()) {
-            open(context);
+            open(click);
             return;
         }
         List<String> next = new ArrayList<>(current.get());
         next.add(text);
-        save(context, next);
+        save(click, next);
     }
 
-    private void edit(ClickContext context, int index, String existing) {
+    private void edit(PropertyClick click, int index, String existing) {
         textInput.prompt(
-                context.viewer(),
+                click.viewer(),
                 InputRequest.of(inputKey, keys.editPrompt(), Map.of("entry", existing)),
-                text -> applyEdit(context, index, text),
-                () -> open(context));
+                text -> applyEdit(click, index, text),
+                () -> open(click));
     }
 
     /** Replace entry {@code index} with a non-blank submitted line; otherwise reopen unchanged. Package-private for tests. */
-    void applyEdit(ClickContext context, int index, String text) {
+    void applyEdit(PropertyClick click, int index, String text) {
         List<String> next = new ArrayList<>(current.get());
         if (!text.isBlank() && index < next.size()) {
             next.set(index, text);
-            save(context, next);
+            save(click, next);
             return;
         }
-        open(context);
+        open(click);
     }
 
     /** Gate a removal behind an engine confirm child: confirming removes the entry and reopens the list, declining reopens. */
-    private void confirmRemove(ClickContext context, int index) {
-        context.confirmOpener()
+    private void confirmRemove(PropertyClick click, int index) {
+        click.confirmOpener()
                 .openConfirm(
-                        context.viewer(),
-                        guiText.text(context.viewer(), keys.removeConfirm()),
-                        () -> remove(context, index),
-                        () -> reopen(context));
+                        click.viewer(),
+                        guiText.text(click.viewer(), keys.removeConfirm()),
+                        () -> remove(click, index),
+                        () -> reopen(click));
     }
 
-    private void remove(ClickContext context, int index) {
+    private void remove(PropertyClick click, int index) {
         List<String> next = new ArrayList<>(current.get());
         if (index >= 0 && index < next.size()) {
             next.remove(index);
-            save(context, next);
+            save(click, next);
         } else {
-            reopen(context);
+            reopen(click);
         }
     }
 
-    private void move(ClickContext context, int index, int direction) {
+    private void move(PropertyClick click, int index, int direction) {
         List<String> next = new ArrayList<>(current.get());
         int target = index + direction;
         if (index >= 0 && index < next.size() && target >= 0 && target < next.size()) {
             String moved = next.remove(index);
             next.add(target, moved);
-            save(context, next);
+            save(click, next);
         } else {
-            reopen(context);
+            reopen(click);
         }
     }
 
-    private void save(ClickContext context, List<String> next) {
+    private void save(PropertyClick click, List<String> next) {
         scheduler.async(() -> {
             setter.accept(List.copyOf(next));
-            reopen(context);
+            reopen(click);
         });
     }
 
     /** Reopen the list sub-menu on the viewer's entity thread. */
-    private void reopen(ClickContext context) {
-        scheduler.entity(context.viewer(), () -> open(context));
+    private void reopen(PropertyClick click) {
+        scheduler.entity(click.viewer(), () -> open(click));
     }
 }

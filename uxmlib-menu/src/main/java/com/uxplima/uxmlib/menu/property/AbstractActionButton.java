@@ -59,8 +59,8 @@ public abstract class AbstractActionButton implements EditableProperty {
     }
 
     @Override
-    public void onClick(ClickContext context) {
-        Objects.requireNonNull(context, "context");
-        scheduler.entity(context.viewer(), () -> handler.accept(context.viewer(), context.reopen()));
+    public void onClick(PropertyClick click) {
+        Objects.requireNonNull(click, "click");
+        scheduler.entity(click.viewer(), () -> handler.accept(click.viewer(), click.reopen()));
     }
 }

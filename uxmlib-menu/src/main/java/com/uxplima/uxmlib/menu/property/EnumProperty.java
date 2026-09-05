@@ -148,36 +148,36 @@ public final class EnumProperty<E> implements EditableProperty {
     }
 
     @Override
-    public void onClick(ClickContext context) {
-        Objects.requireNonNull(context, "context");
+    public void onClick(PropertyClick click) {
+        Objects.requireNonNull(click, "click");
         // The selector opens as an engine child window the one menu listener routes, keeping the whole flow on a
         // single holder and teardown.
-        context.opener()
+        click.opener()
                 .openSelector(
-                        context.viewer(),
-                        guiText.text(context.viewer(), selectorTitle),
+                        click.viewer(),
+                        guiText.text(click.viewer(), selectorTitle),
                         rows,
                         fillerIcon,
-                        selectorButtons(context));
+                        selectorButtons(click));
     }
 
     /** One engine selector button per option (icon plus its choose action), glint baked onto the selected option. */
-    private List<SelectorButton> selectorButtons(ClickContext context) {
+    private List<SelectorButton> selectorButtons(PropertyClick click) {
         E selected = current.get();
         List<SelectorButton> buttons = new ArrayList<>();
         for (int i = 0; i < options.size() && i < optionSlots.size(); i++) {
             E option = options.get(i);
             // An enum option is single-gesture: any click chooses it, so the gesture is ignored.
             buttons.add(SelectorButton.of(
-                    optionSlots.get(i), optionIcon(context.viewer(), option, selected), () -> choose(context, option)));
+                    optionSlots.get(i), optionIcon(click.viewer(), option, selected), () -> choose(click, option)));
         }
         return buttons;
     }
 
-    private void choose(ClickContext context, E option) {
+    private void choose(PropertyClick click, E option) {
         scheduler.async(() -> {
             setter.accept(option);
-            scheduler.entity(context.viewer(), context.reopen());
+            scheduler.entity(click.viewer(), click.reopen());
         });
     }
 

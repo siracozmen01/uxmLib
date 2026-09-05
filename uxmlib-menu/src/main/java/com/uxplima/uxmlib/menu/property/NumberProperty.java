@@ -82,17 +82,17 @@ public final class NumberProperty implements EditableProperty {
     }
 
     @Override
-    public void onClick(ClickContext context) {
-        Objects.requireNonNull(context, "context");
-        long delta = (context.rightClick() ? -step : step) * (context.shiftClick() ? shiftMultiplier : 1);
+    public void onClick(PropertyClick click) {
+        Objects.requireNonNull(click, "click");
+        long delta = (click.rightClick() ? -step : step) * (click.shiftClick() ? shiftMultiplier : 1);
         long next = clamp(current.getAsLong() + delta);
         if (next == current.getAsLong()) {
-            context.reopen().run();
+            click.reopen().run();
             return;
         }
         scheduler.async(() -> {
             setter.accept(next);
-            scheduler.entity(context.viewer(), context.reopen());
+            scheduler.entity(click.viewer(), click.reopen());
         });
     }
 

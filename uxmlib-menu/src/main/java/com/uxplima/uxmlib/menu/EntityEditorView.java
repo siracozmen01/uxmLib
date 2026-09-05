@@ -23,13 +23,13 @@ import org.jspecify.annotations.Nullable;
  * {@link EntityEditorLayout}, with one button per {@link EditableProperty} drawn at its configured slot
  * (label as the name, current value as the lore), a back button, and an optional delete button gated behind a
  * confirm. The properties for an entity are supplied by the caller; a click on a property slot routes to that
- * property's {@link EditableProperty#onClick} with a {@link com.uxplima.uxmlib.menu.property.ClickContext} whose reopen hook redraws this editor so a value change shows.
+ * property's {@link EditableProperty#onClick} with a {@link com.uxplima.uxmlib.menu.property.PropertyClick} whose reopen hook redraws this editor so a value change shows.
  *
  * <p>The view is a typed face on the menu engine's property-editor runtime: it turns the {@code (layout, title,
  * property list, value-lore, back, optional delete)} a module hands it into an {@link EditorSpec} and opens it
  * through {@link Menus#openEditor}, so the window is a holder-backed engine editor routed and torn down by the one
  * menu listener and one {@code closeMenu}. The enum, list and colour property children become engine
- * child menus on their own, because the engine's editor {@code ClickContext} carries the selector and confirm
+ * child menus on their own, because the engine's editor {@code PropertyClick} carries the selector and confirm
  * openers, and the optional delete button gates through {@link Menus#confirm}.
  *
  * <p>The view holds no module logic: the property list, the title, and the back/delete callbacks are all supplied by

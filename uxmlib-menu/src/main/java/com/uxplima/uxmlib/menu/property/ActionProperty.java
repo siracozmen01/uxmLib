@@ -60,8 +60,8 @@ public final class ActionProperty implements EditableProperty {
     }
 
     @Override
-    public void onClick(ClickContext context) {
-        Objects.requireNonNull(context, "context");
-        handler.accept(context.viewer(), context.reopen());
+    public void onClick(PropertyClick click) {
+        Objects.requireNonNull(click, "click");
+        handler.accept(click.viewer(), click.reopen());
     }
 }

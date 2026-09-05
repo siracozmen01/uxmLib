@@ -85,12 +85,12 @@ public final class ToggleProperty<S> implements EditableProperty {
     }
 
     @Override
-    public void onClick(ClickContext context) {
-        Objects.requireNonNull(context, "context");
-        S next = step(context.rightClick() ? -1 : 1);
+    public void onClick(PropertyClick click) {
+        Objects.requireNonNull(click, "click");
+        S next = step(click.rightClick() ? -1 : 1);
         scheduler.async(() -> {
             setter.accept(next);
-            scheduler.entity(context.viewer(), context.reopen());
+            scheduler.entity(click.viewer(), click.reopen());
         });
     }
 

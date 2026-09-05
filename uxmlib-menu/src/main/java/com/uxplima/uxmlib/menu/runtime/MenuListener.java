@@ -53,9 +53,9 @@ import com.uxplima.uxmlib.menu.binding.PagedListSourceRegistry;
 import com.uxplima.uxmlib.menu.eval.PageRequest;
 import com.uxplima.uxmlib.menu.eval.PagedResult;
 import com.uxplima.uxmlib.menu.property.ChildClickHandler;
-import com.uxplima.uxmlib.menu.property.ClickContext;
 import com.uxplima.uxmlib.menu.property.ConfirmOpener;
 import com.uxplima.uxmlib.menu.property.EditableProperty;
+import com.uxplima.uxmlib.menu.property.PropertyClick;
 import com.uxplima.uxmlib.menu.property.SelectorOpener;
 import com.uxplima.uxmlib.menu.providers.ContentClick;
 import com.uxplima.uxmlib.menu.providers.ContentProvider;
@@ -125,14 +125,14 @@ public final class MenuListener implements Listener {
 
     /**
      * The opener a property's click hook uses to show its picker as an engine child window, threaded into the {@link
-     * ClickContext} on the editor path. Null on a spec-only engine and on an editor engine wired without it, in which
+     * PropertyClick} on the editor path. Null on a spec-only engine and on an editor engine wired without it, in which
      * case a property that opens a picker falls back to its uxmLib selector: both runtimes coexist.
      */
     @Nullable private final SelectorOpener selectorOpener;
 
     /**
      * The opener a property's click hook uses to gate a destructive step behind an engine confirm child, threaded into
-     * the {@link ClickContext} on the editor path alongside the selector opener. Null when the engine is wired without
+     * the {@link PropertyClick} on the editor path alongside the selector opener. Null when the engine is wired without
      * it, in which case a property that confirms a removal falls back to its uxmLib {@code ConfirmMenu}.
      */
     @Nullable private final ConfirmOpener confirmOpener;
@@ -808,7 +808,7 @@ public final class MenuListener implements Listener {
 
     /**
      * Route a click in an editor window: a property slot runs that property's {@link EditableProperty#onClick} with a
-     * freshly built {@link ClickContext}, a plain button (back, delete) runs its recorded action. Both hop to the
+     * freshly built {@link PropertyClick}, a plain button (back, delete) runs its recorded action. Both hop to the
      * viewer's entity thread first (the same hop a spec action takes) and re-resolve the live player there, so a viewer
      * who logged off in the gap is simply skipped and Bukkit is only ever touched on the owning thread. The context's
      * reopen hook repaints this editor in place, so the property's own setter-then-reopen loop redraws the window the
@@ -842,7 +842,7 @@ public final class MenuListener implements Listener {
                 return;
             }
             Runnable reopen = () -> reRenderEditor(holder);
-            property.onClick(new ClickContext(viewer, rightClick, shiftClick, reopen, selector, confirm));
+            property.onClick(new PropertyClick(viewer, rightClick, shiftClick, reopen, selector, confirm));
         });
     }
 

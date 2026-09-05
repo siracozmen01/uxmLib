@@ -16,9 +16,9 @@ import org.jspecify.annotations.NullMarked;
  * the one teardown owns. A {@link ListProperty}'s remove gesture uses it to gate a deletion, and it gates on the one
  * holder, listener and teardown every other window uses rather than standing up a second of each.
  *
- * <p>A property only ever opens an engine confirm when its {@link ClickContext} carries an opener (the engine editor
- * runtime threads one in); a context with no confirm opener (the legacy {@code EntityEditorView} path) leaves the
- * property on its uxmLib {@code ConfirmMenu} fallback, so both runtimes coexist while editors migrate.
+ * <p>Every {@link PropertyClick} carries one, because the record requires it and the engine editor runtime is the
+ * only thing that builds one. A property therefore never asks whether it has a confirm opener, and there is no
+ * fallback path to keep working: a destructive step is gated behind an engine confirm child or it is not written.
  */
 @NullMarked
 public interface ConfirmOpener {

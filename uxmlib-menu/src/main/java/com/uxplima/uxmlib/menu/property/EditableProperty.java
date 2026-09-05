@@ -9,7 +9,7 @@ import org.jspecify.annotations.NullMarked;
  * One editable field in an {@link com.uxplima.uxmlib.menu.EntityEditorView}: the description of a single button (its
  * label, the lore line that reports the current value, and its icon) plus the behaviour run when the viewer clicks it.
  * The editor draws one button per property at its configured slot and routes a click on that slot back to {@link
- * #onClick(ClickContext)}.
+ * #onClick(PropertyClick)}.
  *
  * <p>A property carries no domain logic of its own. Its {@link #onClick} performs a presentation step (cycle a flag,
  * open an anvil, step a number, open a sub-selector) and then hands the new value to a caller-supplied setter (a {@code
@@ -38,5 +38,5 @@ public interface EditableProperty {
     Material icon();
 
     /** Perform the edit for a click on this field's button. */
-    void onClick(ClickContext context);
+    void onClick(PropertyClick click);
 }
