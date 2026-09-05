@@ -133,6 +133,37 @@ class ItemRendererTextTest {
                 .startsWith("a a a");
     }
 
+    /**
+     * A registered placeholder's value is written into the line and not read again. Only a menu-local template is
+     * expanded further, which is the one an operator wrote in the file and can be asked to fix. A registered value
+     * comes from another plugin's data (a player's own nickname, a warp's own description) and re-scanning it would
+     * let whatever a player typed into that field name any token in the menu.
+     *
+     * <p>The single pass is {@link java.util.regex.Matcher#appendReplacement}'s behaviour rather than this class's, so
+     * it is pinned here: a rewrite that resolved the tokens itself would lose the guarantee without failing anything.
+     */
+    @Test
+    void aRegisteredValueCarryingATokenIsNotItselfExpanded() {
+        placeholders.register("secret", ctx -> "hidden");
+        placeholders.register("nickname", ctx -> "%secret%");
+
+        assertThat(flat(renderer.title("hello %nickname%", ctx())))
+                .as("a value that arrives from outside the file is text, never more tokens")
+                .isEqualTo("hello %secret%");
+    }
+
+    /**
+     * A dollar sign in a placeholder value is a character, not a group reference. This is what {@link
+     * java.util.regex.Matcher#quoteReplacement} buys, and without it a price written {@code $1} would either vanish or
+     * throw out of the render.
+     */
+    @Test
+    void aDollarSignInAValueIsACharacterRatherThanAGroupReference() {
+        placeholders.register("price", ctx -> "$1.50");
+
+        assertThat(flat(renderer.title("costs %price%", ctx()))).isEqualTo("costs $1.50");
+    }
+
     @Test
     void anAtKeyIsLookedUpInTheViewersCatalogue() {
         assertThat(flat(renderer.title("@menu.warps.title", ctx()))).isEqualTo("catalogue(menu.warps.title)");
