@@ -113,6 +113,37 @@ class GuiTextTest {
         assertThat(nested.plain(player(), "uxmlib.test.nested.key", Map.of())).isEmpty();
     }
 
+    /** A catalog with no chat decoration answers both questions the same way, and needs to override nothing. */
+    @Test
+    void unprefixedFallsBackToTheSameWordsWhenAConsumerHasNoPrefix() {
+        assertThat(plain(ECHO.textUnprefixed(player(), "menu.title", Map.of()))).isEqualTo("menu.title{}");
+    }
+
+    /** A consumer that does have decoration overrides it, and the two questions then differ. */
+    @Test
+    void unprefixedIsTheOverridePointForAConsumerThatHasOne() {
+        GuiText branded = new GuiText() {
+            @Override
+            public Component text(Player viewer, String key, Map<String, String> placeholders) {
+                return Component.text("brand " + key);
+            }
+
+            @Override
+            public Component render(String raw) {
+                return Component.text(raw);
+            }
+
+            @Override
+            public Component textUnprefixed(Player viewer, String key, Map<String, String> placeholders) {
+                return Component.text(key);
+            }
+        };
+
+        assertThat(plain(branded.text(player(), "menu.title"))).isEqualTo("brand menu.title");
+        assertThat(plain(branded.textUnprefixed(player(), "menu.title", Map.of())))
+                .isEqualTo("menu.title");
+    }
+
     private static String plain(Component component) {
         return net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
                 .serialize(component);

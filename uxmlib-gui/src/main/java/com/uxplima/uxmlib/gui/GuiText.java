@@ -53,6 +53,24 @@ public interface GuiText {
      */
     Component render(String raw);
 
+    /**
+     * The same words as {@link #text}, with whatever decoration a chat line carries and an inventory title
+     * must not.
+     *
+     * <p>A catalog usually writes its prompts for chat, so a key can arrive with a brand prefix in front of
+     * it. That reads correctly in a message and wrongly as the title of an anvil, where the prompt has to be
+     * the only thing on the line. Only the consumer knows what its own decoration looks like, so only the
+     * consumer can take it off.
+     *
+     * <p>This one does have a default, and it is the honest one: a catalog with no such decoration answers
+     * the same as {@link #text}, which is exactly right for it. A consumer whose keys do carry a prefix and
+     * does not override this gets a prefixed anvil title, which is visible on the first prompt rather than
+     * silent.
+     */
+    default Component textUnprefixed(Player viewer, String key, Map<String, String> placeholders) {
+        return text(viewer, key, placeholders);
+    }
+
     /** The same as {@link #text}, for the many keys that carry no placeholders. */
     default Component text(Player viewer, String key) {
         return text(viewer, key, Map.of());
