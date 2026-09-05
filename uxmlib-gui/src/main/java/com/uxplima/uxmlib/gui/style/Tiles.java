@@ -97,9 +97,10 @@ public final class Tiles {
      * holds no lines at all and not that every line in it is blank: a list holding one blank line is a caller
      * asking for a blank line, which is the position {@link #blankName()} already takes.
      *
-     * <p>The returned list is unmodifiable and is always a new list, including in the two cases where nothing
-     * is added: a caller that has to know whether a title was moved asks {@link #isBlank}, which is the
-     * question it actually means, rather than comparing the result against what it passed in.
+     * <p>The returned list is unmodifiable and is always a new list, including in the two cases where nothing is
+     * added. A caller that has to know whether a title was moved therefore cannot compare the result against what
+     * it passed in: it asks {@link #isUntitled}, which is the question it actually means and which answers by the
+     * same rule this method decides by.
      */
     public static List<Component> titled(Theme theme, Component title, List<Component> lore) {
         return titled(theme, title, lore, HEADER);
@@ -111,7 +112,7 @@ public final class Tiles {
         Objects.requireNonNull(title, "title");
         Objects.requireNonNull(lore, "lore");
         Objects.requireNonNull(gradient, "gradient");
-        return untitled(title, lore) ? List.copyOf(lore) : box(head(theme, title, gradient), lore);
+        return isUntitled(title, lore) ? List.copyOf(lore) : box(head(theme, title, gradient), lore);
     }
 
     /** The same, with the title painted with the arc the theme's wheel holds at {@code position}. */
@@ -119,11 +120,18 @@ public final class Tiles {
         Objects.requireNonNull(theme, "theme");
         Objects.requireNonNull(title, "title");
         Objects.requireNonNull(lore, "lore");
-        return untitled(title, lore) ? List.copyOf(lore) : box(head(theme, title, position), lore);
+        return isUntitled(title, lore) ? List.copyOf(lore) : box(head(theme, title, position), lore);
     }
 
-    /** Whether there is nothing to title: a button carrying no lore, or a tile whose title is blank. */
-    private static boolean untitled(Component title, List<Component> lore) {
+    /**
+     * Whether there is nothing to title: a button carrying no lore, or a tile whose title is blank. This is the rule
+     * {@link #titled(Theme, Component, List)} decides by, exposed because the caller that titles an item usually has
+     * to make a second decision from the same answer: an item that kept its title needs its name left alone, and one
+     * whose title moved into the lore needs {@link #blankName()} instead.
+     */
+    public static boolean isUntitled(Component title, List<Component> lore) {
+        Objects.requireNonNull(title, "title");
+        Objects.requireNonNull(lore, "lore");
         return lore.isEmpty() || isBlank(title);
     }
 
