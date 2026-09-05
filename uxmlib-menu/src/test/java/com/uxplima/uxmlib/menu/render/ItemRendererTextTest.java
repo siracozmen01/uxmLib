@@ -2,8 +2,13 @@ package com.uxplima.uxmlib.menu.render;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.logging.Handler;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -219,5 +224,41 @@ class ItemRendererTextTest {
         });
 
         assertThat(name("total: {math: %boom% * 2}")).isEqualTo("total: ");
+    }
+
+    /**
+     * A broken handler is reported once, not once per draw. An item with {@code update = true} re-renders every
+     * tick, so a line per draw buries the first one under the thousandth, and the thousandth says nothing new.
+     */
+    @Test
+    void aBrokenHandlerIsReportedOnceHoweverManyTimesTheItemIsDrawn() {
+        placeholders.register("boom", ctx -> {
+            throw new IllegalStateException("no");
+        });
+        List<String> lines = new ArrayList<>();
+        Logger log = Logger.getLogger(ItemRenderer.class.getName());
+        Handler capture = new Handler() {
+
+            @Override
+            public void publish(LogRecord record) {
+                lines.add(record.getMessage());
+            }
+
+            @Override
+            public void flush() {}
+
+            @Override
+            public void close() {}
+        };
+        log.addHandler(capture);
+        try {
+            name("%boom%");
+            name("%boom%");
+            name("%boom%");
+        } finally {
+            log.removeHandler(capture);
+        }
+
+        assertThat(lines).singleElement().satisfies(line -> assertThat(line).contains("boom"));
     }
 }

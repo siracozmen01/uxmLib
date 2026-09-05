@@ -112,15 +112,25 @@ class GridSpecTest {
     }
 
     /**
-     * Columns 0 and 8 carry the pagination buttons, and the javadoc tells a caller to use 1 to 7. The type does not
-     * enforce that: it accepts the full row. So the reservation is a convention held by whoever reads the sentence,
-     * and a caller who puts a control at column 0 gets a collision rather than a refusal. Stated here because a
-     * guard that stops one column short of its documentation is worth knowing about before it is relied on.
+     * The renderer paints the caller's controls after the pagination buttons, so a control in one of their columns
+     * covers the nav icon, while the click router asks about a page flip before it asks about a control. The viewer
+     * would see this button and get a page turn. It only bites on a canvas tall enough to paginate, so the guard is
+     * uniform rather than page-count aware: the two columns are refused wherever the canvas ends up.
      */
     @Test
-    void theTwoPaginationColumnsAreReservedByDocumentationAndNotByTheGuard() {
-        assertThat(new GridSpec.Control(0, icon(), viewer -> {}).column()).isZero();
-        assertThat(new GridSpec.Control(8, icon(), viewer -> {}).column()).isEqualTo(8);
+    void aControlInAPaginationColumnIsRefusedRatherThanCollidingWithThePageButtons() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new GridSpec.Control(0, icon(), viewer -> {}))
+                .withMessageContaining("page buttons");
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new GridSpec.Control(8, icon(), viewer -> {}))
+                .withMessageContaining("page buttons");
+    }
+
+    @Test
+    void theColumnsBetweenThePageButtonsAreAccepted() {
+        assertThat(new GridSpec.Control(1, icon(), viewer -> {}).column()).isEqualTo(1);
+        assertThat(new GridSpec.Control(7, icon(), viewer -> {}).column()).isEqualTo(7);
     }
 
     // -- where a shift-clicked item lands ---------------------------------------------------------------------

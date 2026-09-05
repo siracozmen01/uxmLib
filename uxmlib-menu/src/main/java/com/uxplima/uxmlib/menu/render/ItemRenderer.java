@@ -7,6 +7,7 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -74,6 +75,14 @@ import org.jspecify.annotations.Nullable;
 public final class ItemRenderer {
 
     private static final Logger LOG = Logger.getLogger(ItemRenderer.class.getName());
+
+    /**
+     * The placeholder ids whose handler has already been reported as throwing. An item with {@code update = true}
+     * re-renders every tick, so one broken handler would otherwise write a line per tick, and the thousandth says
+     * nothing the first did not. Held per renderer, which is per plugin, and bounded by the number of distinct
+     * tokens that fail rather than by the number of draws.
+     */
+    private final Set<String> reportedBadHandlers = ConcurrentHashMap.newKeySet();
 
     /** A single {@code %token%} placeholder. {@code group(1)} is the bare token name. */
     private static final Pattern PLACEHOLDER = Pattern.compile("%(\\w+)%");
@@ -475,14 +484,16 @@ public final class ItemRenderer {
      * through.
      *
      * <p>The token is named on the console, because a handler that throws is a defect in the plugin that registered
-     * it, and a silently blank token gives its author nothing to look for. One line per occurrence, which is the same
-     * volume {@code Menus} accepts for an inventory type it could not create.
+     * it, and a silently blank token gives its author nothing to look for. Once per token rather than once per draw:
+     * an item with {@code update = true} re-renders every tick, and a line per tick would bury the first one.
      */
     private String resolveRegistered(String token, MenuContext ctx) {
         try {
             return placeholders.resolve(token, ctx).orElse("");
         } catch (RuntimeException handlerFailed) {
-            LOG.warning("placeholder '" + token + "' could not be resolved: " + handlerFailed);
+            if (reportedBadHandlers.add(token)) {
+                LOG.warning("placeholder '" + token + "' could not be resolved: " + handlerFailed);
+            }
             return "";
         }
     }

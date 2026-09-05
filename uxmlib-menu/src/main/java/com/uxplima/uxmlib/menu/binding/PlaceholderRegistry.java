@@ -64,6 +64,12 @@ public final class PlaceholderRegistry {
      * claims the id, else empty. This is the single seam the renderer substitutes a {@code %token%} through, so a
      * {@code %papi_*%} token resolves through the PlaceholderAPI fallback and a {@code %data_value_*%} token through
      * the player-data fallback, while a plain {@code %page%} resolves through its exact handler.
+     *
+     * <p>A handler that throws is let out rather than swallowed, which is the opposite of {@link #resolveAll} and is
+     * deliberate. There the registry runs every handler against a context most of them were not written for, so a
+     * throw is expected and means the placeholder belongs to another menu. Here the token was asked for by name, so a
+     * throw is a defect in whoever registered it, and the caller is the one that knows what it should cost. The
+     * renderer catches and reports; a caller that would rather fail keeps the exception.
      */
     public Optional<String> resolve(String id, MenuContext ctx) {
         Objects.requireNonNull(id, "id");

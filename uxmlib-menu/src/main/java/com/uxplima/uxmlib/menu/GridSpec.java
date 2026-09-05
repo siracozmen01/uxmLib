@@ -73,20 +73,25 @@ public record GridSpec(
     }
 
     /**
-     * One button on the grid's bottom control row: the column {@code 0..8} it sits at within that row (the engine adds
+     * One button on the grid's bottom control row: the column {@code 1..7} it sits at within that row (the engine adds
      * the row's base slot so the caller stays window-height agnostic), the already-built icon to place there, and the
-     * handler run with the live viewer when it is clicked. Columns {@code 0} and {@code 8} are reserved for the engine's
-     * previous / next pagination buttons, so a control button uses {@code 1..7}.
+     * handler run with the live viewer when it is clicked.
      *
-     * @param column the control-row column {@code 0..8} the button is drawn in
+     * <p>Columns {@code 0} and {@code 8} are the engine's previous / next pagination buttons and are refused here
+     * rather than left to the caller's care. A control there is painted after the nav button, so it covers the nav
+     * icon, while the click router asks about a page flip first: the viewer would see this button and get a page
+     * turn. That only happens on a canvas tall enough to paginate, which is the one a caller is least likely to open
+     * while testing, so the guard is uniform rather than page-count aware.
+     *
+     * @param column the control-row column {@code 1..7} the button is drawn in
      * @param icon the prepared icon to place (name/lore already applied by the caller)
      * @param onClick invoked with the live viewer when the button is clicked
      */
     public record Control(int column, ItemStack icon, Consumer<Player> onClick) {
 
         public Control {
-            if (column < 0 || column > 8) {
-                throw new IllegalArgumentException("column must be 0..8, was " + column);
+            if (column < 1 || column > 7) {
+                throw new IllegalArgumentException("column must be 1..7 (0 and 8 are the page buttons), was " + column);
             }
             Objects.requireNonNull(icon, "icon");
             Objects.requireNonNull(onClick, "onClick");
