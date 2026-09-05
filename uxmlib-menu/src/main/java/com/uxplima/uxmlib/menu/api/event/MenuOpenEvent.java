@@ -10,15 +10,15 @@ import org.bukkit.event.HandlerList;
 import org.jspecify.annotations.NullMarked;
 
 /**
- * Fired just before a menu opens for a viewer, at the single choke-point every open funnels through — a fresh open,
- * a {@code back} step, or a reopen-last. Another plugin can cancel it to veto the open: a cancelled event shows the
+ * Fired just before a menu opens for a viewer, at the single choke-point every open funnels through: a fresh open, a
+ * {@code back} step, or a reopen-last. Another plugin can cancel it to veto the open: a cancelled event shows the
  * viewer neither a chest nor a native Bedrock form. An uncancelled event is the default, so a menu with no listener
  * opens exactly as before.
  *
  * <p>The event fires on the viewer's own region thread (the thread the engine opens the window on), which on Folia is
- * that entity's region rather than a single main thread. A listener must therefore respect Folia threading: it may
- * read the payload and cancel freely, but any world or entity work it triggers must be scheduled onto the owning
- * region, not run inline against another region's state.
+ * that entity's region rather than a single main thread. A listener must therefore respect Folia threading: it may read
+ * the payload and cancel freely, but any world or entity work it triggers must be scheduled onto the owning region, not
+ * run inline against another region's state.
  */
 @NullMarked
 public final class MenuOpenEvent extends Event implements Cancellable {

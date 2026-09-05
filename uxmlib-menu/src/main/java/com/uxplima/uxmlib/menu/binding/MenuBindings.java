@@ -78,9 +78,9 @@ public final class MenuBindings {
     }
 
     /**
-     * Register the streaming counterpart of {@link #list}. An id may back an in-memory source or a paged one but
-     * never both — they answer different questions (the whole corpus versus one page), so an id claimed by both
-     * would leave a spec's reference ambiguous.
+     * Register the streaming counterpart of {@link #list}. An id may back an in-memory source or a paged one but never
+     * both: they answer different questions (the whole corpus versus one page), so an id claimed by both would leave a
+     * spec's reference ambiguous.
      */
     public void pagedList(String id, BiFunction<MenuContext, PageRequest, PagedResult<?>> handler) {
         if (lists.has(id)) {
@@ -119,9 +119,9 @@ public final class MenuBindings {
     }
 
     /**
-     * The four backing registries, handed to the renderer and click listener so they resolve refs against the
-     * very instances this façade writes to. A feature registering a handler after wiring is therefore visible to
-     * an already-built engine — there is one registry per kind, not a copy per consumer.
+     * The four backing registries, handed to the renderer and click listener so they resolve refs against the very
+     * instances this façade writes to. A feature registering a handler after wiring is therefore visible to an already-
+     * built engine: there is one registry per kind, not a copy per consumer.
      */
     public ActionRegistry actions() {
         return actions;
@@ -140,9 +140,9 @@ public final class MenuBindings {
     }
 
     /**
-     * The paged-source registry, the streaming counterpart to {@link #lists()}. This accessor is the only path past
-     * the façade to it, so a source that pages its corpus down to the store stays exactly as reachable — and as
-     * engine-internal — as an in-memory one.
+     * The paged-source registry, the streaming counterpart to {@link #lists()}. This accessor is the only path past the
+     * façade to it, so a source that pages its corpus down to the store stays exactly as reachable (and as engine-
+     * internal) as an in-memory one.
      */
     public PagedListSourceRegistry pagedLists() {
         return pagedLists;
@@ -157,8 +157,8 @@ public final class MenuBindings {
     }
 
     /**
-     * The id catalog the in-game editor's pickers render from — the sorted action / condition / placeholder /
-     * list-source ids these four registries currently hold. A picker reads this one export, so it offers exactly the
+     * The id catalog the in-game editor's pickers render from: the sorted action / condition / placeholder / list-
+     * source ids these four registries currently hold. A picker reads this one export, so it offers exactly the
      * bindings that are wired. Built on demand from the live registries, so a feature that registered late is included.
      */
     public MenuSchema schema() {
@@ -182,8 +182,8 @@ public final class MenuBindings {
         addMissing(spec.openRequirement(), conditions::has, missing);
         addMissing(spec.openActions(), actions::has, missing);
         addMissing(spec.closeActions(), actions::has, missing);
-        // A token this menu defines in its own placeholders {} block counts as known for this menu — it resolves
-        // local-first at render — so validation accepts it just as it accepts a registered built-in.
+        // A token this menu defines in its own placeholders {} block counts as known for this menu (it resolves local-
+        // first at render) so validation accepts it just as it accepts a registered built-in.
         Predicate<String> placeholderKnown =
                 id -> placeholders.has(id) || spec.placeholders().containsKey(id);
         for (String id : extractPlaceholders(spec.title())) {
@@ -206,12 +206,12 @@ public final class MenuBindings {
     /**
      * Validate every {@code list-sort} action this menu wires. A sort button carries the source id of the paged list it
      * drives ({@code list-sort:pw:browse}); the engine can see the linkage between that id and the list items the same
-     * menu declares, so a button that names a list this menu does not contain, or one whose source declares no
-     * {@code sorts} to cycle, is a loud startup error rather than a click that silently does nothing — an operator who
-     * wires a sort button expects it to sort. {@code list-filter} and {@code list-search} carry no such static
-     * precondition (any key is valid), so an unknown list id there is caught at click time as a logged no-op instead.
-     * The scan mirrors the action-id validation above: the menu's open/close actions and every item's click actions,
-     * each resolved against the action registry so {@code list-sort} only triggers this once it is a registered action.
+     * menu declares, so a button that names a list this menu does not contain, or one whose source declares no {@code
+     * sorts} to cycle, is a loud startup error rather than a click that silently does nothing: an operator who wires a
+     * sort button expects it to sort. {@code list-filter} and {@code list-search} carry no such static precondition
+     * (any key is valid), so an unknown list id there is caught at click time as a logged no-op instead. The scan
+     * mirrors the action-id validation above: the menu's open/close actions and every item's click actions, each
+     * resolved against the action registry so {@code list-sort} only triggers this once it is a registered action.
      */
     private void collectListControlMissing(MenuSpec spec, Set<String> missing) {
         Map<String, ListSpec> paged = new HashMap<>();
@@ -258,13 +258,13 @@ public final class MenuBindings {
     }
 
     /**
-     * Validate a list-backed item's source. It must be registered as either an in-memory list or a paged one, or its
-     * id is reported unresolved — exactly as an unknown source has always been reported — so the loader skips just
-     * that one menu rather than the server failing to boot, the same tolerance an unresolved action or placeholder
-     * gets. Beyond that, {@code page-size} and {@code sorts} are paged-only knobs: a plain in-memory source hands its
-     * whole corpus over for the engine to slice and can act on neither, so silently dropping them would let an
-     * operator believe their browse menu pages or sorts when it does not. Both cases are reported naming the menu,
-     * item and source so the offending line is easy to find.
+     * Validate a list-backed item's source. It must be registered as either an in-memory list or a paged one, or its id
+     * is reported unresolved (exactly as an unknown source has always been reported) so the loader skips just that one
+     * menu rather than the server failing to boot, the same tolerance an unresolved action or placeholder gets. Beyond
+     * that, {@code page-size} and {@code sorts} are paged-only knobs: a plain in-memory source hands its whole corpus
+     * over for the engine to slice and can act on neither, so silently dropping them would let an operator believe
+     * their browse menu pages or sorts when it does not. Both cases are reported naming the menu, item and source so
+     * the offending line is easy to find.
      */
     private void collectListSourceMissing(MenuSpec spec, String itemId, ListSpec list, Set<String> missing) {
         String sourceId = list.source().id();
@@ -295,10 +295,10 @@ public final class MenuBindings {
     }
 
     /**
-     * Collect the refs in {@code refs} whose id no registry knows. A ref is first resolved against {@code known}
-     * (the matching registry's {@code has}), so a valued token written {@code has-money:100} counts as known when its
-     * head {@code has-money} is registered — the same registry-aware split the runtime does at dispatch/render time.
-     * The original written token is reported when it is still unknown, so an operator sees exactly what they typed.
+     * Collect the refs in {@code refs} whose id no registry knows. A ref is first resolved against {@code known} (the
+     * matching registry's {@code has}), so a valued token written {@code has-money:100} counts as known when its head
+     * {@code has-money} is registered: the same registry-aware split the runtime does at dispatch/render time. The
+     * original written token is reported when it is still unknown, so an operator sees exactly what they typed.
      */
     private void addMissing(List<Ref> refs, Predicate<String> known, Set<String> missing) {
         for (Ref ref : refs) {
@@ -311,7 +311,7 @@ public final class MenuBindings {
     /**
      * Collect the conditions in a {@link RequirementSpec} view block whose id no registry knows. Each requirement's
      * condition ref is resolved against {@code known} first, so a valued condition written {@code has-money:100} counts
-     * as known when its head {@code has-money} is registered — the same registry-aware split the runtime does when it
+     * as known when its head {@code has-money} is registered: the same registry-aware split the runtime does when it
      * gates the item's visibility. The original written token is reported when it is still unknown, so an operator sees
      * exactly what they typed. A block's minimum and inversion are combinator metadata, not ids, so only the condition
      * ids are validated here.

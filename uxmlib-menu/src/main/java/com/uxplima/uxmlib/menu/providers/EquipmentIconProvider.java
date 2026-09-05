@@ -11,16 +11,16 @@ import com.uxplima.uxmlib.menu.runtime.MenuContext;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Renders one of the viewer's currently-equipped items as a menu icon. The spec is an exact keyword, matched
- * case-insensitively: {@code main_hand}/{@code mainhand}, {@code off_hand}/{@code offhand}, {@code helmet},
- * {@code chestplate}, {@code leggings} or {@code boots}. A keyword that is not one of these is not claimed (so a
- * bare material name is left for the material fallback).
+ * Renders one of the viewer's currently-equipped items as a menu icon. The spec is an exact keyword, matched case-
+ * insensitively: {@code main_hand}/{@code mainhand}, {@code off_hand}/{@code offhand}, {@code helmet}, {@code
+ * chestplate}, {@code leggings} or {@code boots}. A keyword that is not one of these is not claimed (so a bare material
+ * name is left for the material fallback).
  *
- * <p>The provider reads only the <em>viewer's own</em> inventory, resolved from their UUID on the calling
- * thread — the menu's item-build chain already runs on the viewer's entity thread, so this is Folia-safe and
- * never blocks the main thread. The matching slot is returned as a clone, so layering name/lore onto the icon
- * can never mutate the player's real item. An empty or AIR slot, or a viewer who is offline, yields
- * {@link Optional#empty()} so the spec falls through to the material fallback rather than rendering nothing.
+ * <p>The provider reads only the <em>viewer's own</em> inventory, resolved from their UUID on the calling thread: the
+ * menu's item-build chain already runs on the viewer's entity thread, so this is Folia-safe and never blocks the main
+ * thread. The matching slot is returned as a clone, so layering name/lore onto the icon can never mutate the player's
+ * real item. An empty or AIR slot, or a viewer who is offline, yields {@link Optional#empty()} so the spec falls
+ * through to the material fallback rather than rendering nothing.
  */
 final class EquipmentIconProvider implements IconProvider {
 

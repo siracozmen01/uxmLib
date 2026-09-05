@@ -10,14 +10,14 @@ import com.uxplima.uxmlib.item.ItemBuilder;
 import org.jspecify.annotations.NullMarked;
 
 /**
- * Paints the engine's two-button confirm window, matching the geometry of the uxmLib {@code ConfirmMenu} it
- * replaces: a three-row inventory with a lime-wool yes button at slot 11 and a red-wool no button at slot 15, so a
- * migrated caller meets the same window it always did. The decision carried by each button — what yes and no run —
- * is the {@code ConfirmState} on the holder; this renderer only places the icons and reports the two slots it used,
- * which the façade records onto that state so the one listener can route a click back to the right decision.
+ * Paints the engine's two-button confirm window, matching the geometry of the uxmLib {@code ConfirmMenu} it replaces: a
+ * three-row inventory with a lime-wool yes button at slot 11 and a red-wool no button at slot 15, so a migrated caller
+ * meets the same window it always did. The decision carried by each button (what yes and no run) is the {@code
+ * ConfirmState} on the holder; this renderer only places the icons and reports the two slots it used, which the façade
+ * records onto that state so the one listener can route a click back to the right decision.
  *
- * <p>The window's meaning is the title the caller resolved from a {@code String}; the buttons themselves carry
- * no inline text (an empty name), so the confirm window adds no user-facing literal of its own.
+ * <p>The window's meaning is the title the caller resolved from a {@code String}; the buttons themselves carry no
+ * inline text (an empty name), so the confirm window adds no user-facing literal of its own.
  */
 @NullMarked
 public final class ConfirmRenderer {

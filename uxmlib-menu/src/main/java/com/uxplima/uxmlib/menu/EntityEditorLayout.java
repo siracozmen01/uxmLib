@@ -9,15 +9,14 @@ import org.bukkit.Material;
 import org.jspecify.annotations.NullMarked;
 
 /**
- * The externalised presentation of an {@link EntityEditorView}: the row count, the ordered slots the property
- * buttons are drawn into (the i-th property goes in the i-th slot), the back button slot, an optional delete
- * button slot, and the back/delete/filler materials. Holds layout integers and materials only — every label,
- * value, and title is a catalog key — so an operator-edited layout and a translated
- * catalog never collide.
+ * The externalised presentation of an {@link EntityEditorView}: the row count, the ordered slots the property buttons
+ * are drawn into (the i-th property goes in the i-th slot), the back button slot, an optional delete button slot, and
+ * the back/delete/filler materials. Holds layout integers and materials only (every label, value, and title is a
+ * catalog key) so an operator-edited layout and a translated catalog never collide.
  *
- * <p>Built once at load time by {@link GuiLayouts#loadEntityEditor}; the editor reads {@link #propertySlots}
- * to place and to resolve a clicked slot back to its property. The delete slot is optional: an editor for a
- * non-deletable entity omits it from the conf and the editor shows no delete button.
+ * <p>Built once at load time by {@link GuiLayouts#loadEntityEditor}; the editor reads {@link #propertySlots} to place
+ * and to resolve a clicked slot back to its property. The delete slot is optional: an editor for a non-deletable entity
+ * omits it from the conf and the editor shows no delete button.
  *
  * @param rows the editor row count, 1..6
  * @param propertySlots the slots property buttons fill, in property order

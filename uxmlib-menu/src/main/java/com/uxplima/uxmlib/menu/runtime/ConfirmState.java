@@ -6,16 +6,16 @@ import java.util.Optional;
 import org.jspecify.annotations.NullMarked;
 
 /**
- * The per-open state of a two-button confirm window, parked on its {@link MenuHolder} on the confirm path only.
- * Where a spec menu routes a click through its {@code clickMap} and an editor routes one through its
- * {@link EditorState}, a confirm routes through this: the yes slot maps to one decision runnable and the no slot to
- * another, and the listener consults {@link #decisionAt} to find the one the player clicked. Keeping the two
- * decisions here — off the spec {@code clickMap} and off the editor maps — is what lets the one listener tell a
- * confirm window apart from the other two without giving either a slot it has no item for.
+ * The per-open state of a two-button confirm window, parked on its {@link MenuHolder} on the confirm path only. Where a
+ * spec menu routes a click through its {@code clickMap} and an editor routes one through its {@link EditorState}, a
+ * confirm routes through this: the yes slot maps to one decision runnable and the no slot to another, and the listener
+ * consults {@link #decisionAt} to find the one the player clicked. Keeping the two decisions here (off the spec {@code
+ * clickMap} and off the editor maps) is what lets the one listener tell a confirm window apart from the other two
+ * without giving either a slot it has no item for.
  *
  * <p>The window closes on the first click, so a single-fire guard is belt-and-braces against a stray second click
- * arriving in the same tick before the close lands: {@link #fire} flips the guard and reports whether this is the
- * first decision, so the listener runs a handler at most once even if it is clicked twice.
+ * arriving in the same tick before the close lands: {@link #fire} flips the guard and reports whether this is the first
+ * decision, so the listener runs a handler at most once even if it is clicked twice.
  */
 @NullMarked
 public final class ConfirmState {

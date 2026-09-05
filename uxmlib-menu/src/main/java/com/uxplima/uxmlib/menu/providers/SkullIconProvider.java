@@ -13,17 +13,15 @@ import com.uxplima.uxmlib.menu.runtime.MenuContext;
 /**
  * Turns a skull-source spec into a player head. Three prefixes are recognised, case-insensitively:
  *
- * <ul>
- *   <li>{@code skull:<value>} / {@code head:<value>} — {@code <value>} is a player name, a UUID (dashed or
- *       undashed), a base64 texture, or a skin URL; {@link SkullData#parse} routes all four to the right head.
- *   <li>{@code skull:self} / {@code head:self} — the viewer's own head, by their UUID.
- *   <li>{@code basehead:<base64>} — a head from a raw base64 texture value (the {@code textures} payload).
- * </ul>
+ * <ul> <li>{@code skull:<value>} / {@code head:<value>}: {@code <value>} is a player name, a UUID (dashed or undashed),
+ * a base64 texture, or a skin URL; {@link SkullData#parse} routes all four to the right head. <li>{@code skull:self} /
+ * {@code head:self}: the viewer's own head, by their UUID. <li>{@code basehead:<base64>}: a head from a raw base64
+ * texture value (the {@code textures} payload). </ul>
  *
- * <p>uxmLib applies every variant synchronously ({@code setOwningPlayer} for a name/UUID, an embedded textures
- * profile for a base64 value), so the render stays on the calling thread with no async hop. A blank value or a
- * parse failure yields {@link Optional#empty()} so the spec falls through to the material fallback rather than
- * leaving a blank head. The provider claims only these prefixes, never a bare material name.
+ * <p>uxmLib applies every variant synchronously ({@code setOwningPlayer} for a name/UUID, an embedded textures profile
+ * for a base64 value), so the render stays on the calling thread with no async hop. A blank value or a parse failure
+ * yields {@link Optional#empty()} so the spec falls through to the material fallback rather than leaving a blank head.
+ * The provider claims only these prefixes, never a bare material name.
  */
 final class SkullIconProvider implements IconProvider {
 

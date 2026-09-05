@@ -10,22 +10,22 @@ import net.kyori.adventure.text.Component;
 import org.jspecify.annotations.NullMarked;
 
 /**
- * The capability a property uses to open its option/sub-menu picker as a menu-engine child window rather than a
- * uxmLib {@code SimpleGui}. It is defined here, in the property package, so a property depends only on this small
- * port and not on the engine that implements it; the engine supplies the implementation, keeping the property
- * decoupled from the runtime it opens into.
+ * The capability a property uses to open its option/sub-menu picker as a menu-engine child window rather than a uxmLib
+ * {@code SimpleGui}. It is defined here, in the property package, so a property depends only on this small port and not
+ * on the engine that implements it; the engine supplies the implementation, keeping the property decoupled from the
+ * runtime it opens into.
  *
- * <p>An opener receives everything the property already has — the viewer, a resolved title, the row count, the
- * filler material, and one {@link SelectorButton} per option (icon plus its choose action) — and shows them as a
- * child window the one menu listener routes and the one teardown owns. A button click runs its
- * {@link SelectorButton#onChoose} exactly once on the viewer's entity thread; closing the window without choosing
- * runs nothing. The same capability serves any property that opens a flat picker — the enum selector now, and the
- * list and colour pickers as they migrate — so each builds {@link SelectorButton}s and lets the engine paint and
- * route them.
+ * <p>An opener receives everything the property already has: the viewer, a resolved title, the row count, the filler
+ * material, and one {@link SelectorButton} per option, each an icon plus its choose action. It shows them as a child
+ * window
+ * the one menu listener routes and the one teardown owns. A button click runs its {@link SelectorButton#onChoose}
+ * exactly once on the viewer's entity thread; closing the window without choosing runs nothing. The same capability
+ * serves any property that opens a flat picker (the enum selector now, and the list and colour pickers as they migrate)
+ * so each builds {@link SelectorButton}s and lets the engine paint and route them.
  *
- * <p>A property only ever opens a selector when its {@link ClickContext} carries an opener (the engine editor
- * runtime threads one in); a context with no opener — the legacy {@code EntityEditorView} path — leaves the
- * property on its uxmLib fallback, so both runtimes coexist while editors migrate.
+ * <p>A property only ever opens a selector when its {@link ClickContext} carries an opener (the engine editor runtime
+ * threads one in); a context with no opener (the legacy {@code EntityEditorView} path) leaves the property on its
+ * uxmLib fallback, so both runtimes coexist while editors migrate.
  */
 @NullMarked
 public interface SelectorOpener {

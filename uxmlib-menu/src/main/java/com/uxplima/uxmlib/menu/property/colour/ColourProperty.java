@@ -27,23 +27,22 @@ import com.uxplima.uxmlib.scheduler.Scheduler;
 import org.jspecify.annotations.NullMarked;
 
 /**
- * A property whose click opens a config-driven colour-picker sub-menu: a palette of the 16 standard Minecraft
- * named colours (each a coloured icon at a configured slot), a custom-hex button that opens an anvil parsing
- * {@code #RRGGBB} / {@code #AARRGGBB} into a packed ARGB int, a clear button that resets the value to the
- * property's "no override" sentinel, and a back button. Selecting a swatch or submitting a valid hex hands the
- * chosen ARGB int to the {@link IntConsumer} setter; the clear button fires the clear {@link Runnable}; an
- * invalid hex re-opens the picker without writing.
+ * A property whose click opens a config-driven colour-picker sub-menu: a palette of the 16 standard Minecraft named
+ * colours (each a coloured icon at a configured slot), a custom-hex button that opens an anvil parsing {@code #RRGGBB}
+ * / {@code #AARRGGBB} into a packed ARGB int, a clear button that resets the value to the property's "no override"
+ * sentinel, and a back button. Selecting a swatch or submitting a valid hex hands the chosen ARGB int to the {@link
+ * IntConsumer} setter; the clear button fires the clear {@link Runnable}; an invalid hex re-opens the picker without
+ * writing.
  *
- * <p>The consumer supplies the current-value getter, the ARGB setter, the clear runnable, the sentinel, and the
- * catalog keys — so the same widget edits a hologram's background colour, its glow colour, or any other packed
- * ARGB field. Every write runs off the tick thread through the shared {@link Scheduler}, then the editor is
- * redrawn. The setters are the module's existing application use cases wrapped as callbacks; this property holds
- * no domain logic. Geometry and materials come from a {@link ColourPickerLayout} loaded from conf, so nothing is
- * hardcoded.
+ * <p>The consumer supplies the current-value getter, the ARGB setter, the clear runnable, the sentinel, and the catalog
+ * keys: so the same widget edits a hologram's background colour, its glow colour, or any other packed ARGB field. Every
+ * write runs off the tick thread through the shared {@link Scheduler}, then the editor is redrawn. The setters are the
+ * module's existing application use cases wrapped as callbacks; this property holds no domain logic. Geometry and
+ * materials come from a {@link ColourPickerLayout} loaded from conf, so nothing is hardcoded.
  *
- * <p>The picker opens as an engine child window the one menu listener routes — its swatch/custom/clear/back buttons
- * are single-gesture {@code SelectorButton}s and a swatch, clear, or back reopens the parent editor through the
- * context's reopen hook — so the whole flow stays on a single holder and teardown.
+ * <p>The picker opens as an engine child window the one menu listener routes (its swatch/custom/clear/back buttons are
+ * single-gesture {@code SelectorButton}s and a swatch, clear, or back reopens the parent editor through the context's
+ * reopen hook) so the whole flow stays on a single holder and teardown.
  */
 @NullMarked
 public final class ColourProperty implements EditableProperty {
@@ -119,7 +118,7 @@ public final class ColourProperty implements EditableProperty {
      * Open the picker as an engine child window: the swatch/custom/clear/back buttons are handed to the engine opener
      * as single-gesture {@link SelectorButton}s so the one menu listener routes them. A swatch writes its packed ARGB
      * and reopens the parent editor; custom opens the anvil seam; clear fires the clear runnable then reopens the
-     * parent; back reopens the parent — all through the {@code context.reopen()} contract.
+     * parent; back reopens the parent: all through the {@code context.reopen()} contract.
      */
     private void open(ClickContext context) {
         SelectorOpener opener = context.opener();

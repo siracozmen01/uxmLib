@@ -9,22 +9,22 @@ import java.util.OptionalInt;
 import org.jspecify.annotations.NullMarked;
 
 /**
- * The per-open state of a paginated entity list, parked on its {@link MenuHolder} on the list path only. Where a
- * spec menu re-derives its slots from a {@code MenuSpec}, an editor from an {@code EditorSpec}, a selector from its
- * {@link SelectorState} and a confirm from its {@link ConfirmState}, an entity list re-derives its slots from the
- * {@code EntityListSpec} and the already-snapshotted entities, so the holder carries the spec here and the list renderer
- * re-reads the entity snapshot fresh on every draw, which is what makes a page flip show an entity that changed.
+ * The per-open state of a paginated entity list, parked on its {@link MenuHolder} on the list path only. Where a spec
+ * menu re-derives its slots from a {@code MenuSpec}, an editor from an {@code EditorSpec}, a selector from its {@link
+ * SelectorState} and a confirm from its {@link ConfirmState}, an entity list re-derives its slots from the {@code
+ * EntityListSpec} and the already-snapshotted entities, so the holder carries the spec here and the list renderer re-
+ * reads the entity snapshot fresh on every draw, which is what makes a page flip show an entity that changed.
  *
- * <p>It also owns the slot routing for one rendered page. An entity slot maps to the entity drawn there on the
- * current page; the click listener consults {@link #entityAt} to route a click into the spec's {@code onSelect} for
- * that entity. The previous/next nav slots are recorded so a page flip re-paginates the same holder, and the
- * optional create/action buttons map to a {@link Runnable} the listener runs as-is. Keeping these maps here — off
- * the spec {@code clickMap} and off the editor/selector/confirm maps — is what lets the one listener tell a list
- * apart from the other menu kinds without giving any of them a slot it has no item for.
+ * <p>It also owns the slot routing for one rendered page. An entity slot maps to the entity drawn there on the current
+ * page; the click listener consults {@link #entityAt} to route a click into the spec's {@code onSelect} for that
+ * entity. The previous/next nav slots are recorded so a page flip re-paginates the same holder, and the optional
+ * create/action buttons map to a {@link Runnable} the listener runs as-is. Keeping these maps here (off the spec {@code
+ * clickMap} and off the editor/selector/confirm maps) is what lets the one listener tell a list apart from the other
+ * menu kinds without giving any of them a slot it has no item for.
  *
- * <p>The {@code spec} is held as {@link Object} so this runtime class needs no compile dependency on the public
- * {@code EntityListSpec} façade type (the list renderer, which already depends on that type, casts it back) and the
- * {@code runtime}→{@code menu} package edge stays acyclic.
+ * <p>The {@code spec} is held as {@link Object} so this runtime class needs no compile dependency on the public {@code
+ * EntityListSpec} façade type (the list renderer, which already depends on that type, casts it back) and the {@code
+ * runtime}→{@code menu} package edge stays acyclic.
  */
 @NullMarked
 public final class ListViewState {

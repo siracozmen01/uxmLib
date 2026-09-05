@@ -21,16 +21,15 @@ import org.spongepowered.configurate.ConfigurationNode;
 import org.spongepowered.configurate.hocon.HoconConfigurationLoader;
 
 /**
- * The geometry of the shared colour-picker sub-menu: the row count, the slots the 16-colour palette is drawn
- * into and the per-swatch material for each of those slots, the custom-hex / clear / back button slots and their
- * icons, and the background filler. Nothing is hardcoded — every slot and material comes from
- * {@code modules/management/gui/colour-picker.conf} (operator copy on disk, then the bundled resource, then the
- * code default), the same disk-first fallback the editor sub-layouts use, so a typo never stops the picker
- * opening.
+ * The geometry of the shared colour-picker sub-menu: the row count, the slots the 16-colour palette is drawn into and
+ * the per-swatch material for each of those slots, the custom-hex / clear / back button slots and their icons, and the
+ * background filler. Nothing is hardcoded: every slot and material comes from {@code modules/management/gui/colour-
+ * picker.conf} (operator copy on disk, then the bundled resource, then the code default), the same disk-first fallback
+ * the editor sub-layouts use, so a typo never stops the picker opening.
  *
- * <p>{@code paletteSlots} and {@code paletteIcons} are positional and equal length: the i-th palette swatch is
- * drawn into {@code paletteSlots[i]} with {@code paletteIcons[i]}. A swatch with no configured icon falls back
- * to its {@link ColourSwatch#defaultIcon()} stained-glass pane.
+ * <p>{@code paletteSlots} and {@code paletteIcons} are positional and equal length: the i-th palette swatch is drawn
+ * into {@code paletteSlots[i]} with {@code paletteIcons[i]}. A swatch with no configured icon falls back to its {@link
+ * ColourSwatch#defaultIcon()} stained-glass pane.
  *
  * @param rows the menu height in rows (1..6)
  * @param paletteSlots the slot each palette swatch is drawn into, in {@link ColourSwatch} order

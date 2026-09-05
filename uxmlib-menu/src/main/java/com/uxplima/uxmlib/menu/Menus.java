@@ -76,17 +76,17 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * The one entry point a feature uses to open a registered menu for a viewer. A feature registers its specs once at
- * wiring time, then calls {@link #open} to show one to a player. The façade first resolves every list source the
- * spec names off any tick thread — a list source may read a database, which must never block the viewer's region
- * thread on Folia — then hops onto the viewer's entity thread (where the live inventory may legally be touched),
- * builds the {@link MenuHolder} that owns every per-open piece of state, caches the resolved lists on it, renders
- * the spec into a fresh inventory the holder backs, and arms the refresh task. Pagination and refresh re-render
- * from the holder's cache, so a page flip never re-queries. The click listener recovers all of this from the
- * window alone, so no player-keyed side map is needed.
+ * wiring time, then calls {@link #open} to show one to a player. The façade first resolves every list source the spec
+ * names off any tick thread (a list source may read a database, which must never block the viewer's region thread on
+ * Folia) then hops onto the viewer's entity thread (where the live inventory may legally be touched), builds the {@link
+ * MenuHolder} that owns every per-open piece of state, caches the resolved lists on it, renders the spec into a fresh
+ * inventory the holder backs, and arms the refresh task. Pagination and refresh re-render from the holder's cache, so a
+ * page flip never re-queries. The click listener recovers all of this from the window alone, so no player-keyed side
+ * map is needed.
  */
 public final class Menus {
 
-    /** Operator diagnostics for a menu that names an inventory type the server rejects — logged, then a chest opens. */
+    /** Operator diagnostics for a menu that names an inventory type the server rejects: logged, then a chest opens. */
     private static final Logger LOG = Logger.getLogger(Menus.class.getName());
 
     private final MenuRenderer renderer;
@@ -95,9 +95,9 @@ public final class Menus {
 
     /**
      * The streaming counterpart to {@link #lists}: the sources that answer for one page of a large corpus rather than
-     * handing the whole of it over. Empty on every engine wired without one — a list/spec-only test fixture and any
-     * production menu set with no paged source — in which case {@link #resolveLists} finds every source in {@link #lists}
-     * and never consults this registry, so those opens stay byte-identical to before this seam existed.
+     * handing the whole of it over. Empty on every engine wired without one (a list/spec-only test fixture and any
+     * production menu set with no paged source) in which case {@link #resolveLists} finds every source in {@link
+     * #lists} and never consults this registry, so those opens stay byte-identical to before this seam existed.
      */
     private final PagedListSourceRegistry pagedLists;
 
@@ -110,34 +110,34 @@ public final class Menus {
 
     /**
      * The action registry an open runs a spec's {@code open-actions} through, and the condition registry it gates a
-     * spec's {@code open-requirement} on. Both are null on an engine wired without them — every list/spec-only test
-     * fixture — in which case an open neither gates nor fires open-actions, byte-identical to before this seam
-     * existed. Only production wiring, which has the fully populated registries, passes them; a spec with no
-     * open-requirement/open-actions is unaffected either way.
+     * spec's {@code open-requirement} on. Both are null on an engine wired without them (every list/spec-only test
+     * fixture) in which case an open neither gates nor fires open-actions, byte-identical to before this seam existed.
+     * Only production wiring, which has the fully populated registries, passes them; a spec with no open-
+     * requirement/open-actions is unaffected either way.
      */
     @Nullable private final ActionRegistry openActionRegistry;
 
     @Nullable private final ConditionRegistry openConditionRegistry;
 
     /**
-     * The per-player reopen tracker {@code /menu last} reads. Null on every engine wired without it — every
-     * list/spec-only test fixture — in which case an open records nothing, byte-identical to before this seam
-     * existed. Only production wiring, which builds one tracker and shares it with the {@code /menu} command,
-     * passes it; and even then only a subject-less open (a custom menu) is remembered, in {@link #rememberLastOpen}.
+     * The per-player reopen tracker {@code /menu last} reads. Null on every engine wired without it (every list/spec-
+     * only test fixture) in which case an open records nothing, byte-identical to before this seam existed. Only
+     * production wiring, which builds one tracker and shares it with the {@code /menu} command, passes it; and even
+     * then only a subject-less open (a custom menu) is remembered, in {@link #rememberLastOpen}.
      */
     @Nullable private final LastMenu lastMenu;
 
     /**
      * Whether a viewer is a Bedrock (Floodgate) player, so an engine menu can be redirected to a native form for them
-     * rather than a chest. Defaults to {@link BedrockDetector#NONE} — always Java — on every engine wired without it,
-     * so an open there falls straight through to the chest path, byte-identical to before this seam existed. Only
+     * rather than a chest. Defaults to {@link BedrockDetector#NONE} (always Java) on every engine wired without it, so
+     * an open there falls straight through to the chest path, byte-identical to before this seam existed. Only
      * production wiring, on a server with Floodgate, passes a detector that ever answers {@code true}.
      */
     private final BedrockDetector bedrock;
 
     /**
-     * The screen that sends a Bedrock viewer a native Cumulus form. Defaults to {@link BedrockScreen#NONE} — a no-op
-     * carrying no SDK reference — on every engine wired without it, and it is only ever reached after {@link #bedrock}
+     * The screen that sends a Bedrock viewer a native Cumulus form. Defaults to {@link BedrockScreen#NONE} (a no-op
+     * carrying no SDK reference) on every engine wired without it, and it is only ever reached after {@link #bedrock}
      * has confirmed a Bedrock viewer, so a Java-only engine never sends a form and never loads the Cumulus SDK.
      */
     private final BedrockScreen bedrockScreen;
@@ -172,10 +172,10 @@ public final class Menus {
     }
 
     /**
-     * The action/condition-aware constructor: the same engine plus the registries an open needs to run a spec's
-     * {@code open-actions} and gate on its {@code open-requirement}. Delegates to the canonical constructor with a
-     * {@code null} reopen tracker, so every existing {@code new Menus(...)} call-site (almost all test fixtures)
-     * compiles unchanged and records no reopen target — byte-identical to before that seam existed.
+     * The action/condition-aware constructor: the same engine plus the registries an open needs to run a spec's {@code
+     * open-actions} and gate on its {@code open-requirement}. Delegates to the canonical constructor with a {@code
+     * null} reopen tracker, so every existing {@code new Menus(...)} call-site (almost all test fixtures) compiles
+     * unchanged and records no reopen target: byte-identical to before that seam existed.
      */
     public Menus(
             MenuRenderer renderer,
@@ -189,10 +189,10 @@ public final class Menus {
 
     /**
      * The reopen-tracker constructor, kept so every existing {@code new Menus(...)} call-site (almost all test
-     * fixtures) compiles unchanged. It delegates to the canonical constructor with the Java-only Bedrock defaults —
-     * {@link BedrockDetector#NONE} and {@link BedrockScreen#NONE} — so an open there never redirects to a form and
-     * stays byte-identical to before the Bedrock seam existed. Only production wiring passes the resolved detector
-     * and screen.
+     * fixtures) compiles unchanged. It delegates to the canonical constructor with the Java-only Bedrock defaults
+     * ({@link BedrockDetector#NONE} and {@link BedrockScreen#NONE}) so an open there never redirects to a form and
+     * stays byte-identical to before the Bedrock seam existed. Only production wiring passes the resolved detector and
+     * screen.
      */
     public Menus(
             MenuRenderer renderer,
@@ -215,14 +215,14 @@ public final class Menus {
     }
 
     /**
-     * The canonical constructor production wiring uses: the action/condition-aware engine, the reopen tracker
-     * {@code /menu last} reads, and the Bedrock detector/screen the open choke-point consults to redirect a Floodgate
-     * viewer to a native form. Every other constructor delegates here with {@code null} for the parameters it does not
-     * carry and the Java-only Bedrock defaults, so the roughly ninety existing {@code new Menus(...)} call-sites
-     * compile unchanged and open exactly as before — with null registries an open skips the requirement gate and runs
-     * no open-actions, with a null tracker it records no reopen target, and with the {@code NONE} Bedrock defaults it
-     * never redirects to a form. Only production wiring, which has the fully populated registries, the shared tracker,
-     * and the resolved Bedrock detector/screen, passes them.
+     * The canonical constructor production wiring uses: the action/condition-aware engine, the reopen tracker {@code
+     * /menu last} reads, and the Bedrock detector/screen the open choke-point consults to redirect a Floodgate viewer
+     * to a native form. Every other constructor delegates here with {@code null} for the parameters it does not carry
+     * and the Java-only Bedrock defaults, so the roughly ninety existing {@code new Menus(...)} call-sites compile
+     * unchanged and open exactly as before: with null registries an open skips the requirement gate and runs no open-
+     * actions, with a null tracker it records no reopen target, and with the {@code NONE} Bedrock defaults it never
+     * redirects to a form. Only production wiring, which has the fully populated registries, the shared tracker, and
+     * the resolved Bedrock detector/screen, passes them.
      */
     public Menus(
             MenuRenderer renderer,
@@ -251,7 +251,7 @@ public final class Menus {
      * The paged-source-aware canonical constructor: the same engine plus the {@link PagedListSourceRegistry} whose
      * sources answer for one page of a large corpus rather than the whole of it. Every other constructor delegates here
      * with an empty registry, so the roughly ninety existing {@code new Menus(...)} call-sites compile unchanged and
-     * resolve every list through the in-memory {@link #lists} exactly as before — an open there never consults the paged
+     * resolve every list through the in-memory {@link #lists} exactly as before: an open there never consults the paged
      * registry. Only production wiring, which holds the feature-populated paged registry, passes it.
      */
     public Menus(
@@ -285,7 +285,7 @@ public final class Menus {
     }
 
     /**
-     * Drop the spec registered under {@code id} so the menu can no longer be opened — the unregister half of the menu
+     * Drop the spec registered under {@code id} so the menu can no longer be opened: the unregister half of the menu
      * editor's delete, run once the file is gone. A no-op when no spec carries that id. The loader's single-file reload
      * cannot do this itself (a deleted file is a not-found reload, not an unregister), so the editor calls it directly.
      */
@@ -295,8 +295,8 @@ public final class Menus {
     }
 
     /**
-     * The spec registered under {@code id}, or empty when none is — a read-only lookup the {@code /menu dump} and
-     * {@code /menu meta} operator diagnostics use to describe a loaded menu without opening it.
+     * The spec registered under {@code id}, or empty when none is: a read-only lookup the {@code /menu dump} and {@code
+     * /menu meta} operator diagnostics use to describe a loaded menu without opening it.
      */
     public Optional<MenuSpec> registeredSpec(String id) {
         Objects.requireNonNull(id, "id");
@@ -304,12 +304,12 @@ public final class Menus {
     }
 
     /**
-     * Run one menu {@code action} for {@code target} as if they had tapped it — the {@code /menu execute <player>
+     * Run one menu {@code action} for {@code target} as if they had tapped it: the {@code /menu execute <player>
      * <action>} admin tool. It hops onto the target's own entity thread (where touching the live inventory is legal)
      * and dispatches through the same shared {@link #runActions} runner a form tap uses, with {@code target} as the
-     * context viewer so a {@code %player%} in the action resolves to them. No spec need be registered — the action
-     * runs standalone. An engine wired without an action registry (a list/spec-only test engine) runs nothing here,
-     * matching {@link #runActions}.
+     * context viewer so a {@code %player%} in the action resolves to them. No spec need be registered: the action runs
+     * standalone. An engine wired without an action registry (a list/spec-only test engine) runs nothing here, matching
+     * {@link #runActions}.
      */
     public void execute(Player target, Ref action) {
         execute(target, action, Map.of());
@@ -338,10 +338,10 @@ public final class Menus {
     }
 
     /**
-     * Open the spec registered under {@code specId} for {@code viewer} at {@code page}, the same as
-     * {@link #open(Player, String, Object)} but starting on a chosen page rather than page zero — what an
-     * {@code open:<menu> [page]} action reaches for. A negative page is clamped to zero. An unknown spec id is a
-     * caller wiring error, so it fails loudly here rather than opening an empty window.
+     * Open the spec registered under {@code specId} for {@code viewer} at {@code page}, the same as {@link
+     * #open(Player, String, Object)} but starting on a chosen page rather than page zero: what an {@code open:<menu>
+     * [page]} action reaches for. A negative page is clamped to zero. An unknown spec id is a caller wiring error, so
+     * it fails loudly here rather than opening an empty window.
      */
     public void open(Player viewer, String specId, @Nullable Object subject, int page) {
         open(viewer, specId, subject, page, Map.of());
@@ -349,9 +349,9 @@ public final class Menus {
 
     /**
      * Open the spec registered under {@code specId} for {@code viewer} at {@code page}, carrying the typed command
-     * {@code arguments} the menu was opened with — an operator {@code command {}} block's {@code %argument_<name>%}
-     * values, keyed by argument name. The arguments ride the {@link MenuContext} to the renderer so a title, item
-     * name or lore can expand them. A negative page is clamped to zero; an unknown spec id fails loudly here.
+     * {@code arguments} the menu was opened with: an operator {@code command {}} block's {@code %argument_<name>%}
+     * values, keyed by argument name. The arguments ride the {@link MenuContext} to the renderer so a title, item name
+     * or lore can expand them. A negative page is clamped to zero; an unknown spec id fails loudly here.
      */
     public void open(Player viewer, String specId, @Nullable Object subject, int page, Map<String, String> arguments) {
         openInternal(viewer, specId, subject, page, arguments, Map.of(), true);
@@ -377,10 +377,10 @@ public final class Menus {
     /**
      * The shared open body every public {@link #open} overload and the internal {@link #reopen} route through. It
      * resolves the spec, clamps the page, resolves list sources off the tick thread, then shows the window on the
-     * viewer's entity thread. {@code passthrough} is whatever the host attached to this open, carried onto the
-     * context unread. {@code record} decides whether the open joins the viewer's {@code /menu last} / back history: a
-     * fresh open records (subject permitting), a back-step or reopen-last replays an already-recorded open and must not
-     * push it again — otherwise stepping back would immediately re-stack what it just popped.
+     * viewer's entity thread. {@code passthrough} is whatever the host attached to this open, carried onto the context
+     * unread. {@code record} decides whether the open joins the viewer's {@code /menu last} / back history: a fresh
+     * open records (subject permitting), a back-step or reopen-last replays an already-recorded open and must not push
+     * it again: otherwise stepping back would immediately re-stack what it just popped.
      */
     private void openInternal(
             Player viewer,
@@ -412,12 +412,12 @@ public final class Menus {
     }
 
     /**
-     * Reopen the previous menu {@code viewer} had open — the target a {@code back} button steps to. It hops to the
+     * Reopen the previous menu {@code viewer} had open: the target a {@code back} button steps to. It hops to the
      * viewer's entity thread and, if nothing remains beneath the current open (they are at the root, or the engine was
-     * wired without a history), closes the window instead. A previous open whose spec is no longer registered (a
-     * since-dropped menu) is treated as nothing-below, so a stale entry closes cleanly rather than raising the loud
-     * unknown-spec failure a blind reopen would. The reopen itself replays the recorded open without re-recording it,
-     * so stepping back never grows the history.
+     * wired without a history), closes the window instead. A previous open whose spec is no longer registered (a since-
+     * dropped menu) is treated as nothing-below, so a stale entry closes cleanly rather than raising the loud unknown-
+     * spec failure a blind reopen would. The reopen itself replays the recorded open without re-recording it, so
+     * stepping back never grows the history.
      */
     public void back(Player viewer) {
         Objects.requireNonNull(viewer, "viewer");
@@ -431,7 +431,7 @@ public final class Menus {
     }
 
     /**
-     * Reopen the menu {@code viewer} currently has on top of their history — what {@code /menu last} runs. Returns
+     * Reopen the menu {@code viewer} currently has on top of their history: what {@code /menu last} runs. Returns
      * {@code false} (so the caller can show its own feedback) when there is nothing to reopen: the engine carries no
      * history, none has been recorded, or the recorded spec is no longer registered. A successful reopen replays the
      * recorded open without re-recording it, so calling it repeatedly never stacks duplicates.
@@ -448,17 +448,20 @@ public final class Menus {
     }
 
     /**
-     * Replay a recorded open — same page and typed arguments, always subject-less — without recording it again. The
-     * history records no passed-through values and the reopen attaches none, deliberately: they are host objects of
-     * any type, and holding them for the life of a back history would keep a logged-off player or a closed resource
-     * alive. A binding that reads one must therefore tolerate its absence, which is what {@link MenuContext#passthrough()}
-     * is for; the typed reader fails loudly here instead.
+     * Replay a recorded open (same page and typed arguments, always subject-less) without recording it again. The
+     * history records no passed-through values and the reopen attaches none, deliberately: they are host objects of any
+     * type, and holding them for the life of a back history would keep a logged-off player or a closed resource alive.
+     * A binding that reads one must therefore tolerate its absence, which is what {@link MenuContext#passthrough()} is
+     * for; the typed reader fails loudly here instead.
      */
     private void reopen(Player viewer, LastMenu.LastOpen open) {
         openInternal(viewer, open.menuId(), null, open.page(), open.arguments(), Map.of(), false);
     }
 
-    /** Close whatever window {@code viewer} has open, on their entity thread — the back-step to nothing / null-history path. */
+    /**
+     * Close whatever window {@code viewer} has open, on their entity thread: the back-step to nothing / null-history
+     * path.
+     */
     private void closeFor(Player viewer) {
         scheduler.entity(viewer, () -> {
             if (viewer.isOnline()) {
@@ -468,13 +471,13 @@ public final class Menus {
     }
 
     /**
-     * The menu {@code viewer} currently has open, as a plain {@link OpenMenuInfo} value, or empty when they are in
-     * no engine menu — what the outbound {@code menu_*} placeholder source reads. It is a best-effort live read: it
-     * resolves the online player and inspects the holder backing their open top inventory, which is the engine's
-     * single source of truth for an open menu (no player-keyed side map is kept, so nothing can leak and there is
-     * nothing else to consult). The read is authoritative when the placeholder resolves on the viewer's own
-     * region/main context; a cross-region read on Folia would touch another region's player and is caught and
-     * degraded to empty, so a stray off-region request reads "not in a menu" rather than throwing.
+     * The menu {@code viewer} currently has open, as a plain {@link OpenMenuInfo} value, or empty when they are in no
+     * engine menu: what the outbound {@code menu_*} placeholder source reads. It is a best-effort live read: it
+     * resolves the online player and inspects the holder backing their open top inventory, which is the engine's single
+     * source of truth for an open menu (no player-keyed side map is kept, so nothing can leak and there is nothing else
+     * to consult). The read is authoritative when the placeholder resolves on the viewer's own region/main context; a
+     * cross-region read on Folia would touch another region's player and is caught and degraded to empty, so a stray
+     * off-region request reads "not in a menu" rather than throwing.
      */
     public Optional<OpenMenuInfo> currentMenu(UUID viewer) {
         Objects.requireNonNull(viewer, "viewer");
@@ -503,12 +506,12 @@ public final class Menus {
     }
 
     /**
-     * Redraw in place the menu {@code viewer} has open, when it is the one registered under {@code specId} — the seam
-     * a feature whose window shows live state reaches for when that state changes (the far side of a trade staking an
+     * Redraw in place the menu {@code viewer} has open, when it is the one registered under {@code specId}: the seam a
+     * feature whose window shows live state reaches for when that state changes (the far side of a trade staking an
      * item, say). It hops to the viewer's own entity thread and does nothing at all when they have since closed the
      * window or moved to another menu, so a stale update can never paint over an unrelated screen. The redraw reuses
-     * the open window: no second {@code openInventory}, no new holder, and a content region the viewer physically
-     * fills is left untouched.
+     * the open window: no second {@code openInventory}, no new holder, and a content region the viewer physically fills
+     * is left untouched.
      */
     public void redraw(Player viewer, String specId) {
         Objects.requireNonNull(viewer, "viewer");
@@ -526,7 +529,7 @@ public final class Menus {
     }
 
     /**
-     * The live window {@code viewer} has open when it is the menu registered under {@code specId}, else empty — how a
+     * The live window {@code viewer} has open when it is the menu registered under {@code specId}, else empty: how a
      * feature reads or clears the slots of its own {@code content {}} region without keeping a window reference of its
      * own. It is a plain read of the viewer's open inventory, so it must be called on their entity thread (where
      * touching a live inventory is legal), which is where every content-region callback already runs.
@@ -558,9 +561,9 @@ public final class Menus {
     }
 
     /**
-     * The id of the most-recently-opened menu in {@code viewer}'s history — the {@code /menu last} target — which
-     * persists after that menu closes, unlike {@link #currentMenu}. Read from the thread-safe {@link LastMenu}, so
-     * it needs no Bukkit read and answers the same on any thread. Empty when the engine was wired without a history
+     * The id of the most-recently-opened menu in {@code viewer}'s history (the {@code /menu last} target) which
+     * persists after that menu closes, unlike {@link #currentMenu}. Read from the thread-safe {@link LastMenu}, so it
+     * needs no Bukkit read and answers the same on any thread. Empty when the engine was wired without a history
      * tracker (every list/spec-only fixture) or the viewer has opened no custom menu yet.
      */
     public Optional<String> lastMenuId(UUID viewer) {
@@ -573,12 +576,11 @@ public final class Menus {
 
     /**
      * Open a typed property editor for {@code viewer} editing {@code subject}, as a holder-backed engine menu. It
-     * builds the same {@link MenuHolder} every other menu uses — recognised and torn down by the one listener and
-     * one {@code closeMenu} — but tags it with an {@link EditorState} so the listener routes its clicks through the
-     * editor's property/button slots rather than a spec's. The window is shown on the viewer's entity thread, where
-     * touching the live inventory is legal; unlike a list menu it queries no list source, so there is no off-thread
-     * resolve step. An engine wired without an editor renderer cannot open an editor — that is a wiring error, so it
-     * fails loudly here.
+     * builds the same {@link MenuHolder} every other menu uses (recognised and torn down by the one listener and one
+     * {@code closeMenu}) but tags it with an {@link EditorState} so the listener routes its clicks through the editor's
+     * property/button slots rather than a spec's. The window is shown on the viewer's entity thread, where touching the
+     * live inventory is legal; unlike a list menu it queries no list source, so there is no off-thread resolve step. An
+     * engine wired without an editor renderer cannot open an editor: that is a wiring error, so it fails loudly here.
      */
     public void openEditor(Player viewer, EditorSpec spec, @Nullable Object subject) {
         Objects.requireNonNull(viewer, "viewer");
@@ -606,11 +608,11 @@ public final class Menus {
     }
 
     /**
-     * Re-render an open editor in place — the {@code reopen} target a property's click hook runs after its setter.
-     * It hops to the viewer's entity thread, confirms the live top inventory is still this holder's editor window,
-     * clears the editor's slot routing, and repaints the same inventory from the live subject so the changed value
-     * shows. No second {@code openInventory} and no new holder: the window the viewer is looking at is reused, so the
-     * one listener and one teardown keep owning it.
+     * Re-render an open editor in place: the {@code reopen} target a property's click hook runs after its setter. It
+     * hops to the viewer's entity thread, confirms the live top inventory is still this holder's editor window, clears
+     * the editor's slot routing, and repaints the same inventory from the live subject so the changed value shows. No
+     * second {@code openInventory} and no new holder: the window the viewer is looking at is reused, so the one
+     * listener and one teardown keep owning it.
      */
     public void reRenderEditor(MenuHolder holder) {
         Objects.requireNonNull(holder, "holder");
@@ -618,13 +620,13 @@ public final class Menus {
     }
 
     /**
-     * Open a paginated entity list for {@code viewer} as a holder-backed engine menu. It builds the same {@link MenuHolder} every other
-     * menu uses — recognised and torn down by the one listener and one {@code closeMenu} — but tags it with a
-     * {@link ListViewState} so the listener routes its clicks through the list's entity/nav/create/action slots rather
-     * than a spec's. The window is shown on the viewer's entity thread, where touching the live inventory is legal; the
-     * entity supplier was already resolved off-thread by the caller, so there is no off-thread resolve step here and the
-     * imperative icon renderer reads only the snapshot. A page flip re-paginates the same holder (the listener's list
-     * branch), so a list arms no refresh timer and stays leak-balanced.
+     * Open a paginated entity list for {@code viewer} as a holder-backed engine menu. It builds the same {@link
+     * MenuHolder} every other menu uses (recognised and torn down by the one listener and one {@code closeMenu}) but
+     * tags it with a {@link ListViewState} so the listener routes its clicks through the list's
+     * entity/nav/create/action slots rather than a spec's. The window is shown on the viewer's entity thread, where
+     * touching the live inventory is legal; the entity supplier was already resolved off-thread by the caller, so there
+     * is no off-thread resolve step here and the imperative icon renderer reads only the snapshot. A page flip re-
+     * paginates the same holder (the listener's list branch), so a list arms no refresh timer and stays leak-balanced.
      */
     public void openList(Player viewer, EntityListSpec spec) {
         Objects.requireNonNull(viewer, "viewer");
@@ -648,20 +650,20 @@ public final class Menus {
         viewer.openInventory(inv);
     }
 
-    /** The minimal {@link MenuSpec} a list holder carries: the row count, refresh off, no items — clicks ride state. */
+    /** The minimal {@link MenuSpec} a list holder carries: the row count, refresh off, no items: clicks ride state. */
     private static MenuSpec listMenuSpec(EntityListSpec spec) {
         return new MenuSpec("", spec.rows(), new RefreshSpec(false, 0), List.of(), List.of(), List.of(), Map.of());
     }
 
     /**
-     * Open a two-button confirm window for {@code viewer} — the engine's replacement for uxmLib's {@code ConfirmMenu}.
+     * Open a two-button confirm window for {@code viewer}: the engine's replacement for uxmLib's {@code ConfirmMenu}.
      * It builds the same {@link MenuHolder} every other menu uses, so the one listener routes its clicks and the one
-     * {@code closeMenu} tears it down: clicking the yes button runs {@code onYes} exactly once, clicking no runs
-     * {@code onNo} exactly once, and either click closes the window first. Closing the window (or quitting) without a
-     * click runs neither. The window is shown on the viewer's entity thread, where touching the live inventory is
-     * legal; the supplied runnables run on that same thread when their button is clicked, mirroring the editor and
-     * spec-action click hops. The {@code title} is a {@link Component} the caller already resolved from a
-     * {@code String}, so the window carries no inline user-facing literal.
+     * {@code closeMenu} tears it down: clicking the yes button runs {@code onYes} exactly once, clicking no runs {@code
+     * onNo} exactly once, and either click closes the window first. Closing the window (or quitting) without a click
+     * runs neither. The window is shown on the viewer's entity thread, where touching the live inventory is legal; the
+     * supplied runnables run on that same thread when their button is clicked, mirroring the editor and spec-action
+     * click hops. The {@code title} is a {@link Component} the caller already resolved from a {@code String}, so the
+     * window carries no inline user-facing literal.
      */
     public void confirm(Player viewer, Component title, Runnable onYes, Runnable onNo) {
         Objects.requireNonNull(viewer, "viewer");
@@ -691,11 +693,11 @@ public final class Menus {
 
     /**
      * The Bedrock render of the confirm window: a native ModalForm (the caller's title plus a yes/no button pair)
-     * instead of the confirm chest, whose lime/red wool carries no text a form could show — so the button labels come
-     * from the shared {@link MenuKeys} catalog in the viewer's locale. A confirm is always safe to render as a
-     * form (it is a plain two-choice prompt, not an item-display menu), so this redirect is unconditional for a Bedrock
-     * viewer and never gated on {@code chestOnly}. Cumulus fires the response off the main thread, so each choice is
-     * wrapped in a hop back to the viewer's entity thread before {@code onYes}/{@code onNo} runs.
+     * instead of the confirm chest, whose lime/red wool carries no text a form could show: so the button labels come
+     * from the shared {@link MenuKeys} catalog in the viewer's locale. A confirm is always safe to render as a form (it
+     * is a plain two-choice prompt, not an item-display menu), so this redirect is unconditional for a Bedrock viewer
+     * and never gated on {@code chestOnly}. Cumulus fires the response off the main thread, so each choice is wrapped
+     * in a hop back to the viewer's entity thread before {@code onYes}/{@code onNo} runs.
      */
     private void sendConfirmModal(Player viewer, Component title, Runnable onYes, Runnable onNo) {
         String plainTitle = PlainTextComponentSerializer.plainText().serialize(title);
@@ -711,7 +713,7 @@ public final class Menus {
                 () -> scheduler.entity(viewer, onNo));
     }
 
-    /** The minimal {@link MenuSpec} a confirm holder carries: three rows, refresh off, no items — clicks ride state. */
+    /** The minimal {@link MenuSpec} a confirm holder carries: three rows, refresh off, no items: clicks ride state. */
     private static MenuSpec confirmMenuSpec() {
         return new MenuSpec(
                 "", ConfirmRenderer.ROWS, new RefreshSpec(false, 0), List.of(), List.of(), List.of(), Map.of());
@@ -739,13 +741,13 @@ public final class Menus {
     }
 
     /**
-     * Open a selector child window for {@code viewer} — a flat picker of option buttons, the engine's replacement for
-     * a property's uxmLib {@code SimpleGui} selector. It builds the same {@link MenuHolder} every other menu uses, so
-     * the one listener routes its clicks and the one {@code closeMenu} tears it down: clicking an option button runs
-     * its choose action exactly once, and either that or closing the window (or quitting) ends the picker. The window
-     * is shown on the viewer's entity thread, where touching the live inventory is legal; each button's choose action
-     * runs on that same thread when clicked, mirroring the editor and confirm hops. The {@code title} is a
-     * {@link Component} the caller resolved from a {@code String}, so the window carries no inline literal.
+     * Open a selector child window for {@code viewer}: a flat picker of option buttons, the engine's replacement for a
+     * property's uxmLib {@code SimpleGui} selector. It builds the same {@link MenuHolder} every other menu uses, so the
+     * one listener routes its clicks and the one {@code closeMenu} tears it down: clicking an option button runs its
+     * choose action exactly once, and either that or closing the window (or quitting) ends the picker. The window is
+     * shown on the viewer's entity thread, where touching the live inventory is legal; each button's choose action runs
+     * on that same thread when clicked, mirroring the editor and confirm hops. The {@code title} is a {@link Component}
+     * the caller resolved from a {@code String}, so the window carries no inline literal.
      */
     public void openSelector(Player viewer, Component title, int rows, Material filler, List<SelectorButton> buttons) {
         Objects.requireNonNull(viewer, "viewer");
@@ -778,20 +780,22 @@ public final class Menus {
         viewer.openInventory(inv);
     }
 
-    /** The minimal {@link MenuSpec} a selector holder carries: the row count, refresh off, no items — clicks ride state. */
+    /**
+     * The minimal {@link MenuSpec} a selector holder carries: the row count, refresh off, no items: clicks ride state.
+     */
     private static MenuSpec selectorMenuSpec(int rows) {
         return new MenuSpec("", rows, new RefreshSpec(false, 0), List.of(), List.of(), List.of(), Map.of());
     }
 
     /**
-     * Open a slot-grid canvas for {@code viewer} — the engine's visual editor window, opened by the custom-menus grid
-     * editor. It builds the same {@link MenuHolder} every other menu uses — recognised and torn down by the one
-     * listener and one {@code closeMenu} — but tags it with a {@link GridViewState} so the listener routes its clicks
-     * through the canvas's content/nav/control slots rather than a spec's. The window is shown on the viewer's entity
-     * thread, where touching the live inventory is legal; the {@code spec}'s content supplier is read imperatively on
-     * that thread over the caller's already-loaded edit model, so there is no off-thread resolve step. Unlike a list a
-     * grid re-reads its content on every draw (a place / move / clear then a {@link GridView#reRender}), so it arms no
-     * refresh timer and stays leak-balanced.
+     * Open a slot-grid canvas for {@code viewer}: the engine's visual editor window, opened by the custom-menus grid
+     * editor. It builds the same {@link MenuHolder} every other menu uses (recognised and torn down by the one listener
+     * and one {@code closeMenu}) but tags it with a {@link GridViewState} so the listener routes its clicks through the
+     * canvas's content/nav/control slots rather than a spec's. The window is shown on the viewer's entity thread, where
+     * touching the live inventory is legal; the {@code spec}'s content supplier is read imperatively on that thread
+     * over the caller's already-loaded edit model, so there is no off-thread resolve step. Unlike a list a grid re-
+     * reads its content on every draw (a place / move / clear then a {@link GridView#reRender}), so it arms no refresh
+     * timer and stays leak-balanced.
      */
     public void openGrid(Player viewer, GridSpec spec, GridHandlers handlers) {
         Objects.requireNonNull(viewer, "viewer");
@@ -819,22 +823,22 @@ public final class Menus {
         viewer.openInventory(inv);
     }
 
-    /** The minimal {@link MenuSpec} a grid holder carries: the window's row count, refresh off — clicks ride state. */
+    /** The minimal {@link MenuSpec} a grid holder carries: the window's row count, refresh off: clicks ride state. */
     private static MenuSpec gridMenuSpec(int windowRows) {
         return new MenuSpec("", windowRows, new RefreshSpec(false, 0), List.of(), List.of(), List.of(), Map.of());
     }
 
     /**
-     * Open {@code spec} for {@code viewer} as a live preview — render an in-memory working copy exactly as a player
+     * Open {@code spec} for {@code viewer} as a live preview: render an in-memory working copy exactly as a player
      * would see it, through the real {@link MenuRenderer}, without registering the spec. The menu editor uses this so
      * an operator can look over their unsaved edits before committing them to disk: the working copy is frozen into an
-     * immutable {@link MenuSpec} and handed here. It builds the same {@link MenuHolder} every other menu uses — so the
-     * one listener routes its clicks and the one {@code closeMenu} tears it down — and attaches {@code onClose}, the
+     * immutable {@link MenuSpec} and handed here. It builds the same {@link MenuHolder} every other menu uses (so the
+     * one listener routes its clicks and the one {@code closeMenu} tears it down) and attaches {@code onClose}, the
      * seam the close path runs once to step the operator back to the grid editor when the preview closes.
      *
-     * <p>A preview is deliberately not a full open: it does not gate on the spec's open-requirement, run its
-     * open-actions, record it in the viewer's {@code /menu last} history, paint the bottom inventory, or arm a refresh
-     * timer — those are the side effects of really opening a menu, and a preview is a look, not an open. Its clicks
+     * <p>A preview is deliberately not a full open: it does not gate on the spec's open-requirement, run its open-
+     * actions, record it in the viewer's {@code /menu last} history, paint the bottom inventory, or arm a refresh
+     * timer: those are the side effects of really opening a menu, and a preview is a look, not an open. Its clicks
      * still run the spec's own click actions (that is what "as a player sees it" means), so a preview of a shop can be
      * clicked through live. Its list sources are resolved off the tick thread like any open, then the window is shown
      * on the viewer's entity thread.
@@ -904,9 +908,9 @@ public final class Menus {
      * Resolve every list source the spec names. Runs off the viewer's region thread because a source may read a
      * database; an unregistered source resolves to an empty list so a wiring gap renders an empty grid rather than
      * failing the open. This is the only place a source is queried for one open. A paged source is asked for a single
-     * default page — page zero, the spec's first declared sort, no filters — because on first open there is no holder
-     * yet to carry the viewer's page; that {@link PageRequest} is a plain immutable value, so building and using it off
-     * the entity thread touches no per-viewer state.
+     * default page (page zero, the spec's first declared sort, no filters) because on first open there is no holder yet
+     * to carry the viewer's page; that {@link PageRequest} is a plain immutable value, so building and using it off the
+     * entity thread touches no per-viewer state.
      */
     private ResolvedLists resolveLists(MenuSpec spec, MenuContext ctx) {
         Map<String, List<?>> rows = new HashMap<>();
@@ -962,8 +966,8 @@ public final class Menus {
     }
 
     /**
-     * On the viewer's entity thread: record each paged list's reported total on its {@link ListQueryState} — the single
-     * place per open that state is written — and return a render context carrying an immutable {@link PagedListView} per
+     * On the viewer's entity thread: record each paged list's reported total on its {@link ListQueryState} (the single
+     * place per open that state is written) and return a render context carrying an immutable {@link PagedListView} per
      * list so the renderer knows which lists are already paged and what page count their indicator reads. Returns the
      * context unchanged when the open queried no paged source, so an in-memory-only open is untouched.
      */
@@ -984,9 +988,9 @@ public final class Menus {
 
     /**
      * Fire the public, cancellable {@link MenuOpenEvent} and report whether a listener vetoed the open. Called at the
-     * very top of the one open choke-point every open — a fresh open, a {@code back} step, a reopen-last — funnels
-     * through, before the Bedrock form branches and the chest build alike, so a cancelled open shows the viewer
-     * neither a native form nor a chest. It fires on the viewer's own region thread the open already runs on.
+     * very top of the one open choke-point every open (a fresh open, a {@code back} step, a reopen-last) funnels
+     * through, before the Bedrock form branches and the chest build alike, so a cancelled open shows the viewer neither
+     * a native form nor a chest. It fires on the viewer's own region thread the open already runs on.
      */
     private static boolean openVetoed(Player live, String specId, int page) {
         MenuOpenEvent event = new MenuOpenEvent(live, specId, page);
@@ -1022,12 +1026,12 @@ public final class Menus {
         }
         // A Bedrock viewer gets a native Cumulus form instead of the chest, unless the menu opts out (chest-only, for
         // an item-display menu a form cannot represent). An explicit per-menu bedrock {} block wins first: it defines a
-        // native CustomForm — the dropdown/slider/toggle/multi-input widgets the automatic SimpleForm degradation
-        // cannot express — so a menu that declares one sends that form rather than the degraded button list. Absent a
-        // block, the automatic degradation is unchanged. A form is an alternative render at the open choke-point, not a
-        // second window, so it builds no holder and arms no refresh; but it is still an open, so it records into the
-        // back history and fires the menu's open-actions the same way the chest path does — otherwise a back from a
-        // form would have no history to step to and a menu's open-actions would never fire for a Bedrock viewer. A Java
+        // native CustomForm (the dropdown/slider/toggle/multi-input widgets the automatic SimpleForm degradation cannot
+        // express) so a menu that declares one sends that form rather than the degraded button list. Absent a block,
+        // the automatic degradation is unchanged. A form is an alternative render at the open choke-point, not a second
+        // window, so it builds no holder and arms no refresh; but it is still an open, so it records into the back
+        // history and fires the menu's open-actions the same way the chest path does: otherwise a back from a form
+        // would have no history to step to and a menu's open-actions would never fire for a Bedrock viewer. A Java
         // viewer (isBedrock false) falls straight through to the chest path unchanged.
         if (bedrock.isBedrock(viewer.getUniqueId())
                 && !spec.chestOnly()
@@ -1045,7 +1049,7 @@ public final class Menus {
         MenuHolder holder = new MenuHolder(specId, spec, ctx);
         holder.setResolvedLists(resolved.rows());
         // Record each paged list's reported total on the holder's query state and take an immutable render context that
-        // carries a view of each, all on this entity thread — so the mutable state is never touched off it.
+        // carries a view of each, all on this entity thread: so the mutable state is never touched off it.
         MenuContext renderCtx = attachPagedViews(holder, ctx, resolved.paged());
         Inventory inv = createWindow(holder, spec, renderer.title(spec, renderCtx));
         holder.attach(inv);
@@ -1063,11 +1067,11 @@ public final class Menus {
 
     /**
      * The bookkeeping a Bedrock form open shares with the chest path once the form is on the viewer's screen: record
-     * this open into the viewer's back history (subject permitting — the same rule the chest path applies) so a
-     * {@code back} from the form can step to it, and fire the menu's open-actions. A form carries no window, so — unlike
-     * the chest path — it builds no holder and arms no refresh; this runs only the two pieces that describe an open
-     * rather than a window. A reopen (a {@code back} re-sending the previous form) passes {@code record} false, so
-     * stepping back never re-stacks the form it just returned to.
+     * this open into the viewer's back history (subject permitting: the same rule the chest path applies) so a {@code
+     * back} from the form can step to it, and fire the menu's open-actions. A form carries no window, so (unlike the
+     * chest path) it builds no holder and arms no refresh; this runs only the two pieces that describe an open rather
+     * than a window. A reopen (a {@code back} re-sending the previous form) passes {@code record} false, so stepping
+     * back never re-stacks the form it just returned to.
      */
     private void afterBedrockOpen(
             MenuSpec spec,
@@ -1086,10 +1090,10 @@ public final class Menus {
     }
 
     /**
-     * Remember this open as the viewer's {@code /menu last} target — but only a subject-less one, a disk-loaded
-     * custom menu. A feature menu carries a live domain subject (a warp, a home owner) that must never be reopened
-     * blind, and it has its own command, so those are deliberately not recorded. An engine wired without a tracker
-     * (every list/spec-only fixture) records nothing, so an open there stays byte-identical to before this seam.
+     * Remember this open as the viewer's {@code /menu last} target: but only a subject-less one, a disk-loaded custom
+     * menu. A feature menu carries a live domain subject (a warp, a home owner) that must never be reopened blind, and
+     * it has its own command, so those are deliberately not recorded. An engine wired without a tracker (every
+     * list/spec-only fixture) records nothing, so an open there stays byte-identical to before this seam.
      */
     private void rememberLastOpen(
             Player viewer, String specId, @Nullable Object subject, int page, Map<String, String> arguments) {
@@ -1100,9 +1104,9 @@ public final class Menus {
 
     /**
      * Build the window a spec opens into: its declared non-chest {@link InventoryType} when it names one the server
-     * accepts, else the default {@code rows}-based chest. A non-chest shape is best-effort — some types reject a
-     * custom holder or title on some servers — so a thrown build is caught, logged once, and downgraded to the chest,
-     * meaning a bad {@code inventory-type} never leaves the viewer with a blank or missing window.
+     * accepts, else the default {@code rows}-based chest. A non-chest shape is best-effort (some types reject a custom
+     * holder or title on some servers) so a thrown build is caught, logged once, and downgraded to the chest, meaning a
+     * bad {@code inventory-type} never leaves the viewer with a blank or missing window.
      */
     private Inventory createWindow(MenuHolder holder, MenuSpec spec, Component raw) {
         Component title = MenuTitles.centre(raw);
@@ -1120,11 +1124,11 @@ public final class Menus {
     }
 
     /**
-     * Map an operator-friendly inventory-type token to the Bukkit {@link InventoryType} that shapes the window.
-     * {@code chest}, a blank token, or any name not listed here resolves to empty, i.e. the default {@code rows}-based
-     * chest — an unknown type is a soft miss, not a failure. A couple of obvious aliases are accepted so a spec author
-     * can write the block name they know ({@code shulker}/{@code shulker_box}, {@code ender}/{@code ender_chest},
-     * {@code workbench}/{@code crafting}).
+     * Map an operator-friendly inventory-type token to the Bukkit {@link InventoryType} that shapes the window. {@code
+     * chest}, a blank token, or any name not listed here resolves to empty, i.e. the default {@code rows}-based chest:
+     * an unknown type is a soft miss, not a failure. A couple of obvious aliases are accepted so a spec author can
+     * write the block name they know ({@code shulker}/{@code shulker_box}, {@code ender}/{@code ender_chest}, {@code
+     * workbench}/{@code crafting}).
      */
     private static Optional<InventoryType> resolveInventoryType(String name) {
         return switch (name.strip().toLowerCase(Locale.ROOT)) {
@@ -1187,15 +1191,15 @@ public final class Menus {
     }
 
     /**
-     * Run the spec's {@code open-actions} in order, now that the window is open on the viewer's entity thread — where
-     * touching the live inventory is legal. Skipped when the engine was wired without an action registry (a
-     * list/spec-only test engine), so an engine that predates this seam runs nothing extra. Each ref is resolved
-     * against the action registry — the same registry-aware split the click path takes — and dispatched through a
-     * {@link MenuActionContext} carrying {@link ClickKind#LEFT} as the neutral kind (no gesture fired on an open) and
-     * the four-argument, no-control constructor, so a {@code refresh} written as an open-action is a harmless no-op
-     * rather than a null-control failure. An action's {@code %argument_<name>%} tokens are expanded from the
-     * arguments the menu was opened with, matching the click and render paths. Open-actions fire simply here; the
-     * per-action delay and chance modifiers a click action honours are a later concern.
+     * Run the spec's {@code open-actions} in order, now that the window is open on the viewer's entity thread: where
+     * touching the live inventory is legal. Skipped when the engine was wired without an action registry (a list/spec-
+     * only test engine), so an engine that predates this seam runs nothing extra. Each ref is resolved against the
+     * action registry (the same registry-aware split the click path takes) and dispatched through a {@link
+     * MenuActionContext} carrying {@link ClickKind#LEFT} as the neutral kind (no gesture fired on an open) and the
+     * four-argument, no-control constructor, so a {@code refresh} written as an open-action is a harmless no-op rather
+     * than a null-control failure. An action's {@code %argument_<name>%} tokens are expanded from the arguments the
+     * menu was opened with, matching the click and render paths. Open-actions fire simply here; the per-action delay
+     * and chance modifiers a click action honours are a later concern.
      */
     private void runOpenActions(MenuSpec spec, Player live, MenuContext ctx) {
         ActionRegistry actions = openActionRegistry;
@@ -1212,13 +1216,14 @@ public final class Menus {
 
     /**
      * Send the Bedrock viewer a native Cumulus SimpleForm standing in for the chest menu. The button list is built in
-     * three runs — the spec's visible static items, then the current page's list entries (the list template stamped
-     * per entry), then form-native Previous/Next buttons when the list spans more than one page — each button paired
-     * with a {@link Runnable} handler at the same index. The {@code onSelect} callback simply dispatches by index, so
-     * every button's own handler owns its threading: a static or entry tap runs that item's click actions on the
-     * viewer's entity thread, a page button re-resolves the list off-thread and re-sends. The form send is on the
-     * viewer's entity thread (the open path already hopped here); the tap response arrives off-thread, and each handler
-     * makes its own hop. The resolved list cache is threaded in so a list-backed menu shows its entries.
+     * three runs: the spec's visible static items, then the current page's list entries, each one the list template
+     * stamped per entry, then form-native Previous/Next buttons when the list spans more than one page. Each button is
+     * paired with a
+     * {@link Runnable} handler at the same index. The {@code onSelect} callback simply dispatches by index, so every
+     * button's own handler owns its threading: a static or entry tap runs that item's click actions on the viewer's
+     * entity thread, a page button re-resolves the list off-thread and re-sends. The form send is on the viewer's
+     * entity thread (the open path already hopped here); the tap response arrives off-thread, and each handler makes
+     * its own hop. The resolved list cache is threaded in so a list-backed menu shows its entries.
      */
     private void sendBedrockForm(Player live, MenuSpec spec, MenuContext ctx, Map<String, List<?>> resolved) {
         Player viewer = ctx.viewer();
@@ -1235,13 +1240,13 @@ public final class Menus {
     }
 
     /**
-     * Send the Bedrock viewer the menu's explicit {@code bedrock {}} CustomForm — the form-native widgets
-     * (label/input/dropdown/slider/toggle) the automatic SimpleForm degradation cannot express. The form's title,
-     * intro content and every widget's display text and options are resolved through the renderer's plain-text path
-     * (they may carry a {@code %token%}/{@code @key}, exactly like an item name), then handed to the screen. On submit,
-     * each widget's value arrives keyed by its {@code name}, and {@code runOnSubmit} binds those as local placeholders
-     * and runs the block's on-submit actions on the viewer's entity thread — Cumulus responds off-thread, so the hop
-     * is explicit. Closing without submitting is a no-op: the viewer simply dismissed the form.
+     * Send the Bedrock viewer the menu's explicit {@code bedrock {}} CustomForm: the form-native widgets
+     * (label/input/dropdown/slider/toggle) the automatic SimpleForm degradation cannot express. The form's title, intro
+     * content and every widget's display text and options are resolved through the renderer's plain-text path (they may
+     * carry a {@code %token%}/{@code @key}, exactly like an item name), then handed to the screen. On submit, each
+     * widget's value arrives keyed by its {@code name}, and {@code runOnSubmit} binds those as local placeholders and
+     * runs the block's on-submit actions on the viewer's entity thread: Cumulus responds off-thread, so the hop is
+     * explicit. Closing without submitting is a no-op: the viewer simply dismissed the form.
      */
     private void sendBedrockCustomForm(Player live, MenuSpec spec, MenuContext ctx) {
         BedrockFormSpec form = spec.bedrock().orElseThrow();
@@ -1325,7 +1330,7 @@ public final class Menus {
 
     /**
      * Append one button per list entry on the current page, labelling each with the list template stamped for that
-     * entry and routing a tap through the template's click actions bound to that entry — the form stand-in for a chest
+     * entry and routing a tap through the template's click actions bound to that entry: the form stand-in for a chest
      * list cell's {@code RenderedSlot(template, entry)}. Only the first list-backed item is paged (a spec pairs one
      * scrollable list with its controls, mirroring the chest renderer's page-count rule); a static-only menu has none
      * and stays a single page. Returns the page count so the caller knows whether to add page-nav buttons.
@@ -1356,8 +1361,8 @@ public final class Menus {
     }
 
     /**
-     * Append the form-native Previous/Next buttons a paged list needs: a Previous when the viewer is past page zero,
-     * a Next when a further page exists, each re-sending the form one page over. These are text-only (no icon — a page
+     * Append the form-native Previous/Next buttons a paged list needs: a Previous when the viewer is past page zero, a
+     * Next when a further page exists, each re-sending the form one page over. These are text-only (no icon: a page
      * control needs none). A single-page menu (a static-only menu or a list that fits one page) adds neither, so its
      * form is byte-identical to before this slice.
      */
@@ -1389,10 +1394,11 @@ public final class Menus {
     }
 
     /**
-     * Re-send the Bedrock form one page over — the target a Previous/Next form button runs. Because a list source may
+     * Re-send the Bedrock form one page over: the target a Previous/Next form button runs. Because a list source may
      * read a database, the list is re-resolved off the tick thread for the new page, then the render hops back onto the
      * viewer's entity thread, the very async-resolve→entity-render discipline the initial open takes. The viewer may
-     * have gone offline between the tap and the re-render, so the online player is re-fetched and a missing one skipped.
+     * have gone offline between the tap and the re-render, so the online player is re-fetched and a missing one
+     * skipped.
      */
     private void resendBedrockPage(Player viewer, MenuSpec spec, MenuContext baseCtx, int page) {
         MenuContext newCtx = baseCtx.withPage(Math.max(0, page));
@@ -1408,10 +1414,10 @@ public final class Menus {
 
     /**
      * Run the tapped item's left-click actions against {@code ctx}, on the viewer's entity thread the caller already
-     * hopped onto. A tap is a plain click, so it runs the item's {@code actionsFor(LEFT)} chain — which already merges
-     * the shared {@link ClickKind#ANY} block — through the shared {@link #runActions} runner, so a form tap reaches
-     * the identical handler a chest click would. Per-click requirements and deny routing are a later item; this runs
-     * the actions only.
+     * hopped onto. A tap is a plain click, so it runs the item's {@code actionsFor(LEFT)} chain (which already merges
+     * the shared {@link ClickKind#ANY} block) through the shared {@link #runActions} runner, so a form tap reaches the
+     * identical handler a chest click would. Per-click requirements and deny routing are a later item; this runs the
+     * actions only.
      */
     private void runFormActions(MenuContext ctx, MenuItemSpec item) {
         runActions(ctx, item.click().actionsFor(ClickKind.LEFT));
@@ -1420,9 +1426,9 @@ public final class Menus {
     /**
      * Run the {@code bedrock {}} block's on-submit actions with the submitted widget values bound. Each value arrives
      * keyed by its widget {@code name}; they are layered over the menu's own {@code placeholders {}} block (the values
-     * winning) and carried as the context's local placeholders, so a {@code %warpname%}/{@code %cost%} token in an
-     * on-submit action's argument resolves to the submitted value through the local-placeholder channel — exactly the
-     * way the click path expands an item-drag's {@code %drag_*%} tokens. Runs on the viewer's entity thread the caller
+     * winning) and carried as the context's local placeholders, so a {@code %warpname%}/{@code %cost%} token in an on-
+     * submit action's argument resolves to the submitted value through the local-placeholder channel: exactly the way
+     * the click path expands an item-drag's {@code %drag_*%} tokens. Runs on the viewer's entity thread the caller
      * already hopped onto, through the same shared {@link #runActions} runner a form tap uses.
      */
     private void runOnSubmit(MenuSpec spec, MenuContext ctx, Map<String, String> values) {
@@ -1444,8 +1450,8 @@ public final class Menus {
      * Run a list of action refs against {@code ctx} on the viewer's entity thread the caller already hopped onto,
      * through the very {@link ActionRegistry} the click listener resolves against (production hands both the same
      * {@code MenuBindings.actions()} instance). Each ref is split registry-aware, then its argument values have their
-     * {@code %argument_<name>%} tokens and their menu-local {@code %name%} tokens expanded — the same two-channel
-     * substitution the click path's dispatch applies — so a form tap or an on-submit action reaches the identical
+     * {@code %argument_<name>%} tokens and their menu-local {@code %name%} tokens expanded (the same two-channel
+     * substitution the click path's dispatch applies) so a form tap or an on-submit action reaches the identical
      * handler with the identical arguments a chest click would. Skipped when the engine was wired without an action
      * registry (a list/spec-only test engine), matching {@link #runOpenActions}.
      */
@@ -1486,7 +1492,7 @@ public final class Menus {
                     holder.resolvedLists(),
                     false);
             if (holder.spec().bottomInventory()) {
-                // Re-paint the bottom too, but do not re-snapshot — the viewer's real items were captured on open and
+                // Re-paint the bottom too, but do not re-snapshot: the viewer's real items were captured on open and
                 // are held on the holder until close; populateBottom clears and redraws only the menu tiles.
                 renderer.populateBottom(
                         p.getInventory(), holder.spec(), holder.ctx(), holder::recordSlot, holder.resolvedLists());
@@ -1496,10 +1502,10 @@ public final class Menus {
 
     /**
      * The open-time half of a bottom-inventory menu: snapshot the viewer's real 36 bottom slots onto the holder, then
-     * paint the menu's bottom items into them. The snapshot is what the close restores (and what a death drops in
-     * place of the menu tiles), so it is taken before {@code populateBottom} clears and repaints the canvas. Runs on
-     * the viewer's own entity thread — where touching the live inventory is legal — and only for a menu whose spec
-     * sets the flag; an ordinary menu never reaches here and never touches the player inventory.
+     * paint the menu's bottom items into them. The snapshot is what the close restores (and what a death drops in place
+     * of the menu tiles), so it is taken before {@code populateBottom} clears and repaints the canvas. Runs on the
+     * viewer's own entity thread (where touching the live inventory is legal) and only for a menu whose spec sets the
+     * flag; an ordinary menu never reaches here and never touches the player inventory.
      */
     private void paintBottom(MenuHolder holder, MenuSpec spec, MenuContext ctx, Player live) {
         holder.setBottomSnapshot(live.getInventory().getStorageContents());

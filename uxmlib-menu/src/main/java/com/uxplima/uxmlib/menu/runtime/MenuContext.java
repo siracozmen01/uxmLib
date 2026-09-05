@@ -10,30 +10,30 @@ import org.bukkit.entity.Player;
 import org.jspecify.annotations.Nullable;
 
 /**
- * The per-open data a menu binding sees: who is viewing, the optional domain subject the menu was opened for
- * (a warp, a home owner, ...), the current page, — while a list is rendered or clicked — the live list element,
- * any typed command arguments the menu was opened with (an operator {@code command {}} block's
- * {@code %argument_<name>%} values), the menu's own local placeholder definitions, and who triggered the open.
- * The engine creates it; it is public only so feature binding lambdas can read it.
+ * The per-open data a menu binding sees: who is viewing, the optional domain subject the menu was opened for (a warp, a
+ * home owner, ...), the current page, (while a list is rendered or clicked) the live list element, any typed command
+ * arguments the menu was opened with (an operator {@code command {}} block's {@code %argument_<name>%} values), the
+ * menu's own local placeholder definitions, and who triggered the open. The engine creates it; it is public only so
+ * feature binding lambdas can read it.
  *
- * <p>The {@code viewer} is who <em>sees</em> the menu: the player it is rendered for, the player whose inventory
- * and permissions a binding reads, and the entity whose thread every render runs on. It is a live
- * {@link Player} because the engine spends it, and a menu cannot be drawn for somebody who is not here.
+ * <p>The {@code viewer} is who <em>sees</em> the menu: the player it is rendered for, the player whose inventory and
+ * permissions a binding reads, and the entity whose thread every render runs on. It is a live {@link Player} because
+ * the engine spends it, and a menu cannot be drawn for somebody who is not here.
  *
  * <p>Who <em>triggered</em> the open is not the same question, and the engine does not answer it. An open can be
- * triggered by a player, by the console, or by another plugin, so the trigger has no live {@link Player} to name
- * and no meaning the engine could read. A host that wants to draw the opener puts whatever it wants to say into
- * {@link #passthrough()} and registers its own binding to spend it.
+ * triggered by a player, by the console, or by another plugin, so the trigger has no live {@link Player} to name and no
+ * meaning the engine could read. A host that wants to draw the opener puts whatever it wants to say into {@link
+ * #passthrough()} and registers its own binding to spend it.
  *
- * <p>The {@code localPlaceholders} map is the open spec's {@code placeholders {}} block — {@code name -> template}
- * pairs the renderer resolves local-first, so a menu can define or override a {@code %name%} token for itself alone.
- * It is empty for a menu that declares no such block, and for every engine child window (a list/confirm/selector/
- * editor), whose minimal spec carries none.
+ * <p>The {@code localPlaceholders} map is the open spec's {@code placeholders {}} block: {@code name -> template} pairs
+ * the renderer resolves local-first, so a menu can define or override a {@code %name%} token for itself alone. It is
+ * empty for a menu that declares no such block, and for every engine child window (a list/confirm/selector/ editor),
+ * whose minimal spec carries none.
  *
- * <p>Immutable. {@link #withEntry}, {@link #withPage}, {@link #withPageCount}, {@link #withLocalPlaceholders},
- * {@link #withPassthrough} and {@link #withPagedViews} return copies rather than mutating, because the same base context
- * is reused across every slot of a list page and must not leak one element's identity into the next; each copy carries
- * the open's arguments, local placeholders, passed-through values and paged-list snapshots through unchanged.
+ * <p>Immutable. {@link #withEntry}, {@link #withPage}, {@link #withPageCount}, {@link #withLocalPlaceholders}, {@link
+ * #withPassthrough} and {@link #withPagedViews} return copies rather than mutating, because the same base context is
+ * reused across every slot of a list page and must not leak one element's identity into the next; each copy carries the
+ * open's arguments, local placeholders, passed-through values and paged-list snapshots through unchanged.
  */
 public final class MenuContext {
 
@@ -63,7 +63,7 @@ public final class MenuContext {
     private final Map<String, Object> passthrough;
 
     /**
-     * The paged lists this render draws, keyed by list-source id — empty for every open that queried no paged source,
+     * The paged lists this render draws, keyed by list-source id: empty for every open that queried no paged source,
      * which is the historic case. A source id present here tells the renderer the list's rows are already one page (so
      * they are placed without re-slicing) and carries the page and corpus total the page indicator reads. Each value is
      * an immutable snapshot taken from the list's {@link ListQueryState} on the viewer's entity thread, so the renderer
@@ -121,27 +121,26 @@ public final class MenuContext {
     }
 
     /**
-     * The typed command arguments the menu was opened with, keyed by argument name — empty for a menu not opened
-     * through an argument-carrying command. The renderer reads it to expand {@code %argument_<name>%}; the map is
-     * immutable.
+     * The typed command arguments the menu was opened with, keyed by argument name: empty for a menu not opened through
+     * an argument-carrying command. The renderer reads it to expand {@code %argument_<name>%}; the map is immutable.
      */
     public Map<String, String> arguments() {
         return arguments;
     }
 
     /**
-     * The open spec's own {@code placeholders {}} block, keyed by custom token name — empty for a menu that declares
-     * none. The renderer reads it to resolve a {@code %name%} local-first, ahead of the shared placeholder registry,
-     * so a menu-scoped token overrides a built-in or global custom for this menu alone; the map is immutable.
+     * The open spec's own {@code placeholders {}} block, keyed by custom token name: empty for a menu that declares
+     * none. The renderer reads it to resolve a {@code %name%} local-first, ahead of the shared placeholder registry, so
+     * a menu-scoped token overrides a built-in or global custom for this menu alone; the map is immutable.
      */
     public Map<String, String> localPlaceholders() {
         return localPlaceholders;
     }
 
     /**
-     * The paged lists this render draws, keyed by list-source id, as immutable snapshots — empty for an open that
-     * queried no paged source. The renderer reads it to tell a paged list (already one page) from an in-memory one
-     * (the whole corpus, sliced here) and to source the paged list's {@code %page%}/{@code %max_page%}.
+     * The paged lists this render draws, keyed by list-source id, as immutable snapshots: empty for an open that
+     * queried no paged source. The renderer reads it to tell a paged list (already one page) from an in-memory one (the
+     * whole corpus, sliced here) and to source the paged list's {@code %page%}/{@code %max_page%}.
      */
     public Map<String, PagedListView> pagedViews() {
         return pagedViews;

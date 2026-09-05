@@ -6,10 +6,10 @@ import java.util.Optional;
 import org.jspecify.annotations.NullMarked;
 
 /**
- * Which backend captures a line of text for an input point: a vanilla anvil prompt, the next chat message, a
- * transient sign, or a native dialog screen. The choice is operator config, resolved per input-point key (with a
- * global default) by {@link InputSettings}; the call site is mode-agnostic — it hands a request to {@link TextInput}
- * and gets the typed line back whichever backend ran.
+ * Which backend captures a line of text for an input point: a vanilla anvil prompt, the next chat message, a transient
+ * sign, or a native dialog screen. The choice is operator config, resolved per input-point key (with a global default)
+ * by {@link InputSettings}; the call site is mode-agnostic: it hands a request to {@link TextInput} and gets the typed
+ * line back whichever backend ran.
  */
 @NullMarked
 public enum InputMode {

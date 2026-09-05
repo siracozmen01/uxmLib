@@ -8,16 +8,15 @@ import org.jspecify.annotations.NullMarked;
 
 /**
  * One clickable button in a selector/list child menu: the slot it sits at, the already-built icon to draw there, and
- * the {@link ChildClickHandler} to run when the viewer clicks it. The icon is fully prepared by the caller — name,
- * lore, and any selection glint are baked in — so a {@link SelectorOpener} only places it and wires the click; it
- * makes no presentation decision of its own.
+ * the {@link ChildClickHandler} to run when the viewer clicks it. The icon is fully prepared by the caller (name, lore,
+ * and any selection glint are baked in) so a {@link SelectorOpener} only places it and wires the click; it makes no
+ * presentation decision of its own.
  *
  * <p>The handler receives the click gesture as two booleans, so a list-entry button can branch (left moves up, right
- * moves down, shift-left edits, shift-right removes), while a single-gesture
- * button (an enum option, the add or back button) ignores the gesture — build those through {@link #of}, which adapts
- * a plain {@link Runnable}. This is the unit an {@link EnumProperty} or a {@link ListProperty} hands the opener: a
- * property builds one {@code SelectorButton} per slot and lets the engine paint and route them, keeping the property
- * free of the menu runtime it opens into.
+ * moves down, shift-left edits, shift-right removes), while a single-gesture button (an enum option, the add or back
+ * button) ignores the gesture: build those through {@link #of}, which adapts a plain {@link Runnable}. This is the unit
+ * an {@link EnumProperty} or a {@link ListProperty} hands the opener: a property builds one {@code SelectorButton} per
+ * slot and lets the engine paint and route them, keeping the property free of the menu runtime it opens into.
  *
  * @param slot the inventory slot the button is drawn at
  * @param icon the prepared icon to place (name/lore/glint already applied)

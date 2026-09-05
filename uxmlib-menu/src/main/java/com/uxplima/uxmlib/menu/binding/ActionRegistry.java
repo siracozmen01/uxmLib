@@ -10,8 +10,8 @@ import com.uxplima.uxmlib.menu.runtime.MenuActionContext;
 
 /**
  * Holds the action handlers a spec can fire by id (on open, on close, or on a click). A duplicate id is a wiring
- * mistake — two features both claiming {@code "close"} — so registration fails loudly rather than letting the
- * second silently win.
+ * mistake (two features both claiming {@code "close"}) so registration fails loudly rather than letting the second
+ * silently win.
  */
 public final class ActionRegistry {
 
@@ -35,7 +35,7 @@ public final class ActionRegistry {
         return handlers.containsKey(id);
     }
 
-    /** Every registered action id, sorted — the catalog the in-game action picker offers a spec author. */
+    /** Every registered action id, sorted: the catalog the in-game action picker offers a spec author. */
     public List<String> ids() {
         return handlers.keySet().stream().sorted().toList();
     }

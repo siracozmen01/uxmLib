@@ -74,10 +74,10 @@ public final class TextInput {
     @Nullable private final TextInputBackend signBackend;
 
     /**
-     * The native-dialog backend a {@code dialog} input point uses, or {@code null} when no dialog backend is wired —
-     * the server predates the 1.21.6 Dialog API, or the seam predates the dialog backend. When {@code null}, a
-     * {@code dialog} input point falls back to the sign backend (or the anvil if no sign backend either), and the seam
-     * logs the substitution once through {@link #dialogFallback()} so the operator is not silently handed a sign.
+     * The native-dialog backend a {@code dialog} input point uses, or {@code null} when no dialog backend is wired: the
+     * server predates the 1.21.6 Dialog API, or the seam predates the dialog backend. When {@code null}, a {@code
+     * dialog} input point falls back to the sign backend (or the anvil if no sign backend either), and the seam logs
+     * the substitution once through {@link #dialogFallback()} so the operator is not silently handed a sign.
      */
     @Nullable private final TextInputBackend dialogBackend;
 
@@ -144,7 +144,6 @@ public final class TextInput {
      * typed a cancel keyword).
      *
      * @param player the live player to prompt
-     * @param player the player reference — locale, identity, and the region the callbacks run on
      * @param request the input point: its key (config lookup), label, and optional pre-fill
      * @param onSubmit receives the accepted line
      * @param onCancel runs on cancellation; typically reopens the menu the player came from
@@ -170,13 +169,12 @@ public final class TextInput {
 
     /**
      * As {@link #prompt}, but with the prompt already resolved to a {@link Component} rather than looked up from a
-     * {@link String} catalog — the entry point the menu engine uses, whose {@code input:} prompts are arbitrary
-     * {@code @key}-or-MiniMessage strings the engine resolves through its own renderer, not catalog enum keys. The
-     * backend is still chosen from the operator's per-{@code key} mode, and a Bedrock player still gets the Cumulus
-     * form regardless of that mode; the cancel-keyword policy and the entity-thread hop are the shared {@link #route}.
+     * {@link String} catalog: the entry point the menu engine uses, whose {@code input:} prompts are arbitrary {@code
+     * @key}-or-MiniMessage strings the engine resolves through its own renderer, not catalog enum keys. The backend is
+     * still chosen from the operator's per-{@code key} mode, and a Bedrock player still gets the Cumulus form
+     * regardless of that mode; the cancel-keyword policy and the entity-thread hop are the shared {@link #route}.
      *
      * @param player the live player to prompt
-     * @param player the player reference — locale, identity, and the region the callbacks run on
      * @param key the input-point key the per-key mode is looked up by
      * @param prompt the already-resolved prompt label
      * @param initialText the anvil pre-fill, or {@code null}
@@ -202,7 +200,7 @@ public final class TextInput {
         InputMode mode = settings.modeFor(key);
         TextInputBackend backend = backendFor(mode);
         // A chat prompt has no cancel button, so it carries the abort hint; a screen backend (anvil/sign) shows the
-        // prompt as its own title and needs none — the same rule buildPrompt applies to a catalog-resolved prompt.
+        // prompt as its own title and needs none: the same rule buildPrompt applies to a catalog-resolved prompt.
         Component effective = mode == InputMode.CHAT ? appendCancelHint(player, prompt) : prompt;
         backend.open(
                 player,
@@ -227,7 +225,7 @@ public final class TextInput {
     }
 
     /**
-     * The backend a {@code dialog} input point falls back to when no dialog backend is wired — the server predates the
+     * The backend a {@code dialog} input point falls back to when no dialog backend is wired: the server predates the
      * 1.21.6 Dialog API, or the seam was built without one. The substitution is logged once (not per prompt, guarded by
      * {@link #dialogFallbackWarned}) so an operator who configured {@code dialog} and saw a sign or an anvil can find
      * out why, instead of a silent masquerade.
@@ -261,10 +259,10 @@ public final class TextInput {
     }
 
     /**
-     * Render the resolved prompt as a Cumulus CustomForm for a Bedrock player — the {@link #promptResolved}
-     * counterpart to {@link #sendInputForm}. The prompt is flattened to plain text for the form title and its single
-     * input's label, and both the submit and the close re-enter {@link #route} on the player's entity thread, so the
-     * cancel-keyword policy and the Folia hop stay shared with every other backend.
+     * Render the resolved prompt as a Cumulus CustomForm for a Bedrock player: the {@link #promptResolved} counterpart
+     * to {@link #sendInputForm}. The prompt is flattened to plain text for the form title and its single input's label,
+     * and both the submit and the close re-enter {@link #route} on the player's entity thread, so the cancel-keyword
+     * policy and the Folia hop stay shared with every other backend.
      */
     private void sendResolvedInputForm(
             Player player,

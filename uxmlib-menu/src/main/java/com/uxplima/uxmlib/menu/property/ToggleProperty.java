@@ -13,15 +13,15 @@ import com.uxplima.uxmlib.scheduler.Scheduler;
 import org.jspecify.annotations.NullMarked;
 
 /**
- * A property whose click cycles through a small, fixed set of states — a boolean (two states) or a short enum
- * — and hands the chosen state to a setter. A left-click advances to the next state, a right-click steps back,
- * so the viewer can move either way through the cycle without re-opening anything. The new state is written
- * through the caller's setter off the tick thread via the shared {@link Scheduler}, then the editor is
- * redrawn so the value lore shows the new state.
+ * A property whose click cycles through a small, fixed set of states, a boolean or a short enum, and hands
+ * the chosen state to a setter. A left-click advances to the next state, a right-click steps back, so the viewer can
+ * move either way through the cycle without re-opening anything. The new state is written through the caller's setter
+ * off the tick thread via the shared {@link Scheduler}, then the editor is redrawn so the value lore shows the new
+ * state.
  *
- * <p>The setter is the module's existing application use case wrapped as a {@link Consumer}; this property
- * holds no domain logic. The value-display function resolves a state to its locale display string (the caller
- * routes it through the message catalog), so no state name is ever an inline literal.
+ * <p>The setter is the module's existing application use case wrapped as a {@link Consumer}; this property holds no
+ * domain logic. The value-display function resolves a state to its locale display string (the caller routes it through
+ * the message catalog), so no state name is ever an inline literal.
  *
  * @param <S> the state type cycled (e.g. {@link Boolean} or an enum)
  */

@@ -8,29 +8,28 @@ import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
 /**
- * The custom-head capability the menu engine asks for and never provides. A host that runs HeadDatabase
- * hands the engine a real one; a host that does not hands it {@link #NONE}, and neither has to tell the engine
- * which it did. A skull icon can
- * name a HeadDatabase head by id (the {@code hdb:<id>} skull source); this seam resolves that id to its
- * {@link ItemStack}. When HeadDatabase is absent the whole capability is the no-op {@link #NONE}: the lookup
- * returns empty and the skull provider falls back to a plain player head, so a menu referencing an HDB head
- * still renders on a server that does not run HeadDatabase.
+ * The custom-head capability the menu engine asks for and never provides. A host that runs HeadDatabase hands the
+ * engine a real one; a host that does not hands it {@link #NONE}, and neither has to tell the engine which it did. A
+ * skull icon can name a HeadDatabase head by id (the {@code hdb:<id>} skull source); this seam resolves that id to its
+ * {@link ItemStack}. When HeadDatabase is absent the whole capability is the no-op {@link #NONE}: the lookup returns
+ * empty and the skull provider falls back to a plain player head, so a menu referencing an HDB head still renders on a
+ * server that does not run HeadDatabase.
  *
- * <p>A lookup is best-effort by design. An unknown id, a HeadDatabase that has not yet finished loading its
- * head index (it builds the index asynchronously on startup, so an early read can come back empty), or a
- * reflective read that fails all collapse to {@link Optional#empty()} rather than throwing — a head lookup
- * degrades to the plain-head fallback, it never breaks a menu render. A null or blank id is empty as well.
+ * <p>A lookup is best-effort by design. An unknown id, a HeadDatabase that has not yet finished loading its head index
+ * (it builds the index asynchronously on startup, so an early read can come back empty), or a reflective read that
+ * fails all collapse to {@link Optional#empty()} rather than throwing: a head lookup degrades to the plain-head
+ * fallback, it never breaks a menu render. A null or blank id is empty as well.
  *
- * <p>The lookup touches the item on the calling thread with no I/O, so a caller invokes it on the viewer's
- * entity thread — the menu engine's item-build chain already runs there. This interface and its {@link #NONE}
- * default reference none of {@code me.arcaniax}; the only class that may touch HeadDatabase is the
- * implementation a host injects, and that one is expected to reach it by reflection past a plugin-present
- * guard. So a HeadDatabase-less server loads no SDK class through this seam.
+ * <p>The lookup touches the item on the calling thread with no I/O, so a caller invokes it on the viewer's entity
+ * thread: the menu engine's item-build chain already runs there. This interface and its {@link #NONE} default reference
+ * none of {@code me.arcaniax}; the only class that may touch HeadDatabase is the implementation a host injects, and
+ * that one is expected to reach it by reflection past a plugin-present guard. So a HeadDatabase-less server loads no
+ * SDK class through this seam.
  */
 @NullMarked
 public interface HeadQuery {
 
-    /** Whether a live HeadDatabase is present and usable — false for the absent default. */
+    /** Whether a live HeadDatabase is present and usable: false for the absent default. */
     boolean available();
 
     /**

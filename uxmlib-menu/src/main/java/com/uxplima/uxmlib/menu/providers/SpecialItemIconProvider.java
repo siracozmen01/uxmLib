@@ -14,19 +14,17 @@ import org.bukkit.potion.PotionType;
 import com.uxplima.uxmlib.menu.runtime.MenuContext;
 
 /**
- * The native "special" item keywords a material name cannot express, because the item is a base material carrying
- * a specific data value rather than a distinct material:
+ * The native "special" item keywords a material name cannot express, because the item is a base material carrying a
+ * specific data value rather than a distinct material:
  *
- * <ul>
- *   <li>{@code water_bottle} — a {@link Material#POTION} whose base potion type is {@link PotionType#WATER}, i.e.
- *       a plain water bottle (there is no {@code WATER_BOTTLE} material).
- *   <li>{@code light:<0-15>} — a {@link Material#LIGHT} block item with its light-block level set; the level is
- *       clamped to {@code 0..15} and a malformed or absent level falls back to the full {@code 15}.
- * </ul>
+ * <ul> <li>{@code water_bottle}: a {@link Material#POTION} whose base potion type is {@link PotionType#WATER}, i.e. a
+ * plain water bottle (there is no {@code WATER_BOTTLE} material). <li>{@code light:<0-15>}: a {@link Material#LIGHT}
+ * block item with its light-block level set; the level is clamped to {@code 0..15} and a malformed or absent level
+ * falls back to the full {@code 15}. </ul>
  *
- * <p>Both are best-effort: a runtime that cannot model the base potion type or block-data level still yields a
- * plain {@code POTION}/{@code LIGHT} item rather than throwing, the same fail-soft contract the rest of the render
- * pipeline keeps. The provider claims only these two keywords, never a bare material name.
+ * <p>Both are best-effort: a runtime that cannot model the base potion type or block-data level still yields a plain
+ * {@code POTION}/{@code LIGHT} item rather than throwing, the same fail-soft contract the rest of the render pipeline
+ * keeps. The provider claims only these two keywords, never a bare material name.
  */
 final class SpecialItemIconProvider implements IconProvider {
 

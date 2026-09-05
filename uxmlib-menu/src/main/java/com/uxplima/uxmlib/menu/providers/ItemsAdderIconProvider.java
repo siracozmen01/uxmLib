@@ -7,13 +7,13 @@ import com.uxplima.uxmlib.common.Log;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Resolves an {@code itemsadder:<id>} spec to its ItemsAdder custom item. ItemsAdder exposes a static factory
- * {@code dev.lone.itemsadder.api.CustomStack.getInstance(String)} that returns a {@code CustomStack} wrapper (or
- * {@code null} for an unknown id), whose {@code getItemStack()} hands back the built {@link ItemStack}.
+ * Resolves an {@code itemsadder:<id>} spec to its ItemsAdder custom item. ItemsAdder exposes a static factory {@code
+ * dev.lone.itemsadder.api.CustomStack.getInstance(String)} that returns a {@code CustomStack} wrapper (or {@code null}
+ * for an unknown id), whose {@code getItemStack()} hands back the built {@link ItemStack}.
  *
- * <p>No {@code dev.lone} type is named here — the SDK is reached only by string class-name through reflection — so a
- * server without ItemsAdder loads none of its classes and the present-guard in {@link ReflectiveItemProvider}
- * short-circuits before any lookup runs.
+ * <p>No {@code dev.lone} type is named here (the SDK is reached only by string class-name through reflection) so a
+ * server without ItemsAdder loads none of its classes and the present-guard in {@link ReflectiveItemProvider} short-
+ * circuits before any lookup runs.
  */
 final class ItemsAdderIconProvider extends ReflectiveItemProvider {
 

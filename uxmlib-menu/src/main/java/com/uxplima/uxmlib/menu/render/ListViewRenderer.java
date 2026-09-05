@@ -17,18 +17,18 @@ import com.uxplima.uxmlib.menu.runtime.ListViewState;
 import org.jspecify.annotations.NullMarked;
 
 /**
- * Lays an {@link EntityListSpec} into an open inventory for one viewer, the list counterpart of {@link EditorRenderer}. It
- * paints the spec's filler everywhere, then one entity icon per content slot for the requested page (sliced through
- * the shared {@link Pagination} so a page flip never re-queries), then the previous/next nav buttons, then the
- * optional create and action buttons — recording each clickable slot onto the holder's {@link ListViewState} so the
- * one listener can route a later click back to the entity or button drawn there. The entity snapshot is re-read
- * fresh from the spec on every call (a page flip is just a repaint of the next slice), and the per-entity icon is
- * the caller's already-prepared {@code ItemStack}, so this renderer makes no presentation decision of its own beyond
- * the filler and the nav/create/action button names the spec resolved.
+ * Lays an {@link EntityListSpec} into an open inventory for one viewer, the list counterpart of {@link EditorRenderer}.
+ * It paints the spec's filler everywhere, then one entity icon per content slot for the requested page (sliced through
+ * the shared {@link Pagination} so a page flip never re-queries), then the previous/next nav buttons, then the optional
+ * create and action buttons: recording each clickable slot onto the holder's {@link ListViewState} so the one listener
+ * can route a later click back to the entity or button drawn there. The entity snapshot is re-read fresh from the spec
+ * on every call (a page flip is just a repaint of the next slice), and the per-entity icon is the caller's already-
+ * prepared {@code ItemStack}, so this renderer makes no presentation decision of its own beyond the filler and the
+ * nav/create/action button names the spec resolved.
  *
- * <p>A page is the spec's content slots holding this page's entities, its nav, create and action slots holding
- * their icons, and the filler everywhere else. Every page of every list is drawn by this one method, so two pages
- * of the same list cannot drift apart.
+ * <p>A page is the spec's content slots holding this page's entities, its nav, create and action slots holding their
+ * icons, and the filler everywhere else. Every page of every list is drawn by this one method, so two pages of the same
+ * list cannot drift apart.
  */
 @NullMarked
 public final class ListViewRenderer {

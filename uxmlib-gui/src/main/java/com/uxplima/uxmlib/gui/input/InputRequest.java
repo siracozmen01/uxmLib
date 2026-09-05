@@ -8,14 +8,14 @@ import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
 /**
- * One text-input point: a stable {@code key} the operator config keys its per-point mode override off, the
- * {@code label} catalog line shown as the prompt (anvil hint or chat message) with its {@code placeholders}, and an
- * optional {@code initialText} the anvil backend pre-fills the rename field with (the chat backend cannot pre-fill, so
- * it ignores it).
+ * One text-input point: a stable {@code key} the operator config keys its per-point mode override off, the {@code
+ * label} catalog line shown as the prompt (anvil hint or chat message) with its {@code placeholders}, and an optional
+ * {@code initialText} the anvil backend pre-fills the rename field with (the chat backend cannot pre-fill, so it
+ * ignores it).
  *
- * <p>The key is the contract between code and config: it is the dotted token an operator writes under
- * {@code input.modes} to flip this point between anvil and chat (e.g. {@code home.rename}, {@code loan.amount}).
- * It is descriptive and stable — renaming it is a config-breaking change, so it reads like the action it captures.
+ * <p>The key is the contract between code and config: it is the dotted token an operator writes under {@code
+ * input.modes} to flip this point between anvil and chat (e.g. {@code home.rename}, {@code loan.amount}). It is
+ * descriptive and stable: renaming it is a config-breaking change, so it reads like the action it captures.
  *
  * @param key the stable input-point identifier the per-key mode override is looked up by
  * @param label the prompt catalog line, resolved in the player's locale
@@ -34,7 +34,7 @@ public record InputRequest(String key, String label, Map<String, String> placeho
         }
     }
 
-    /** A request with no placeholders and no anvil pre-fill — the field starts empty. */
+    /** A request with no placeholders and no anvil pre-fill: the field starts empty. */
     public static InputRequest of(String key, String label) {
         return new InputRequest(key, label, Map.of(), null);
     }

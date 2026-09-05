@@ -65,9 +65,9 @@ public final class EntityEditorView<T> {
         this.onDelete = builder.onDelete;
         EditorSpec.Builder specBuilder = EditorSpec.builder()
                 .layout(layout)
-                // The engine spec is type-erased on the subject, so the typed title/property provider close over T
-                // and cast the Object subject back — the subject is always the entity this view was opened with, so
-                // a null here would be a wiring error and is rejected rather than rendered.
+                // The engine spec is type-erased on the subject, so the typed title/property provider close over T and
+                // cast the Object subject back: the subject is always the entity this view was opened with, so a null
+                // here would be a wiring error and is rejected rather than rendered.
                 .title((viewer, subject) -> title.apply(viewer, require(subject)))
                 .valueLore(valueLore)
                 .backName(backName)

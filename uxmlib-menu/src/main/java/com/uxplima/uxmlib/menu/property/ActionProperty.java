@@ -10,15 +10,15 @@ import org.bukkit.entity.Player;
 import org.jspecify.annotations.NullMarked;
 
 /**
- * A property whose click runs a one-shot action rather than cycling a value — the "do-it-now" button a settings
- * panel or launcher hub places next to its toggles. The motivating cases are a button that opens a confirm or an
- * anvil, a button that opens another menu, or a button that fires a fire-and-forget admin action. The handler is
- * invoked with the live {@link Player} who clicked and a {@code reopen} runnable so it can open a sub-view (or
- * re-render) safely; it carries no domain logic of its own — the module's own use case sits inside the handler.
+ * A property whose click runs a one-shot action rather than cycling a value: the "do-it-now" button a settings panel or
+ * launcher hub places next to its toggles. The motivating cases are a button that opens a confirm or an anvil, a button
+ * that opens another menu, or a button that fires a fire-and-forget admin action. The handler is invoked with the live
+ * {@link Player} who clicked and a {@code reopen} runnable so it can open a sub-view (or re-render) safely; it carries
+ * no domain logic of its own: the module's own use case sits inside the handler.
  *
  * <p>Unlike {@link ToggleProperty} this property has no editable current value, so its value lore is a fixed hint
- * resolved from the catalog (never an inline literal). The hint may depend on the viewer (so a count or a state
- * line can be shown), so the caller supplies it as a {@link Function} of the viewer.
+ * resolved from the catalog (never an inline literal). The hint may depend on the viewer (so a count or a state line
+ * can be shown), so the caller supplies it as a {@link Function} of the viewer.
  */
 @NullMarked
 public final class ActionProperty implements EditableProperty {

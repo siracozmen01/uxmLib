@@ -7,13 +7,13 @@ import com.uxplima.uxmlib.common.Log;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Resolves an {@code oraxen:<id>} spec to its Oraxen custom item. Oraxen exposes a static facade
- * {@code io.th0rgal.oraxen.api.OraxenItems.getItemById(String)} that returns an Oraxen {@code ItemBuilder} (or
- * {@code null} for an unknown id), whose {@code build()} yields the finished {@link ItemStack}.
+ * Resolves an {@code oraxen:<id>} spec to its Oraxen custom item. Oraxen exposes a static facade {@code
+ * io.th0rgal.oraxen.api.OraxenItems.getItemById(String)} that returns an Oraxen {@code ItemBuilder} (or {@code null}
+ * for an unknown id), whose {@code build()} yields the finished {@link ItemStack}.
  *
- * <p>No {@code io.th0rgal} type is named here — the SDK is reached only by string class-name through reflection — so a
- * server without Oraxen loads none of its classes and the present-guard in {@link ReflectiveItemProvider}
- * short-circuits before any lookup runs.
+ * <p>No {@code io.th0rgal} type is named here (the SDK is reached only by string class-name through reflection) so a
+ * server without Oraxen loads none of its classes and the present-guard in {@link ReflectiveItemProvider} short-
+ * circuits before any lookup runs.
  */
 final class OraxenIconProvider extends ReflectiveItemProvider {
 

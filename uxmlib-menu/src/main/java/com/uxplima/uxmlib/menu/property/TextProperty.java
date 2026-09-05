@@ -15,17 +15,17 @@ import com.uxplima.uxmlib.scheduler.Scheduler;
 import org.jspecify.annotations.NullMarked;
 
 /**
- * A property whose click opens a {@link TextInput} prompt (anvil or chat, per the operator's per-key config),
- * validates the typed line, and hands the accepted value to a setter. The prompt's hint is a catalog line; the
- * validator turns the raw text into the accepted value or rejects it (an empty {@link Optional}), so a module can
- * trim, length-check, or pattern-match without the framework knowing the rules. An accepted value is written through
- * the caller's setter off the tick thread via the shared {@link Scheduler}; on a rejected submit and on cancel the
- * editor is redrawn so the viewer lands back where they were.
+ * A property whose click opens a {@link TextInput} prompt (anvil or chat, per the operator's per-key config), validates
+ * the typed line, and hands the accepted value to a setter. The prompt's hint is a catalog line; the validator turns
+ * the raw text into the accepted value or rejects it (an empty {@link Optional}), so a module can trim, length-check,
+ * or pattern-match without the framework knowing the rules. An accepted value is written through the caller's setter
+ * off the tick thread via the shared {@link Scheduler}; on a rejected submit and on cancel the editor is redrawn so the
+ * viewer lands back where they were.
  *
- * <p>The {@code inputKey} identifies this field to the input config — every text field in an entity editor shares the
+ * <p>The {@code inputKey} identifies this field to the input config: every text field in an entity editor shares the
  * one {@code editor.text-field} key, so an operator flips all editor text fields to chat (or anvil) with a single
- * override. The {@link TextInput} seam already hops the callback onto the viewer's region thread and handles the
- * cancel keywords, so this property only validates and sets.
+ * override. The {@link TextInput} seam already hops the callback onto the viewer's region thread and handles the cancel
+ * keywords, so this property only validates and sets.
  */
 @NullMarked
 public final class TextProperty implements EditableProperty {

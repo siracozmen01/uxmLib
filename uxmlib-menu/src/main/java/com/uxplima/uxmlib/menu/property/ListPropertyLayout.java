@@ -8,11 +8,11 @@ import org.bukkit.Material;
 import org.jspecify.annotations.NullMarked;
 
 /**
- * The externalised geometry and materials of a {@link ListProperty}'s sub-menu, read once from a module's
- * {@code gui/*.conf}: the row count, the slots each entry button is drawn into, the add and back button slots,
- * and the entry/add/back/filler icon materials. Holds layout integers and materials only — never localised
- * strings (those are a {@link ListPropertyText}) — so an operator-edited layout and a translated catalog never
- * collide. Validated at construction; a view passes the parsed record straight to the property.
+ * The externalised geometry and materials of a {@link ListProperty}'s sub-menu, read once from a module's {@code
+ * gui/*.conf}: the row count, the slots each entry button is drawn into, the add and back button slots, and the
+ * entry/add/back/filler icon materials. Holds layout integers and materials only, never localised strings, which
+ * are a {@link ListPropertyText}, so an operator-edited layout and a translated catalog never collide. Validated at
+ * construction; a view passes the parsed record straight to the property.
  *
  * @param rows the sub-menu row count, 1..6
  * @param entrySlots the slots entry buttons fill, in order; paging is the caller's concern if it overflows

@@ -14,19 +14,18 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * Shared scaffolding for the icon providers that resolve a custom-item id through another plugin reached purely by
- * reflection: ItemsAdder, Oraxen, Nexo, CraftEngine, MMOItems. A subclass names the plugin it integrates with and
- * its {@code material} prefix (e.g. {@code itemsadder:}) and implements one reflective primitive: turn the bare id
- * into an {@link ItemStack}. This base owns the load-safe contract around it. A spec it does not own (the prefix does not
+ * reflection: ItemsAdder, Oraxen, Nexo, CraftEngine, MMOItems. A subclass names the plugin it integrates with and its
+ * {@code material} prefix (e.g. {@code itemsadder:}) and implements one reflective primitive: turn the bare id into an
+ * {@link ItemStack}. This base owns the load-safe contract around it. A spec it does not own (the prefix does not
  * match) is left for the next provider; a matching spec is gated by the plugin-present guard, so a server without the
- * plugin resolves to empty — the renderer's plain-material fallback then renders the id as a material name. Any
- * {@link ReflectiveOperationException} (the API absent, or its shape shifted under a version bump) or unchecked
- * failure from the lookup is logged exactly once and degraded to empty rather than aborting the render.
+ * plugin resolves to empty: the renderer's plain-material fallback then renders the id as a material name. Any {@link
+ * ReflectiveOperationException} (the API absent, or its shape shifted under a version bump) or unchecked failure from
+ * the lookup is logged exactly once and degraded to empty rather than aborting the render.
  *
- * <p>This is the same discipline the migration {@code PlayerPointsBalanceFeed} uses. Crucially, a subclass names
- * the integrated plugin's SDK only by string class-name through {@link
- * Class#forName(String)} and reflective lookups, so no field or method signature here carries an SDK type:
- * constructing one of these on a server without the plugin loads none of its classes, and the present-guard
- * short-circuits before any reflection runs.
+ * <p>This is the same discipline the migration {@code PlayerPointsBalanceFeed} uses. Crucially, a subclass names the
+ * integrated plugin's SDK only by string class-name through {@link Class#forName(String)} and reflective lookups, so no
+ * field or method signature here carries an SDK type: constructing one of these on a server without the plugin loads
+ * none of its classes, and the present-guard short-circuits before any reflection runs.
  */
 abstract class ReflectiveItemProvider implements IconProvider {
 
@@ -55,7 +54,7 @@ abstract class ReflectiveItemProvider implements IconProvider {
             return Optional.empty();
         }
         String id = trimmed.substring(prefix.length()).trim();
-        // Plugin absent (or a blank id) is a silent miss, not a warning — the menu degrades to the material fallback.
+        // Plugin absent (or a blank id) is a silent miss, not a warning: the menu degrades to the material fallback.
         if (id.isBlank() || !server.getPluginManager().isPluginEnabled(pluginName)) {
             return Optional.empty();
         }

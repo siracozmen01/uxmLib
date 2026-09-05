@@ -176,8 +176,8 @@ public final class EntityListSpec {
     }
 
     /**
-     * Any fixed, pre-built buttons the list draws alongside the entities and nav — beyond the single create and action
-     * buttons — each at its own slot with its own click handler. The list renderer paints each icon as-is and records
+     * Any fixed, pre-built buttons the list draws alongside the entities and nav (beyond the single create and action
+     * buttons) each at its own slot with its own click handler. The list renderer paints each icon as-is and records
      * its click, so a caller that needs more than the create/action pair (the shared player picker's offline-name
      * button plus its optional footer buttons) is not capped at two. Empty for a list that uses none.
      */

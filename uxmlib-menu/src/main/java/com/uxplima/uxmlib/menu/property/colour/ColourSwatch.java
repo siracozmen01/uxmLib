@@ -8,14 +8,14 @@ import com.uxplima.uxmlib.menu.MenuKeys;
 import org.jspecify.annotations.NullMarked;
 
 /**
- * One entry in the colour picker's fixed palette: a standard Minecraft named colour (the 16 dye colours), its
- * RGB value, the catalog key carrying its display name, and the default stained-glass-pane material the picker
- * draws it with when the layout conf does not override the slot's material. The palette order matches the
- * canonical Minecraft dye order so an operator's {@code palette-slots} list maps positionally onto it.
+ * One entry in the colour picker's fixed palette: a standard Minecraft named colour (the 16 dye colours), its RGB
+ * value, the catalog key carrying its display name, and the default stained-glass-pane material the picker draws it
+ * with when the layout conf does not override the slot's material. The palette order matches the canonical Minecraft
+ * dye order so an operator's {@code palette-slots} list maps positionally onto it.
  *
- * <p>The swatch carries only presentation data — an RGB triple, a name key, and a default icon. The picker packs
- * the RGB into an opaque ARGB int ({@code 0xFF} alpha) when a swatch is chosen; the property's setter is the
- * only place a domain write happens.
+ * <p>The swatch carries only presentation data: an RGB triple, a name key, and a default icon. The picker packs the RGB
+ * into an opaque ARGB int ({@code 0xFF} alpha) when a swatch is chosen; the property's setter is the only place a
+ * domain write happens.
  */
 @NullMarked
 public enum ColourSwatch {

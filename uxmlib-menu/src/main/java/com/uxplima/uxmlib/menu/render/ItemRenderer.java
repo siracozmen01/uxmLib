@@ -63,12 +63,11 @@ import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Resolves one {@link MenuItemSpec} into the {@link ItemStack} a viewer sees. The spec carries only raw text —
- * a {@code @key}, an inline literal, or a {@code %placeholder%} — so this is where those forms turn into a
- * concrete material, an Adventure name and lore, and the cosmetic decor. Material placeholders expand to a
- * material name; name/lore placeholders expand inline before the text is rendered or looked up in the catalog.
- * Unknown materials fall back to {@link Material#STONE} rather than failing a render, so one bad spec line
- * never blanks a whole menu.
+ * Resolves one {@link MenuItemSpec} into the {@link ItemStack} a viewer sees. The spec carries only raw text (a {@code
+ * @key}, an inline literal, or a {@code %placeholder%}) so this is where those forms turn into a concrete material, an
+ * Adventure name and lore, and the cosmetic decor. Material placeholders expand to a material name; name/lore
+ * placeholders expand inline before the text is rendered or looked up in the catalog. Unknown materials fall back to
+ * {@link Material#STONE} rather than failing a render, so one bad spec line never blanks a whole menu.
  */
 @NullMarked
 public final class ItemRenderer {
@@ -147,14 +146,14 @@ public final class ItemRenderer {
     }
 
     /**
-     * The item's resolved display name followed by its lore, as one flat label — what the hybrid form renderer shows
-     * on the button that stands in for this item. A Bedrock SimpleForm button carries a single {@code \n}-separated
-     * string rather than a rich icon, so the name and each spec lore line are put through the same {@code
-     * %token%}/{@code @key} resolution {@link #render} uses, flattened of formatting, and joined one per line; a
-     * Bedrock viewer then reads the same name and lore a Java viewer sees on the icon. An item with no lore yields
-     * just the name, and a blank spec lore line stays a blank line so the operator's spacing carries over. The spec
-     * lore ({@link MenuItemSpec#lore}) is used deliberately — the operator's written lore, not any lore a {@code b64:}
-     * or provider icon embeds — since that is what belongs on a form button.
+     * The item's resolved display name followed by its lore, as one flat label: what the hybrid form renderer shows on
+     * the button that stands in for this item. A Bedrock SimpleForm button carries a single {@code \n}-separated string
+     * rather than a rich icon, so the name and each spec lore line are put through the same {@code %token%}/{@code
+     * @key} resolution {@link #render} uses, flattened of formatting, and joined one per line; a Bedrock viewer then
+     * reads the same name and lore a Java viewer sees on the icon. An item with no lore yields just the name, and a
+     * blank spec lore line stays a blank line so the operator's spacing carries over. The spec lore ({@link
+     * MenuItemSpec#lore}) is used deliberately (the operator's written lore, not any lore a {@code b64:} or provider
+     * icon embeds) since that is what belongs on a form button.
      */
     public String buttonText(MenuItemSpec item, MenuContext ctx) {
         Objects.requireNonNull(item, "item");
@@ -167,7 +166,7 @@ public final class ItemRenderer {
     }
 
     /**
-     * The resolved icon material spec for {@code item} — the very string the icon providers and the material fallback
+     * The resolved icon material spec for {@code item}: the very string the icon providers and the material fallback
      * read, with any {@code %token%} expanded ({@code %head%} → {@code skull:Notch}, or a literal {@code DIAMOND}). The
      * hybrid Bedrock renderer reads this to source a form button's image, so a per-entry {@code skull:%player%} icon
      * resolves against the entry's own context exactly as it would on a chest.
@@ -181,8 +180,8 @@ public final class ItemRenderer {
     /**
      * A raw spec string resolved through the same {@code %token%}/{@code @key} path an item name takes, then flattened
      * to plain text. A Bedrock CustomForm's title, intro content and widget labels/options are flat strings, so the
-     * hybrid form renderer resolves each operator-written string here — carrying a per-entry or per-open token through
-     * — exactly as a button label or a menu title would.
+     * hybrid form renderer resolves each operator-written string here (carrying a per-entry or per-open token through)
+     * exactly as a button label or a menu title would.
      */
     public String plainText(String raw, MenuContext ctx) {
         Objects.requireNonNull(raw, "raw");
@@ -192,18 +191,18 @@ public final class ItemRenderer {
 
     /**
      * One text line resolved through the same {@code %token%}/{@code @key} path an icon name or lore line takes, then
-     * flattened to plain text — a Bedrock form label is a flat string, so a button's name and lore reach it stripped
-     * of all formatting.
+     * flattened to plain text: a Bedrock form label is a flat string, so a button's name and lore reach it stripped of
+     * all formatting.
      */
     private String plainLine(String line, MenuContext ctx) {
         return PlainTextComponentSerializer.plainText().serialize(resolveText(line, ctx));
     }
 
     /**
-     * A shared {@link String} resolved for {@code viewer} and flattened to plain text — the label a Bedrock form
-     * needs where the chest paints a wordless icon (a confirm window's yes/no wool). Goes through the same
-     * {@link GuiText} catalog path an item name takes, so the label honours the viewer's locale, then drops all
-     * formatting to a flat string.
+     * A shared {@link String} resolved for {@code viewer} and flattened to plain text: the label a Bedrock form needs
+     * where the chest paints a wordless icon (a confirm window's yes/no wool). Goes through the same {@link GuiText}
+     * catalog path an item name takes, so the label honours the viewer's locale, then drops all formatting to a flat
+     * string.
      */
     public String plainMessage(Player viewer, String key) {
         Objects.requireNonNull(viewer, "viewer");
@@ -225,8 +224,8 @@ public final class ItemRenderer {
         Component shown = untitled ? name : Tiles.blankName();
         ItemStack built = applyDecor(builderFor(base, materialSpec).name(shown).lore(titled), item.decor(), ctx)
                 .build();
-        // Tag every tile the engine renders — including an equipment/self-inventory icon, which is already a clone of
-        // the viewer's real item — so any display copy that escapes into a real inventory is strippable. The mark rides
+        // Tag every tile the engine renders (including an equipment/self-inventory icon, which is already a clone of
+        // the viewer's real item) so any display copy that escapes into a real inventory is strippable. The mark rides
         // on the display copy only; the player's own items are never touched here (MenuItemMark, MenuAntiDupeListener).
         ItemStack marked = MenuItemMark.mark(built);
         // Last, and on the finished stack: the whole-tooltip flag and the hidden set live on one component, so
@@ -236,11 +235,11 @@ public final class ItemRenderer {
     }
 
     /**
-     * Combine the base icon's own lore with the spec lore per {@code item}'s {@link LoreMode}. REPLACE keeps only
-     * the spec lore (the historic behaviour); APPEND puts the base lore first, then the spec lore beneath it;
-     * PREPEND puts the spec lore first, then the base lore. The base lore comes from the resolved icon — a
-     * serialized {@code b64:} stack or a provider item may carry its own — so a plain material, which has no lore
-     * of its own, renders identically under any mode.
+     * Combine the base icon's own lore with the spec lore per {@code item}'s {@link LoreMode}. REPLACE keeps only the
+     * spec lore (the historic behaviour); APPEND puts the base lore first, then the spec lore beneath it; PREPEND puts
+     * the spec lore first, then the base lore. The base lore comes from the resolved icon (a serialized {@code b64:}
+     * stack or a provider item may carry its own) so a plain material, which has no lore of its own, renders
+     * identically under any mode.
      */
     private List<Component> combineLore(MenuItemSpec item, Optional<ItemStack> base, MenuContext ctx) {
         List<Component> specLore = lore(item, ctx);
@@ -265,10 +264,10 @@ public final class ItemRenderer {
 
     /**
      * Build the lore components for {@code item}. Each spec line maps to one component as before, except an
-     * inline/placeholder literal whose resolved value carries newlines, which expands into one component per
-     * {@code \n}-separated segment. This lets a per-entry icon (the kit/warp browse rows) emit a variable number
-     * of lore lines from a single {@code %placeholder%} — a {@code ✔/✘} per requirement, plus the conditional
-     * cooldown/cost/claimable lines — rather than being capped at the spec's fixed line count.
+     * inline/placeholder literal whose resolved value carries newlines, which expands into one component per {@code
+     * \n}-separated segment. This lets a per-entry icon (the kit/warp browse rows) emit a variable number of lore lines
+     * from a single {@code %placeholder%} (a {@code ✔/✘} per requirement, plus the conditional cooldown/cost/claimable
+     * lines) rather than being capped at the spec's fixed line count.
      */
     public List<Component> lore(MenuItemSpec item, MenuContext ctx) {
         Objects.requireNonNull(item, "item");
@@ -281,12 +280,12 @@ public final class ItemRenderer {
     }
 
     /**
-     * Append the component(s) for one lore spec line to {@code out}. A blank spec stays one blank line, and a
-     * {@code @key} catalog line stays a single component (the catalog owns its own layout, so its output is never
-     * split here). Any other line is an inline/placeholder literal: its {@code %token%}s are substituted, then the
-     * result is split on {@code \n} so a multi-line placeholder value becomes one lore component per segment. The
-     * {@code -1} split limit keeps trailing empty segments, and a value with no newline yields exactly one
-     * component — identical to a plain literal line.
+     * Append the component(s) for one lore spec line to {@code out}. A blank spec stays one blank line, and a {@code
+     * @key} catalog line stays a single component (the catalog owns its own layout, so its output is never split here).
+     * Any other line is an inline/placeholder literal: its {@code %token%}s are substituted, then the result is split
+     * on {@code \n} so a multi-line placeholder value becomes one lore component per segment. The {@code -1} split
+     * limit keeps trailing empty segments, and a value with no newline yields exactly one component: identical to a
+     * plain literal line.
      */
     private void appendLore(String spec, MenuContext ctx, List<Component> out) {
         if (spec.isEmpty()) {
@@ -304,9 +303,9 @@ public final class ItemRenderer {
     }
 
     /**
-     * The resolved material spec string: a {@code %token%} spec expands through its placeholder, a literal spec
-     * is itself. This is the string the icon providers and the material fallback both read — so {@code %head%}
-     * → {@code skull:Notch} reaches the skull provider, and {@code DIAMOND} reaches the material lookup.
+     * The resolved material spec string: a {@code %token%} spec expands through its placeholder, a literal spec is
+     * itself. This is the string the icon providers and the material fallback both read: so {@code %head%} → {@code
+     * skull:Notch} reaches the skull provider, and {@code DIAMOND} reaches the material lookup.
      */
     private String resolveMaterialSpec(String raw, MenuContext ctx) {
         Matcher matcher = PLACEHOLDER.matcher(raw);
@@ -314,11 +313,11 @@ public final class ItemRenderer {
     }
 
     /**
-     * The {@link ItemBuilder} for a resolved {@code base}: from an icon provider's stack (a skull source, the
-     * viewer's equipment, a serialized {@code b64:} stack, an HDB head) when one claimed the spec, else a plain
-     * item of the named material. A provider's stack still has the item's name, lore and decor layered on top by
-     * the caller, exactly as a material item does. It is split out from lore-combining so the resolved base stack —
-     * whose own lore an append/prepend mode reads — stays visible to {@link #render}.
+     * The {@link ItemBuilder} for a resolved {@code base}: from an icon provider's stack (a skull source, the viewer's
+     * equipment, a serialized {@code b64:} stack, an HDB head) when one claimed the spec, else a plain item of the
+     * named material. A provider's stack still has the item's name, lore and decor layered on top by the caller,
+     * exactly as a material item does. It is split out from lore-combining so the resolved base stack (whose own lore
+     * an append/prepend mode reads) stays visible to {@link #render}.
      */
     private ItemBuilder builderFor(Optional<ItemStack> base, String spec) {
         return base.map(ItemBuilder::from).orElseGet(() -> ItemBuilder.of(materialOrStone(spec)));
@@ -501,8 +500,8 @@ public final class ItemRenderer {
 
     /**
      * Apply every native rich-meta value the operator declared, resolving each token against the live registries.
-     * Anything that does not resolve — an unknown enchant, an unsupported colour, a banner/trim registry the
-     * runtime cannot model — is skipped rather than aborting the render, the same way an unknown flag is skipped.
+     * Anything that does not resolve (an unknown enchant, an unsupported colour, a banner/trim registry the runtime
+     * cannot model) is skipped rather than aborting the render, the same way an unknown flag is skipped.
      */
     private void applyRichMeta(ItemBuilder builder, RichMeta meta) {
         if (meta.unbreakable()) {

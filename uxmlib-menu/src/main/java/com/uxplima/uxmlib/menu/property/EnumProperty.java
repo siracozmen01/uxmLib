@@ -20,22 +20,21 @@ import com.uxplima.uxmlib.scheduler.Scheduler;
 import org.jspecify.annotations.NullMarked;
 
 /**
- * A property whose click opens a small selector sub-menu listing the options, one button per option drawn into
- * the configured option slots; clicking an option hands it to the setter and returns to the editor. The
- * selector's title, the per-option name (resolved from the option through the caller's display function), and
- * its geometry (rows, option slots, option-icon and filler materials) all come from the caller — nothing is
- * hardcoded. The currently-selected option is highlighted with an enchant glint so the viewer can see where
- * they are.
+ * A property whose click opens a small selector sub-menu listing the options, one button per option drawn into the
+ * configured option slots; clicking an option hands it to the setter and returns to the editor. The selector's title,
+ * the per-option name (resolved from the option through the caller's display function), and its geometry (rows, option
+ * slots, option-icon and filler materials) all come from the caller: nothing is hardcoded. The currently-selected
+ * option is highlighted with an enchant glint so the viewer can see where they are.
  *
- * <p>The chosen option is written through the caller's setter off the tick thread via the shared
- * {@link Scheduler}, then the editor is redrawn. The setter is the module's existing application use case
- * wrapped as a {@link Consumer}; this property holds no domain logic. The selector opens as an engine child
- * window the one menu listener routes, so click routing and teardown stay on a single holder.
+ * <p>The chosen option is written through the caller's setter off the tick thread via the shared {@link Scheduler},
+ * then the editor is redrawn. The setter is the module's existing application use case wrapped as a {@link Consumer};
+ * this property holds no domain logic. The selector opens as an engine child window the one menu listener routes, so
+ * click routing and teardown stay on a single holder.
  *
- * <p>Every option draws with the same configured {@code optionIcon} by default; a caller that wants a
- * per-option icon (e.g. the NPC type selector showing each mob's spawn egg) passes an {@code optionIconFn}
- * that maps an option to its own material. The function is only consulted for the button material — the name,
- * geometry, glint, and selection behaviour are identical either way.
+ * <p>Every option draws with the same configured {@code optionIcon} by default; a caller that wants a per-option icon
+ * (e.g. the NPC type selector showing each mob's spawn egg) passes an {@code optionIconFn} that maps an option to its
+ * own material. The function is only consulted for the button material: the name, geometry, glint, and selection
+ * behaviour are identical either way.
  *
  * @param <E> the option type (typically an enum)
  */

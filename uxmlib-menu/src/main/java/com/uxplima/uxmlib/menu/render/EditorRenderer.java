@@ -22,16 +22,15 @@ import com.uxplima.uxmlib.text.style.Theme;
 import org.jspecify.annotations.NullMarked;
 
 /**
- * Lays an {@link EditorSpec} into an open inventory for one viewer, the editor counterpart of {@link MenuRenderer}.
- * It paints the layout's filler everywhere, then one button per {@link EditableProperty} at the layout's ordered
- * property slots, then the back button, then the optional delete button — recording each clickable slot onto the
- * holder's {@link EditorState} so the one listener can route a later click back to the property or button drawn
- * there. The property list is re-read fresh from the subject on every call (a page-less re-render of an editor is
- * just a repaint), so a value changed by a click shows on the next draw.
+ * Lays an {@link EditorSpec} into an open inventory for one viewer, the editor counterpart of {@link MenuRenderer}. It
+ * paints the layout's filler everywhere, then one button per {@link EditableProperty} at the layout's ordered property
+ * slots, then the back button, then the optional delete button: recording each clickable slot onto the holder's {@link
+ * EditorState} so the one listener can route a later click back to the property or button drawn there. The property
+ * list is re-read fresh from the subject on every call (a page-less re-render of an editor is just a repaint), so a
+ * value changed by a click shows on the next draw.
  *
- * <p>A per-property button is the property's own icon, its {@code label()} catalog name, and the value-lore
- * catalog line wrapping {@code valueLore(viewer)}, which is what makes two editors built from different specs
- * identical window.
+ * <p>A per-property button is the property's own icon, its {@code label()} catalog name, and the value-lore catalog
+ * line wrapping {@code valueLore(viewer)}, which is what makes two editors built from different specs identical window.
  */
 @NullMarked
 public final class EditorRenderer {
