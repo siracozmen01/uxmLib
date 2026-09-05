@@ -18,7 +18,7 @@ import org.bukkit.inventory.ItemStack;
 
 import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.util.Pair;
-import com.uxplima.uxmlib.npc.PacketSender;
+import com.uxplima.uxmlib.pipeline.PacketSender;
 import com.uxplima.uxmlib.packet.Bundles;
 import com.uxplima.uxmlib.packet.Codecs;
 import com.uxplima.uxmlib.packet.Components;
@@ -120,7 +120,7 @@ import org.jspecify.annotations.Nullable;
 /**
  * The sole NMS-bearing class of the packet NPC layer: it builds the real Mojang-mapped packets that spawn and
  * steer a fake-player NPC per viewer and writes them through the connection. Quarantining {@code net.minecraft}
- * to one class follows the same precedent as {@code uxmlib-npc}'s {@code ChannelResolver}, the nametag
+ * to one class follows the same precedent as {@code uxmlib-pipeline}'s {@code ChannelResolver}, the nametag
  * renderer's {@code NmsNametagPackets}, and the tablist renderer's {@code NmsTabListPackets}.
  *
  * <p>Built against the Mojang-mapped 1.21.11 dev bundle; Paper's runtime remapper maps these back to the

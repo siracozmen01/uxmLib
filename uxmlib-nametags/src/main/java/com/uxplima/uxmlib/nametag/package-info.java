@@ -4,7 +4,7 @@
  * different viewers can see different prefixes, suffixes, colours, or visibility: without touching the
  * server-side scoreboard. PacketEvents (the off-the-shelf choice) is GPL, so none of it is borrowed; the
  * packets are constructed against the Mojang-mapped dev bundle and quarantined to a single NMS class, while
- * the channel/send plumbing is reused from {@code uxmlib-npc}.
+ * the channel/send plumbing is reused from {@code uxmlib-pipeline}.
  *
  * <p>This package holds the pure value types ({@link com.uxplima.uxmlib.nametag.Appearance},
  * {@link com.uxplima.uxmlib.nametag.PerViewerText}, {@link com.uxplima.uxmlib.nametag.Billboard},

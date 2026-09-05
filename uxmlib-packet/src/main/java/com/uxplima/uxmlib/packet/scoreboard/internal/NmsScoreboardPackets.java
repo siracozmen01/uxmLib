@@ -6,7 +6,7 @@ import java.util.Optional;
 
 import org.bukkit.entity.Player;
 
-import com.uxplima.uxmlib.npc.PacketSender;
+import com.uxplima.uxmlib.pipeline.PacketSender;
 import com.uxplima.uxmlib.packet.Bundles;
 import com.uxplima.uxmlib.packet.Components;
 import com.uxplima.uxmlib.packet.scoreboard.ScoreboardDisplaySlot;

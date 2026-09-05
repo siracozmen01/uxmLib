@@ -12,7 +12,7 @@ import org.bukkit.entity.Player;
 import net.kyori.adventure.text.Component;
 
 import com.mojang.authlib.GameProfile;
-import com.uxplima.uxmlib.npc.PacketSender;
+import com.uxplima.uxmlib.pipeline.PacketSender;
 import com.uxplima.uxmlib.packet.Components;
 import com.uxplima.uxmlib.packet.GameProfiles;
 import com.uxplima.uxmlib.packet.tablist.PlayerInfoEntry;
@@ -32,7 +32,7 @@ import org.jspecify.annotations.Nullable;
 /**
  * The sole NMS-bearing class of the tab-list layer: it builds the real Mojang-mapped player-info packets that
  * paint a per-viewer tab row and writes them through the connection. Quarantining {@code net.minecraft} to one
- * class follows the same precedent as {@code uxmlib-npc}'s {@code ChannelResolver} and the nametag renderer's
+ * class follows the same precedent as {@code uxmlib-pipeline}'s {@code ChannelResolver} and the nametag renderer's
  * {@code NmsNametagPackets}, which isolate the unavoidable server-internal reach so the rest of the module
  * stays pure and unit-testable against a fake.
  *

@@ -7,7 +7,7 @@ import org.bukkit.entity.Player;
 
 import net.kyori.adventure.text.Component;
 
-import com.uxplima.uxmlib.npc.PacketSender;
+import com.uxplima.uxmlib.pipeline.PacketSender;
 import com.uxplima.uxmlib.packet.Components;
 import com.uxplima.uxmlib.packet.Reflect;
 import com.uxplima.uxmlib.packet.display.DisplayTextPackets;

@@ -110,7 +110,7 @@ what you use. Modules marked **experimental** are previews with unstable APIs (s
 | `uxmlib-hud` | Adventure-native HUD overlays, all through the public player API: a flicker-free diffing sidebar, title/subtitle, a sticky action bar, boss bars with a mode enum (permanent/filling/countdown/dynamic), tablist header/footer, per-tick text animators, and a nametag registry that composes several plugins' prefixes, suffixes and colours onto the one team a player may belong to. |
 | `uxmlib-update` | A notify-only release update checker (GitHub / Modrinth providers) that compares a build-time version constant against the latest release and surfaces a permission-gated clickable join message. It never self-downloads. |
 | `uxmlib-condition` | A declarative condition engine (operand comparison + placeholder resolution + failure policy) and its natural pair, a config-driven action engine (`[message]`, `[console]`, `[title]`, … parsed once into closures). |
-| `uxmlib-npc` | **Experimental.** A from-scratch, MIT-clean Netty pipeline foundation: channel resolve, idempotent inject/eject, a self-healing reorder watchdog, and a fail-open listener seam. Groundwork for the packet layer; no NPC yet. |
+| `uxmlib-pipeline` | **Experimental.** A from-scratch, MIT-clean Netty pipeline: channel resolve, idempotent inject/eject, a self-healing reorder watchdog, and a fail-open listener seam. It builds no packet and knows no entity. Alone in the packet family it needs no Mojang-mapped server, so a plugin that wants a pipeline and no server internals can take it on its own. |
 | `uxmlib-packet` | **Experimental.** The shared Mojang-mapped packet helpers (Adventure→vanilla component conversion, bundling, the stream-codec buffer trick, guarded reflection, entity-id allocation) plus per-viewer tab-list, NPC, and text-display packet ports built on them. |
 | `uxmlib-nametags` | **Experimental.** A from-scratch per-viewer nametag renderer (different prefixes/colours/visibility per viewer) over scoreboard-team and metadata packets, without touching the server-side scoreboard. |
 | `uxmlib-bom` | A bill of materials so a consumer can align every `uxmlib-*` artifact to one version with a single platform import. |
@@ -129,10 +129,10 @@ graph TD
     update[uxmlib-update] --> common
     condition[uxmlib-condition] --> common
     redis[uxmlib-redis]
-    npc[uxmlib-npc] --> common
-    packet[uxmlib-packet] --> npc
+    pipeline[uxmlib-pipeline] --> common
+    packet[uxmlib-packet] --> pipeline
     nametags[uxmlib-nametags] --> common
-    nametags --> npc
+    nametags --> pipeline
     nametags --> packet
 ```
 
@@ -803,7 +803,7 @@ is the same type everywhere. Registrations are marked, and an unmarked `Runnable
 
 ### Experimental: packet layer
 
-`uxmlib-npc`, `uxmlib-packet`, and `uxmlib-nametags` are an in-progress, **clean-room** packet foundation
+`uxmlib-pipeline`, `uxmlib-packet`, and `uxmlib-nametags` are an in-progress, **clean-room** packet foundation
 for the things the public API cannot do per viewer: different nametag colours, tab-list rows, or holograms
 for different players. PacketEvents (the off-the-shelf choice) is GPL, so none of it is borrowed; the Netty
 plumbing is re-implemented for Paper 26.2+ and the unavoidable NMS is quarantined to single, named classes
@@ -844,7 +844,7 @@ Requires a JDK 21 toolchain (Gradle provisions it via the Foojay resolver if nee
 ## Versioning & stability
 
 The library follows semantic versioning. Public API modules aim for stable names and documented seams; the
-**experimental** modules (`uxmlib-npc`, `uxmlib-packet`, `uxmlib-nametags`) may change without notice until
+**experimental** modules (`uxmlib-pipeline`, `uxmlib-packet`, `uxmlib-nametags`) may change without notice until
 they graduate. Pre-1.0 (`0.x`) releases may still adjust APIs between minor versions as the surface settles.
 
 ## Contributing

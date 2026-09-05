@@ -17,7 +17,7 @@ dependencies {
         api(project(":uxmlib-hud"))
         api(project(":uxmlib-update"))
         api(project(":uxmlib-condition"))
-        api(project(":uxmlib-npc"))
+        api(project(":uxmlib-pipeline"))
         api(project(":uxmlib-packet"))
         api(project(":uxmlib-nametags"))
     }

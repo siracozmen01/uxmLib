@@ -8,9 +8,9 @@ plugins {
 // conversion, bundle building, the stream-codec buffer trick, the guarded accessor reflection, the entity-id
 // allocator) that more than one packet feature needs. The nametag renderer was the first consumer; the tablist
 // renderer is the second. NMS is quarantined to the small helper classes here, mirroring uxmlib-nametags. The
-// Netty plumbing (channel resolve, packet send) comes from uxmlib-npc.
+// Netty plumbing (channel resolve, packet send) comes from uxmlib-pipeline.
 dependencies {
-    api(project(":uxmlib-npc"))
+    api(project(":uxmlib-pipeline"))
 
     // The Mojang-mapped dev bundle supplies the Paper API *and* the server internals (net.minecraft,
     // org.bukkit.craftbukkit) the packet construction needs; it replaces the plain paper-api compile
