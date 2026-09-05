@@ -55,14 +55,11 @@ class OneShotPropertiesTest {
                 });
     }
 
-    // -- a typed line is not covered here, and the reason is worth stating ------------------------------------
+    // -- a typed line is not covered here ---------------------------------------------------------------------
     //
-    // TextProperty.applyInput is public because its own javadoc says a test drives it to pin validate-then-set
-    // without opening a live prompt. The constructor blocks that: it requires a non-null TextInput, which is a final
-    // class needing six collaborators (settings, catalogue, scheduler, two backends and a log), none of which any of
-    // these assertions would touch. So the documented seam is reachable only through a fixture built entirely to
-    // satisfy a field no test reads. Making the field nullable to suit a test would be weakening the code to fit the
-    // test, so it is left alone and the gap is recorded instead.
+    // TextProperty.applyInput is public so the validate-then-set behaviour is reachable without a live prompt, but
+    // constructing the property still costs a TextInput that none of these assertions would touch. The reason now
+    // lives in that method's own javadoc, which used to claim the coverage this comment would otherwise excuse.
 
     // -- a one-shot action ------------------------------------------------------------------------------------
 

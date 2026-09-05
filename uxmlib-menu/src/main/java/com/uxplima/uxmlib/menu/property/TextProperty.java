@@ -86,8 +86,15 @@ public final class TextProperty implements EditableProperty {
 
     /**
      * Apply a submitted line: validate it, and on acceptance write it through the setter off-thread and redraw; on
-     * rejection redraw without writing. The seam delegates here; it is also the seam a test drives to pin the
-     * validate-then-set behaviour without opening a live prompt, the same pattern the home rename editor uses.
+     * rejection redraw without writing. The prompt callback delegates here, and it is public so the behaviour is
+     * reachable without opening a live prompt.
+     *
+     * <p>Reachable is not the same as covered, and this sentence used to claim the second. Constructing the property
+     * still costs a {@link TextInput}, a final class with no interface whose cheapest constructor takes six
+     * collaborators, none of which this method touches. So a caller wanting only the validate-then-set behaviour
+     * pays for a field it never reads. The asymmetry is real (this path needs the validator, the setter, the
+     * scheduler and the click; only the open path needs the input) and splitting on it would be a change to a public
+     * type rather than a tidy-up, so it is not made here.
      */
     public void applyInput(PropertyClick click, String raw) {
         Objects.requireNonNull(click, "click");

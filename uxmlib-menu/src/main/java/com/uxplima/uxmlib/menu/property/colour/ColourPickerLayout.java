@@ -60,6 +60,12 @@ public record ColourPickerLayout(
 
     public static final String NAME = "colour-picker";
 
+    /** The width of an inventory row, the multiplier that turns a declared row count into an addressable slot range. */
+    private static final int SLOTS_PER_ROW = 9;
+
+    /** The sentinel a node hands back when its value is not readable as a number: no real slot is this. */
+    private static final int NOT_A_NUMBER = Integer.MIN_VALUE;
+
     public ColourPickerLayout {
         paletteSlots = List.copyOf(Objects.requireNonNull(paletteSlots, "paletteSlots"));
         paletteIcons = List.copyOf(Objects.requireNonNull(paletteIcons, "paletteIcons"));
@@ -111,11 +117,11 @@ public record ColourPickerLayout(
             return codeDefault;
         }
         int rows = clampRows(root.node("rows").getInt(codeDefault.rows()), codeDefault.rows(), log);
-        List<Integer> slots = intList(root.node("palette-slots"), codeDefault.paletteSlots());
+        List<Integer> slots = slotList(root.node("palette-slots"), codeDefault.paletteSlots(), "palette-slots", log);
         List<Material> icons = paletteIcons(root.node("palette-icons"), slots.size(), codeDefault, log);
-        int customSlot = Math.max(0, root.node("custom-slot").getInt(codeDefault.customSlot()));
-        int clearSlot = Math.max(0, root.node("clear-slot").getInt(codeDefault.clearSlot()));
-        int backSlot = Math.max(0, root.node("back-slot").getInt(codeDefault.backSlot()));
+        int customSlot = slot(root.node("custom-slot"), codeDefault.customSlot(), rows, "custom-slot", log);
+        int clearSlot = slot(root.node("clear-slot"), codeDefault.clearSlot(), rows, "clear-slot", log);
+        int backSlot = slot(root.node("back-slot"), codeDefault.backSlot(), rows, "back-slot", log);
         Material customIcon = material(root.node("custom-icon").getString(), codeDefault.customIcon(), log);
         Material clearIcon = material(root.node("clear-icon").getString(), codeDefault.clearIcon(), log);
         Material backIcon = material(root.node("back-icon").getString(), codeDefault.backIcon(), log);
@@ -188,15 +194,44 @@ public record ColourPickerLayout(
         return matched;
     }
 
-    private static List<Integer> intList(ConfigurationNode node, List<Integer> fallback) {
+    /**
+     * The slot list under {@code key}, or the shipped one when the file names none or names one that is not a list of
+     * numbers. An entry Configurate cannot read as a number used to come back as zero, so a palette written with
+     * words collapsed onto slot zero and the picker still opened looking like something an operator had chosen. A
+     * whole list is refused rather than the bad entries dropped, because a palette missing three of its sixteen
+     * colours is a worse thing to hand back than the shipped one.
+     */
+    private static List<Integer> slotList(ConfigurationNode node, List<Integer> fallback, String key, Log log) {
         if (node.virtual() || node.empty()) {
             return fallback;
         }
         List<Integer> values = new ArrayList<>();
         for (ConfigurationNode child : node.childrenList()) {
-            values.add(child.getInt());
+            int value = child.getInt(NOT_A_NUMBER);
+            if (value == NOT_A_NUMBER || value < 0) {
+                log.warn("colour picker {} entry {} is not a slot, using the shipped list", key, child.raw());
+                return fallback;
+            }
+            values.add(value);
         }
         return values.isEmpty() ? fallback : values;
+    }
+
+    /**
+     * One button slot under {@code key}, or the shipped one when the file names something the window cannot address.
+     * A slot past the end is simply never drawn, and a button nobody can click is not a button, so it falls back and
+     * says so rather than being clamped into a slot the operator did not choose either.
+     */
+    private static int slot(ConfigurationNode node, int fallback, int rows, String key, Log log) {
+        int value = node.getInt(NOT_A_NUMBER);
+        if (value == NOT_A_NUMBER) {
+            return fallback;
+        }
+        if (value < 0 || value >= rows * SLOTS_PER_ROW) {
+            log.warn("colour picker {} {} is outside the {} row window, using {}", key, value, rows, fallback);
+            return fallback;
+        }
+        return value;
     }
 
     private static BufferedReader openReader(String resource) throws IOException {
