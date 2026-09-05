@@ -17,7 +17,7 @@ import org.spongepowered.configurate.ConfigurationNode;
 /** The lore shape: the order of the blocks, the air between them, and glyphs that come from the theme. */
 class LoreTest {
 
-    private final Theme theme = Theme.defaults();
+    private final Theme theme = TestThemes.withGlyphs();
 
     @Test
     void theBlocksComeOutInTheOrderTheShapeAllows() {
@@ -247,7 +247,7 @@ class LoreTest {
      */
     @Test
     void aCallerMayStateItsOwnDescriptionWidth() {
-        Theme theme = Theme.defaults();
+        Theme theme = TestThemes.withGlyphs();
         Component sentence = Component.text("A line of light that follows your feet everywhere you walk.");
 
         List<String> narrow = lines(Lore.of(theme)
@@ -265,6 +265,6 @@ class LoreTest {
     /** A width nobody could write a sentence into is a defect in the caller, not a tooltip of empty lines. */
     @Test
     void aWidthThatIsNotPositiveIsRefused() {
-        assertThatThrownBy(() -> Lore.of(Theme.defaults()).width(0)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> Lore.of(TestThemes.withGlyphs()).width(0)).isInstanceOf(IllegalArgumentException.class);
     }
 }

@@ -32,25 +32,45 @@ class StyleTokensTest {
     }
 
     @Test
-    void aCategoryPrefixIsTheWordInBoldThenTheSeparator() {
+    void aCategoryPrefixIsTheWordInBoldThenTheSeparator() throws ConfigurateException {
+        ConfigurationNode node = CommentedConfigurationNode.root();
+        node.node("glyphs", "separator").set("▶");
+
+        assertThat(StyleTokens.expand("<tag:'HOME'>", Theme.from(node), true))
+                .isEqualTo("<b><color:#55ffff>ʜᴏᴍᴇ</color></b> <color:#555555>▶</color>");
+    }
+
+    /** The library draws no separator, so a theme that names none writes the word and nothing after it. */
+    @Test
+    void aCategoryPrefixIsTheWordAloneUntilTheFileNamesASeparator() {
         assertThat(StyleTokens.expand("<tag:'HOME'>", theme, true))
-                .isEqualTo("<b><color:#38b6ff>ʜᴏᴍᴇ</color></b> <color:#6b7886>▶</color>");
+                .isEqualTo("<b><color:#55ffff>ʜᴏᴍᴇ</color></b> <color:#555555></color>");
     }
 
     @Test
-    void aCategoryTheThemeColoursDifferentlyKeepsItsOwnColour() {
-        assertThat(StyleTokens.expand("<tag:'shop'>", theme, false)).contains("<color:#5be38c>shop</color>");
+    void aCategoryTheThemeColoursDifferentlyKeepsItsOwnColour() throws ConfigurateException {
+        ConfigurationNode node = CommentedConfigurationNode.root();
+        node.node("prefix", "categories", "shop").set("good");
+
+        assertThat(StyleTokens.expand("<tag:'shop'>", Theme.from(node), false))
+                .contains("<color:#55ff55>shop</color>");
+    }
+
+    /** A category the file says nothing about reads in the accent, which is a prefix and not a mistake. */
+    @Test
+    void aCategoryNobodyColouredReadsInTheAccent() {
+        assertThat(StyleTokens.expand("<tag:'shop'>", theme, false)).contains("<color:#55ffff>shop</color>");
     }
 
     @Test
     void aDenialReadsInTheFailureColourWhicheverFeatureRaisedIt() {
         assertThat(StyleTokens.expand("<etag:'ERROR'>", theme, true))
-                .isEqualTo("<b><color:#ff6b6b>ᴇʀʀᴏʀ</color></b> <color:#6b7886>▶</color>");
+                .startsWith("<b><color:#ff5555>ᴇʀʀᴏʀ</color></b>");
     }
 
     @Test
     void aHeaderIsBoldAndInTheAccentColour() {
-        assertThat(StyleTokens.expand("<h:'REWARDS'>", theme, true)).isEqualTo("<b><color:#38b6ff>ʀᴇᴡᴀʀᴅꜱ</color></b>");
+        assertThat(StyleTokens.expand("<h:'REWARDS'>", theme, true)).isEqualTo("<b><color:#55ffff>ʀᴇᴡᴀʀᴅꜱ</color></b>");
     }
 
     /** A theme that names a header gradient paints the header across it; nothing else changes. */
