@@ -117,7 +117,8 @@ public record ColourPickerLayout(
             return codeDefault;
         }
         int rows = clampRows(root.node("rows").getInt(codeDefault.rows()), codeDefault.rows(), log);
-        List<Integer> slots = slotList(root.node("palette-slots"), codeDefault.paletteSlots(), "palette-slots", log);
+        List<Integer> slots =
+                slotList(root.node("palette-slots"), codeDefault.paletteSlots(), rows, "palette-slots", log);
         List<Material> icons = paletteIcons(root.node("palette-icons"), slots.size(), codeDefault, log);
         int customSlot = slot(root.node("custom-slot"), codeDefault.customSlot(), rows, "custom-slot", log);
         int clearSlot = slot(root.node("clear-slot"), codeDefault.clearSlot(), rows, "clear-slot", log);
@@ -201,15 +202,21 @@ public record ColourPickerLayout(
      * whole list is refused rather than the bad entries dropped, because a palette missing three of its sixteen
      * colours is a worse thing to hand back than the shipped one.
      */
-    private static List<Integer> slotList(ConfigurationNode node, List<Integer> fallback, String key, Log log) {
+    private static List<Integer> slotList(
+            ConfigurationNode node, List<Integer> fallback, int rows, String key, Log log) {
         if (node.virtual() || node.empty()) {
             return fallback;
         }
         List<Integer> values = new ArrayList<>();
         for (ConfigurationNode child : node.childrenList()) {
+            Object written = child.raw();
             int value = child.getInt(NOT_A_NUMBER);
-            if (value == NOT_A_NUMBER || value < 0) {
-                log.warn("colour picker {} entry {} is not a slot, using the shipped list", key, child.raw());
+            if (!inWindow(value, rows)) {
+                log.warn(
+                        "colour picker {} entry {} is not a slot in a {} row window, using the shipped list",
+                        key,
+                        written,
+                        rows);
                 return fallback;
             }
             values.add(value);
@@ -221,17 +228,33 @@ public record ColourPickerLayout(
      * One button slot under {@code key}, or the shipped one when the file names something the window cannot address.
      * A slot past the end is simply never drawn, and a button nobody can click is not a button, so it falls back and
      * says so rather than being clamped into a slot the operator did not choose either.
+     *
+     * <p>An absent key and an unreadable value both read back as the sentinel, so the key is asked for first:
+     * without that, a word where a slot belongs would take the silent path an omitted key is meant to take. The
+     * written value is kept before the read, because reading with a default copies that default into the node, and
+     * the operator has to be told the word they typed rather than the sentinel it became.
      */
     private static int slot(ConfigurationNode node, int fallback, int rows, String key, Log log) {
-        int value = node.getInt(NOT_A_NUMBER);
-        if (value == NOT_A_NUMBER) {
+        if (node.virtual() || node.isNull()) {
             return fallback;
         }
-        if (value < 0 || value >= rows * SLOTS_PER_ROW) {
-            log.warn("colour picker {} {} is outside the {} row window, using {}", key, value, rows, fallback);
+        Object written = node.raw();
+        int value = node.getInt(NOT_A_NUMBER);
+        if (!inWindow(value, rows)) {
+            log.warn("colour picker {} {} is not a slot in a {} row window, using {}", key, written, rows, fallback);
             return fallback;
         }
         return value;
+    }
+
+    /**
+     * Whether a read slot can be drawn in a window of {@code rows} rows. The sentinel a bad value reads as is
+     * {@link Integer#MIN_VALUE}, which is below every window, so one test answers both questions: a value the file
+     * gave that no number can be made of, and a number that names a slot the window does not have. Splitting them
+     * into two conditions adds a branch that cannot be reached on its own.
+     */
+    private static boolean inWindow(int slot, int rows) {
+        return slot >= 0 && slot < rows * SLOTS_PER_ROW;
     }
 
     private static BufferedReader openReader(String resource) throws IOException {

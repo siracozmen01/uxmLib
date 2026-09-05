@@ -249,4 +249,48 @@ class ColourPickerLayoutTest {
                 .isThrownBy(() -> layout(0, List.of(1), List.of(Material.DIRT)))
                 .withMessageContaining("rows must be 1..6");
     }
+
+    /**
+     * The three button keys read through Configurate with a sentinel default, and an absent key reads as that same
+     * sentinel. So the loader has to ask whether the key is there before it asks what number it holds: without that,
+     * a word where a slot belongs takes the silent path that an omitted key is supposed to take, and the operator
+     * is told nothing.
+     */
+    @Test
+    void aButtonSlotThatIsNotANumberIsSaidOutLoudAndNotTreatedAsAnOmittedKey(@TempDir Path dir) throws Exception {
+        conf(dir, "custom-slot = left\n");
+
+        ColourPickerLayout layout = ColourPickerLayout.load(dir, log);
+
+        assertThat(layout.customSlot())
+                .isEqualTo(ColourPickerLayout.codeDefault().customSlot());
+        assertThat(log.warnings).anySatisfy(line -> assertThat(line).contains("custom-slot", "left"));
+    }
+
+    @Test
+    void aButtonKeyTheFileLeavesOutIsNotWarnedAbout(@TempDir Path dir) throws Exception {
+        conf(dir, "rows = 6\n");
+
+        ColourPickerLayout layout = ColourPickerLayout.load(dir, log);
+
+        assertThat(layout.customSlot())
+                .isEqualTo(ColourPickerLayout.codeDefault().customSlot());
+        assertThat(log.warnings).isEmpty();
+    }
+
+    /**
+     * A palette slot past the end of the window draws nothing at all, and the swatch it carried is simply missing
+     * from a picker that still opens and still looks deliberate. The list falls back whole rather than losing the
+     * one entry, because the slots are positional against the icons: dropping one shifts every colour after it.
+     */
+    @Test
+    void aPaletteSlotPastTheEndOfTheWindowRefusesTheWholeList(@TempDir Path dir) throws Exception {
+        conf(dir, "rows = 3\npalette-slots = [1, 2, 60]\n");
+
+        ColourPickerLayout layout = ColourPickerLayout.load(dir, log);
+
+        assertThat(layout.paletteSlots())
+                .containsExactlyElementsOf(ColourPickerLayout.codeDefault().paletteSlots());
+        assertThat(log.warnings).anySatisfy(line -> assertThat(line).contains("palette-slots", "60"));
+    }
 }
