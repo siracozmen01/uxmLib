@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -71,6 +72,8 @@ import org.jspecify.annotations.Nullable;
  */
 @NullMarked
 public final class ItemRenderer {
+
+    private static final Logger LOG = Logger.getLogger(ItemRenderer.class.getName());
 
     /** A single {@code %token%} placeholder. {@code group(1)} is the bare token name. */
     private static final Pattern PLACEHOLDER = Pattern.compile("%(\\w+)%");
@@ -351,7 +354,7 @@ public final class ItemRenderer {
         if (s.isEmpty()) {
             return Component.empty();
         }
-        String substituted = substitutePlaceholders(s, ctx);
+        String substituted = substitutePlaceholders(dropMathWithMissingOperand(s, ctx), ctx);
         if (s.startsWith("@")) {
             String key = substituted.substring(1);
             // The catalog entry may carry {token} arguments (e.g. {sound}, {warp}); fill them from the same
@@ -380,6 +383,46 @@ public final class ItemRenderer {
         }
         matcher.appendTail(out);
         return out.toString();
+    }
+
+    /**
+     * Remove every {@code {math: …}} block whose expression names a token that resolves to nothing, before the token
+     * pass runs. Afterwards the hole is anonymous: a token that resolved to nothing leaves {@code "+ 1"}, and plus is
+     * also a unary prefix, so the expression parses and the player is shown the number 1 as though the menu meant it.
+     * Multiplication and division cannot absorb a missing operand, so those already showed a gap; this makes the two
+     * operators that can behave like the two that cannot.
+     *
+     * <p>Run here rather than by reordering the two passes, which would cost the thing the order buys: a token whose
+     * value carries a {@code {math:}} block of its own is still evaluated. The price is that a token inside a math
+     * block is resolved twice, once to ask whether it is there and once to substitute it. Only tokens inside a math
+     * block pay it.
+     *
+     * <p>What this does not cover, stated rather than left to be discovered: a block assembled inside a registry
+     * placeholder's own return value is not visible in the written line, so it is not checked here.
+     */
+    private String dropMathWithMissingOperand(String raw, MenuContext ctx) {
+        if (raw.indexOf("{math:") < 0) {
+            return raw;
+        }
+        Matcher matcher = MATH.matcher(raw);
+        StringBuilder out = new StringBuilder();
+        while (matcher.find()) {
+            String kept = hasMissingOperand(matcher.group(1), ctx) ? "" : matcher.group();
+            matcher.appendReplacement(out, Matcher.quoteReplacement(kept));
+        }
+        matcher.appendTail(out);
+        return out.toString();
+    }
+
+    /** Whether any {@code %token%} in {@code expression} resolves to nothing, which is not a number in any position. */
+    private boolean hasMissingOperand(String expression, MenuContext ctx) {
+        Matcher matcher = PLACEHOLDER.matcher(expression);
+        while (matcher.find()) {
+            if (resolveToken(matcher.group(1), ctx).isEmpty()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Evaluate one substituted expression to the evaluator's formatted number, or empty when it cannot be parsed. */
@@ -420,7 +463,28 @@ public final class ItemRenderer {
         if (local != null) {
             return substituteLocal(local, ctx);
         }
-        return placeholders.resolve(token, ctx).orElse("");
+        return resolveRegistered(token, ctx);
+    }
+
+    /**
+     * Resolve one token through the placeholder registry, treating a handler that throws as a token that could not be
+     * filled rather than as a failed render. A handler is code a consumer wrote, and it may be asked for a token on a
+     * menu whose context does not carry what it needs: without this, one such handler costs the whole window, while
+     * every bad value written by an operator costs one icon. {@code PlaceholderRegistry.resolveAll} already takes this
+     * stance and says so in its own javadoc; this is the same stance on the seam the renderer actually substitutes
+     * through.
+     *
+     * <p>The token is named on the console, because a handler that throws is a defect in the plugin that registered
+     * it, and a silently blank token gives its author nothing to look for. One line per occurrence, which is the same
+     * volume {@code Menus} accepts for an inventory type it could not create.
+     */
+    private String resolveRegistered(String token, MenuContext ctx) {
+        try {
+            return placeholders.resolve(token, ctx).orElse("");
+        } catch (RuntimeException handlerFailed) {
+            LOG.warning("placeholder '" + token + "' could not be resolved: " + handlerFailed);
+            return "";
+        }
     }
 
     /**
@@ -438,7 +502,7 @@ public final class ItemRenderer {
         }
         depth[0]++;
         try {
-            Matcher matcher = PLACEHOLDER.matcher(template);
+            Matcher matcher = PLACEHOLDER.matcher(dropMathWithMissingOperand(template, ctx));
             StringBuilder out = new StringBuilder();
             while (matcher.find()) {
                 matcher.appendReplacement(out, Matcher.quoteReplacement(resolveToken(matcher.group(1), ctx)));

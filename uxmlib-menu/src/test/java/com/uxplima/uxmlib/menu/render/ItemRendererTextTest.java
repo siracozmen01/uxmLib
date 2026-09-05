@@ -120,26 +120,37 @@ class ItemRendererTextTest {
     }
 
     /**
-     * The unsafe half, and it is not a gap. Plus and minus are also valid as unary prefixes, so a missing left
-     * operand leaves {@code "+ 1"}, which parses, evaluates, and puts the number 1 in front of a player as though
-     * the menu meant it. Nothing warns, nothing is blank, and the wrong number is indistinguishable from a right
-     * one.
-     *
-     * <p>The fix is not local: the math pass runs after the token pass on purpose, so that a token holding a
-     * {@code {math:}} block of its own is still evaluated, and by the time the expression is seen the fact that an
-     * operand went missing has been erased. Reversing the two passes would trade this defect for that one. This
-     * test states the behaviour rather than approving it, so that the pipeline rework has a red line to turn green
-     * and cannot fix it by accident without noticing.
+     * Plus and minus are also valid as unary prefixes, so a missing left operand used to leave {@code "+ 1"}, which
+     * parses, and the player was shown the number 1 as though the menu meant it. A block naming a token that
+     * resolves to nothing is now dropped on the written line, before the token pass makes the hole anonymous, so
+     * the two operators that can absorb a missing operand behave like the two that cannot.
      */
     @Test
-    void anUnresolvedOperandUnderAUnaryCapableOperatorIsShownAsANumberInstead() {
-        assertThat(name("total: {math: %missing% + 1}")).isEqualTo("total: 1");
-        assertThat(name("total: {math: %missing% - 1}")).isEqualTo("total: -1");
+    void anUnresolvedOperandUnderAUnaryCapableOperatorLeavesAGapToo() {
+        assertThat(name("total: {math: %missing% + 1}")).isEqualTo("total: ");
+        assertThat(name("total: {math: %missing% - 1}")).isEqualTo("total: ");
     }
 
     @Test
-    void aLineWithNoExpressionIsHandedOnUnchanged() {
-        assertThat(name("nothing to add here")).isEqualTo("nothing to add here");
+    void aBlockWithEveryOperandPresentStillEvaluates() {
+        placeholders.register("coins", ctx -> "7");
+
+        assertThat(name("total: {math: %coins% + 1}")).isEqualTo("total: 8");
+    }
+
+    /** Only the block with the hole goes: a second block on the same line is untouched. */
+    @Test
+    void aBlockWithAHoleDoesNotTakeTheBlockBesideItWithIt() {
+        placeholders.register("coins", ctx -> "7");
+
+        assertThat(name("{math: %missing% + 1} then {math: %coins% * 2}")).isEqualTo(" then 14");
+    }
+
+    @Test
+    void aHandlerAnsweringAnEmptyStringIsAMissingOperandTooAndNotAZero() {
+        placeholders.register("blank", ctx -> "");
+
+        assertThat(name("total: {math: %blank% + 1}")).isEqualTo("total: ");
     }
 
     // -- the token pass ---------------------------------------------------------------------------------------
@@ -181,5 +192,32 @@ class ItemRendererTextTest {
         placeholders.register("who", ctx -> "Sirac");
 
         assertThat(name("%rate% of %who%")).isEqualTo("50% of Sirac");
+    }
+
+    // -- a handler that cannot answer -------------------------------------------------------------------------
+
+    /**
+     * A placeholder handler is code the consumer wrote, and it may be asked for its token on a menu whose context
+     * does not carry what it needs. Every bad value an operator writes costs one icon; a handler that throws must
+     * not cost the whole window, because nothing above the renderer catches it: neither {@code Menus.open} nor the
+     * listener wraps a render.
+     */
+    @Test
+    void aHandlerThatThrowsCostsItsOwnTokenAndNotTheItem() {
+        placeholders.register("boom", ctx -> {
+            throw new IllegalStateException("this placeholder belongs to another menu");
+        });
+        placeholders.register("who", ctx -> "Sirac");
+
+        assertThat(name("hello %who%, %boom%")).isEqualTo("hello Sirac, ");
+    }
+
+    @Test
+    void aHandlerThatThrowsInsideAMathBlockLeavesTheBlockUnevaluatedRatherThanAborting() {
+        placeholders.register("boom", ctx -> {
+            throw new IllegalStateException("no");
+        });
+
+        assertThat(name("total: {math: %boom% * 2}")).isEqualTo("total: ");
     }
 }
