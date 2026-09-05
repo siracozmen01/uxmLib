@@ -14,7 +14,6 @@ import net.kyori.adventure.text.Component;
 
 import com.uxplima.uxmlib.gui.GuiText;
 import com.uxplima.uxmlib.menu.property.EditableProperty;
-import com.uxplima.uxmlib.scheduler.Scheduler;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
@@ -33,7 +32,10 @@ import org.jspecify.annotations.Nullable;
  * openers, and the optional delete button gates through {@link Menus#confirm}.
  *
  * <p>The view holds no module logic: the property list, the title, and the back/delete callbacks are all supplied by
- * the caller, and a property mutates through the module's own use case. {@link #open} hands the editor to the engine,
+ * the caller, and a property mutates through the module's own use case. It hops no thread of its own either. Every
+ * callback a caller hands this builder runs where the engine calls it, which is the menu thread: the property
+ * provider on each draw, and the delete consumer inside the confirm's accept. A caller whose handler touches storage
+ * or the network hops off that thread itself, exactly as an {@link EditableProperty} does around its own setter. {@link #open} hands the editor to the engine,
  * which resolves the live player and shows the inventory on the viewer's entity thread. The same
  * {@link EntityEditorLayout#propertySlots} drives both the render and {@link #propertyAt}, so a clicked slot always
  * resolves to the property drawn there.
@@ -60,7 +62,6 @@ public final class EntityEditorView<T> {
         String valueLore = Objects.requireNonNull(builder.valueLore, "valueLore");
         String backName = Objects.requireNonNull(builder.backName, "backName");
         Consumer<Player> onBack = Objects.requireNonNull(builder.onBack, "onBack");
-        Objects.requireNonNull(builder.scheduler, "scheduler");
         this.deleteConfirmTitle = builder.deleteConfirmTitle;
         this.onDelete = builder.onDelete;
         EditorSpec.Builder specBuilder = EditorSpec.builder()
@@ -131,7 +132,6 @@ public final class EntityEditorView<T> {
     public static final class Builder<T> {
         private @Nullable Menus menus;
         private @Nullable GuiText guiText;
-        private @Nullable Scheduler scheduler;
         private @Nullable EntityEditorLayout layout;
         private @Nullable BiFunction<Player, T, Component> title;
         private @Nullable String valueLore;
@@ -152,11 +152,6 @@ public final class EntityEditorView<T> {
 
         public Builder<T> guiText(GuiText guiText) {
             this.guiText = Objects.requireNonNull(guiText, "guiText");
-            return this;
-        }
-
-        public Builder<T> scheduler(Scheduler scheduler) {
-            this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
             return this;
         }
 
