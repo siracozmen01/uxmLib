@@ -233,4 +233,35 @@ class RequirementSpecTest {
 
         assertThat(block.passes(requirement -> !requirement.optional())).isEqualTo(block.satisfiedBy(1, false));
     }
+
+    // -- whether a walk may stop early ------------------------------------------------------------------------
+
+    /**
+     * The early-stop rule is asserted here rather than through the click runtime, because the runtime cannot show it.
+     * There a non-positive minimum caps at the block size, so the break can only be reached on the final iteration
+     * and breaking there changes nothing an assertion could see. The rule is real all the same, and this is the only
+     * place it is visible.
+     */
+    @Test
+    void anAndBlockMayNotStopEarlyHoweverManyRequirementsHavePassed() {
+        RequirementSpec spec = new RequirementSpec(List.of(req("a:1"), req("b:1")), 0, List.of(), true);
+
+        assertThat(spec.mayStopEarly())
+                .as("an AND block fails on any mandatory miss, so no tally settles it before the last requirement")
+                .isFalse();
+    }
+
+    @Test
+    void aBlockWithAPositiveMinimumMayStopEarlyWhenItAsksTo() {
+        RequirementSpec spec = new RequirementSpec(List.of(req("a:1"), req("b:1")), 1, List.of(), true);
+
+        assertThat(spec.mayStopEarly()).isTrue();
+    }
+
+    @Test
+    void aBlockThatDidNotAskForTheShortCircuitMayNotStopEarly() {
+        RequirementSpec spec = new RequirementSpec(List.of(req("a:1"), req("b:1")), 1, List.of(), false);
+
+        assertThat(spec.mayStopEarly()).isFalse();
+    }
 }

@@ -63,6 +63,21 @@ public record RequirementSpec(List<Requirement> requirements, int minimum, List<
     }
 
     /**
+     * Whether a walk over this block may stop as soon as {@link #effectiveMinimum()} requirements have passed. Only a
+     * block with a positive minimum may: an AND block ({@code minimum <= 0}) fails on any mandatory miss, so no tally
+     * of passes settles it until the last requirement has been asked.
+     *
+     * <p>The rule lives here rather than in the walk, because in the walk it is invisible. A non-positive minimum
+     * caps at the block size, and a tally can only reach the size on the final iteration, so an unguarded early stop
+     * would break out of a loop that was ending anyway. Nothing an operator or a test can see would change. That is
+     * an accident of the cap, not a licence: read {@link #effectiveMinimum()} as an OR default one day and an AND
+     * block would start passing on its first success. This method is the rule the cap currently flatters.
+     */
+    public boolean mayStopEarly() {
+        return stopAtSuccess && minimum > 0;
+    }
+
+    /**
      * Wrap a flat list of condition refs into an all-mandatory AND block: every ref becomes a plain, non-inverted
      * mandatory {@link Requirement}, the minimum is {@code 0} (so all of them must pass), and there are no deny
      * actions or short-circuit. This is how the historic flat item {@code view}: a bare list of conditions every one

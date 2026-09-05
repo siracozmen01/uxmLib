@@ -1340,8 +1340,8 @@ public final class MenuListener implements Listener {
      * optional requirement failing does not fail the block, yet its per-requirement {@code deny} still runs.</li>
      * <li>{@code minimum > 0}: at least N of <em>all</em> requirements (optional included) must pass.</li> </ul>
      *
-     * <p>With {@link RequirementSpec#stopAtSuccess()} and a positive {@code minimum}, the loop breaks the moment the
-     * minimum is met, so later requirements are not evaluated and their per-requirement actions do not run. This is
+     * <p>When {@link RequirementSpec#mayStopEarly()} holds, the loop breaks the moment the minimum is met, so later
+     * requirements are not evaluated and their per-requirement actions do not run. This is
      * backward-compatible with the slice-1 model: a block with no optional and no per-requirement actions yields {@code
      * !mandatoryFail} (all passed) at {@code minimum <= 0} and {@code passes >= min} at {@code minimum > 0}, exactly as
      * the old pass tally did.
@@ -1356,7 +1356,7 @@ public final class MenuListener implements Listener {
             } else if (!r.optional()) {
                 mandatoryFail = true;
             }
-            if (spec.stopAtSuccess() && spec.minimum() > 0 && passes >= cap) {
+            if (spec.mayStopEarly() && passes >= cap) {
                 break;
             }
         }
