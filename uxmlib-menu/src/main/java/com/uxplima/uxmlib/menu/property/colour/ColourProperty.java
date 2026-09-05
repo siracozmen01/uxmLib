@@ -19,6 +19,7 @@ import com.uxplima.uxmlib.gui.GuiText;
 import com.uxplima.uxmlib.gui.input.InputRequest;
 import com.uxplima.uxmlib.gui.input.TextInput;
 import com.uxplima.uxmlib.item.ItemBuilder;
+import com.uxplima.uxmlib.menu.SlotFit;
 import com.uxplima.uxmlib.menu.property.EditableProperty;
 import com.uxplima.uxmlib.menu.property.PropertyClick;
 import com.uxplima.uxmlib.menu.property.SelectorButton;
@@ -127,7 +128,8 @@ public final class ColourProperty implements EditableProperty {
         List<Integer> slots = layout.paletteSlots();
         List<Material> icons = layout.paletteIcons();
         List<SelectorButton> buttons = new ArrayList<>();
-        for (int i = 0; i < palette.size() && i < slots.size(); i++) {
+        int drawn = SlotFit.fit(palette.size(), slots.size(), "colour palette", layout);
+        for (int i = 0; i < drawn; i++) {
             ColourSwatch swatch = palette.get(i);
             ItemStack icon = swatchIcon(click.viewer(), swatch, icons.get(i), selected);
             buttons.add(SelectorButton.of(slots.get(i), icon, () -> pick(click, swatch.argb())));

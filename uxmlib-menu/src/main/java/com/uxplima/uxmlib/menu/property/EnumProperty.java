@@ -16,6 +16,7 @@ import org.bukkit.inventory.ItemStack;
 
 import com.uxplima.uxmlib.gui.GuiText;
 import com.uxplima.uxmlib.item.ItemBuilder;
+import com.uxplima.uxmlib.menu.SlotFit;
 import com.uxplima.uxmlib.scheduler.Scheduler;
 import org.jspecify.annotations.NullMarked;
 
@@ -165,7 +166,8 @@ public final class EnumProperty<E> implements EditableProperty {
     private List<SelectorButton> selectorButtons(PropertyClick click) {
         E selected = current.get();
         List<SelectorButton> buttons = new ArrayList<>();
-        for (int i = 0; i < options.size() && i < optionSlots.size(); i++) {
+        int drawn = SlotFit.fit(options.size(), optionSlots.size(), "enum options", optionSlots);
+        for (int i = 0; i < drawn; i++) {
             E option = options.get(i);
             // An enum option is single-gesture: any click chooses it, so the gesture is ignored.
             buttons.add(SelectorButton.of(

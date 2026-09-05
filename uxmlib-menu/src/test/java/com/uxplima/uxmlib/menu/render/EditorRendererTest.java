@@ -6,6 +6,9 @@ import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Handler;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -19,6 +22,7 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import com.uxplima.uxmlib.gui.GuiText;
 import com.uxplima.uxmlib.menu.EditorSpec;
 import com.uxplima.uxmlib.menu.EntityEditorLayout;
+import com.uxplima.uxmlib.menu.SlotFit;
 import com.uxplima.uxmlib.menu.property.EditableProperty;
 import com.uxplima.uxmlib.menu.property.PropertyClick;
 import com.uxplima.uxmlib.menu.runtime.EditorState;
@@ -158,21 +162,45 @@ class EditorRendererTest {
     }
 
     /**
-     * A subject with more properties than the layout has slots draws as many as fit and drops the rest. Pinning the
-     * behaviour rather than endorsing it: an operator who adds a property to a full layout sees nothing happen, and
-     * the renderer says nothing about it.
+     * A subject with more properties than the layout has slots draws as many as fit and drops the rest, which is all
+     * it can do: a slot that does not exist cannot be painted. What it must not do is drop them in silence, because
+     * the operator's layout is always the shorter of the two lists and a miss reads to them as their edit doing
+     * nothing. The layout here is this test's own, so the once-per-layout report is this test's to observe.
      */
     @Test
-    void propertiesPastTheLayoutsLastSlotAreDroppedWithoutASign() {
-        properties.add(new Fixed("third", "3", Material.GOLD_INGOT));
-        properties.add(new Fixed("fourth", "4", Material.IRON_INGOT));
-        EditorState state = new EditorState("spec", "subject");
+    void propertiesPastTheLayoutsLastSlotAreDrawnNoFurtherButAreReported() {
+        List<String> warnings = new ArrayList<>();
+        Logger log = Logger.getLogger(SlotFit.class.getName());
+        Handler capture = new Handler() {
 
-        Inventory inv = draw(editor(layout()).build(), state);
+            @Override
+            public void publish(LogRecord record) {
+                warnings.add(record.getMessage());
+            }
 
-        assertThat(at(inv, 12)).isEqualTo(Material.GOLD_INGOT);
-        assertThat(state.propertyAt(12)).isPresent();
-        assertThat(inv.all(Material.IRON_INGOT)).isEmpty();
+            @Override
+            public void flush() {}
+
+            @Override
+            public void close() {}
+        };
+        log.addHandler(capture);
+        try {
+            properties.add(new Fixed("third", "3", Material.GOLD_INGOT));
+            properties.add(new Fixed("fourth", "4", Material.IRON_INGOT));
+            EditorState state = new EditorState("spec", "subject");
+
+            Inventory inv = draw(
+                    editor(EntityEditorLayout.codeDefault(List.of(1, 2, 3), 26)).build(), state);
+
+            assertThat(at(inv, 3)).isEqualTo(Material.GOLD_INGOT);
+            assertThat(state.propertyAt(3)).isPresent();
+            assertThat(inv.all(Material.IRON_INGOT)).isEmpty();
+            assertThat(warnings).hasSize(1);
+            assertThat(warnings.get(0)).contains("editor properties");
+        } finally {
+            log.removeHandler(capture);
+        }
     }
 
     // -- the one presentation decision the renderer makes --------------------------------------------------------

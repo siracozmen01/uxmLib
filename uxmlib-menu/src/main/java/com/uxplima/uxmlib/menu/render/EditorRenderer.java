@@ -16,6 +16,7 @@ import com.uxplima.uxmlib.gui.style.Tiles;
 import com.uxplima.uxmlib.item.ItemBuilder;
 import com.uxplima.uxmlib.menu.EditorSpec;
 import com.uxplima.uxmlib.menu.EntityEditorLayout;
+import com.uxplima.uxmlib.menu.SlotFit;
 import com.uxplima.uxmlib.menu.property.EditableProperty;
 import com.uxplima.uxmlib.menu.runtime.EditorState;
 import com.uxplima.uxmlib.text.style.Theme;
@@ -66,7 +67,8 @@ public final class EditorRenderer {
     private void paintProperties(Inventory inv, EditorSpec spec, EditorState state, Player viewer) {
         List<EditableProperty> props = spec.propertiesFor(state.subject());
         List<Integer> slots = spec.layout().propertySlots();
-        for (int i = 0; i < props.size() && i < slots.size(); i++) {
+        int drawn = SlotFit.fit(props.size(), slots.size(), "editor properties", spec.layout());
+        for (int i = 0; i < drawn; i++) {
             EditableProperty property = props.get(i);
             int slot = slots.get(i);
             inv.setItem(slot, propertyButton(viewer, spec, property));

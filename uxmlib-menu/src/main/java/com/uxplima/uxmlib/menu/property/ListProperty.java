@@ -16,6 +16,7 @@ import com.uxplima.uxmlib.gui.input.InputRequest;
 import com.uxplima.uxmlib.gui.input.TextInput;
 import com.uxplima.uxmlib.gui.style.Tiles;
 import com.uxplima.uxmlib.item.ItemBuilder;
+import com.uxplima.uxmlib.menu.SlotFit;
 import com.uxplima.uxmlib.scheduler.Scheduler;
 import com.uxplima.uxmlib.text.style.Theme;
 import org.jspecify.annotations.NullMarked;
@@ -111,7 +112,8 @@ public final class ListProperty implements EditableProperty {
         List<String> entries = current.get();
         List<Integer> slots = layout.entrySlots();
         List<SelectorButton> buttons = new ArrayList<>();
-        for (int i = 0; i < entries.size() && i < slots.size(); i++) {
+        int drawn = SlotFit.fit(entries.size(), slots.size(), "list entries", slots);
+        for (int i = 0; i < drawn; i++) {
             buttons.add(engineEntryButton(click, entries.get(i), i, slots.get(i)));
         }
         buttons.add(SelectorButton.of(layout.addSlot(), addIcon(click), () -> add(click)));
