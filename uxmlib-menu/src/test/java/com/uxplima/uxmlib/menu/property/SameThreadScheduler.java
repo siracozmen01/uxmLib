@@ -48,51 +48,51 @@ final class SameThreadScheduler implements Scheduler {
 
     @Override
     public TaskHandle global(Runnable task) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("a global hop is not one the editable properties take");
     }
 
     @Override
     public TaskHandle globalLater(Duration delay, Runnable task) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("a delayed global hop is not one the editable properties take");
     }
 
     @Override
     public TaskHandle globalTimer(Duration delay, Duration period, Consumer<TaskHandle> task) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("a repeating global hop is not one the editable properties take");
     }
 
     @Override
     public TaskHandle region(Location location, Runnable task) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("a region hop is not one the editable properties take");
     }
 
     @Override
     public TaskHandle regionLater(Location location, Duration delay, Runnable task) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("a delayed region hop is not one the editable properties take");
     }
 
     @Override
     public TaskHandle regionTimer(Location location, Duration delay, Duration period, Consumer<TaskHandle> task) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("a repeating region hop is not one the editable properties take");
     }
 
     @Override
     public TaskHandle entityLater(Entity entity, Duration delay, Runnable task) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("a delayed entity hop is not one the editable properties take");
     }
 
     @Override
     public TaskHandle entityTimer(Entity entity, Duration delay, Duration period, Consumer<TaskHandle> task) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("a repeating entity hop is not one the editable properties take");
     }
 
     @Override
     public TaskHandle asyncLater(Duration delay, Runnable task) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("a delayed async hop is not one the editable properties take");
     }
 
     @Override
     public TaskHandle asyncTimer(Duration delay, Duration period, Consumer<TaskHandle> task) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("a repeating async hop is not one the editable properties take");
     }
 }
