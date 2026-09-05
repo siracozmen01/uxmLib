@@ -3,11 +3,11 @@ package com.uxplima.uxmlib.gui.style;
 import java.util.Locale;
 import java.util.Objects;
 
-import net.kyori.adventure.key.InvalidKeyException;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.sound.Sound;
 
 import com.uxplima.uxmlib.config.HoconConfig;
+import com.uxplima.uxmlib.gui.config.MenuAction;
 
 /**
  * The four sounds a menu plays: opening, a click that acts, turning a page, and a click that is refused.
@@ -73,26 +73,54 @@ public record MenuSounds(Sound open, Sound click, Sound page, Sound denied) {
 
     /**
      * The sound {@code name} asks for, falling back to the shipped {@code fallback} key when the file names something
-     * that is not a key at all. A well formed key the client does not know still plays nothing, which is the documented
-     * behaviour and is unchanged; this covers the different case of a name Adventure refuses to parse.
+     * this record cannot turn into a key. A well formed key the client does not know still plays nothing, which is the
+     * documented behaviour and is unchanged; this covers the two cases where the name never becomes a usable key at
+     * all.
      *
-     * <p>The name is lower-cased first, because an operator who writes {@code BLOCK_NOTE_BLOCK_PLING} is writing the
-     * form the server prints rather than making a mistake they would recognise as one. This library already tolerates
-     * that spelling elsewhere, so throwing on it here was the same operator meeting two answers to one question.
+     * <p>The name is trimmed and lower-cased first, because the key grammar holds lower case only and an operator who
+     * writes {@code MINECRAFT:BLOCK.BELL.USE} is writing the same sound in the case the server prints. That much is
+     * pure case, and {@link Sounds} already reads a name that way.
      *
-     * <p>Anything still unparseable falls back rather than propagating: a typo that plays the shipped sound is a shrug,
-     * and a typo that stops the plugin loading is an outage. Nothing here reads a registry, so this stays loadable with
-     * no server under it, which is what lets the configuration be tested at all.
+     * <p>The constant spelling, {@code BLOCK_NOTE_BLOCK_PLING}, is a different question and this record answers it by
+     * refusing rather than guessing. It cannot be translated by string work: the key is
+     * {@code block.note_block.pling}, so some of those underscores are dots and one is an underscore, and nothing in
+     * the constant says which. Replacing every underscore with a dot gives {@code block.note.block.pling}, and lower-
+     * casing alone gives {@code block_note_block_pling}: both are well formed keys, both name no sound, and both play
+     * silence with no diagnostic. Only the sound registry can answer it, which is why {@link MenuAction} defers a
+     * constant until the moment it plays. Nothing here reads a registry, because that is what lets a configuration
+     * file be tested with no server under it, so the constant form falls back to the shipped tone: an operator hears
+     * the wrong click and has something to report, rather than hearing nothing and having nothing to search for.
      */
     private static Sound sound(String name, String fallback, float volume, float pitch) {
         return Sound.sound(keyOrFallback(name, fallback), Sound.Source.MASTER, volume, pitch);
     }
 
     private static Key keyOrFallback(String name, String fallback) {
-        try {
-            return Key.key(name.trim().toLowerCase(Locale.ROOT));
-        } catch (InvalidKeyException malformed) {
+        String trimmed = name.trim();
+        if (isConstant(trimmed)) {
             return Key.key(fallback);
         }
+        String lowered = trimmed.toLowerCase(Locale.ROOT);
+        return Key.parseable(lowered) ? Key.key(lowered) : Key.key(fallback);
+    }
+
+    /**
+     * Whether the name is the constant form: upper case letters, digits and underscores only. The same rule {@link
+     * MenuAction} tests, held separately because the two classes answer it differently on purpose. MenuAction accepts
+     * a constant and resolves it against the registry when the sound plays; this record has no registry and refuses
+     * it. If the rule ever moves to one place, both must keep those two answers.
+     */
+    private static boolean isConstant(String name) {
+        if (name.isEmpty()) {
+            return false;
+        }
+        for (int at = 0; at < name.length(); at++) {
+            char letter = name.charAt(at);
+            boolean allowed = letter == '_' || (letter >= 'A' && letter <= 'Z') || (letter >= '0' && letter <= '9');
+            if (!allowed) {
+                return false;
+            }
+        }
+        return true;
     }
 }

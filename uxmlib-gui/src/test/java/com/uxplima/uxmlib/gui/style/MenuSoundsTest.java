@@ -82,18 +82,35 @@ class MenuSoundsTest {
         assertThat(sounds.open().volume()).isZero();
     }
 
-    /**
-     * An operator who writes the enum spelling gets the sound rather than an exception. The key grammar accepts lower
-     * case only, and the name in the file is the operator's, so the reading side lowers it before it asks.
-     */
+    /** A name that is the same sound in the case the server prints is the same sound. That much is pure case. */
     @Test
-    void theEnumSpellingAnOperatorKnowsFromTheWikiIsAccepted(@TempDir Path dir) throws Exception {
+    void aKeyWrittenInUpperCaseIsTheSameKey(@TempDir Path dir) throws Exception {
         Path file = dir.resolve("config.conf");
-        Files.writeString(file, "menu { sounds { click { name = \"BLOCK_ANVIL_LAND\" } } }\n");
+        Files.writeString(file, "menu { sounds { click { name = \"MINECRAFT:BLOCK.BELL.USE\" } } }\n");
 
         MenuSounds sounds = MenuSounds.from(HoconConfig.load(file), "menu.sounds");
 
-        assertThat(sounds.click().name().asString()).isEqualTo("minecraft:block_anvil_land");
+        assertThat(sounds.click().name().asString()).isEqualTo("minecraft:block.bell.use");
+    }
+
+    /**
+     * The constant spelling falls back to the shipped tone rather than being translated, because it cannot be
+     * translated here. BLOCK_ANVIL_LAND is block.anvil.land and BLOCK_NOTE_BLOCK_PLING is block.note_block.pling:
+     * some of those underscores are dots and some are not, and only the sound registry knows which. Lower-casing
+     * alone yields a well formed key that names no sound, which plays silence with nothing to search for. This record
+     * reads no registry on purpose, so the honest answer is the wrong click an operator can hear and report.
+     */
+    @Test
+    void theConstantSpellingFallsBackRatherThanBecomingAKeyThatNamesNoSound(@TempDir Path dir) throws Exception {
+        Path file = dir.resolve("config.conf");
+        Files.writeString(file, "menu { sounds { click { name = \"BLOCK_ANVIL_LAND\", volume = 0.2 } } }\n");
+
+        MenuSounds sounds = MenuSounds.from(HoconConfig.load(file), "menu.sounds");
+
+        assertThat(sounds.click().name().asString()).isEqualTo("minecraft:block.note_block.pling");
+        assertThat(sounds.click().volume())
+                .as("the tone falls back, the operator's own volume and pitch still apply")
+                .isEqualTo(0.2f);
     }
 
     @Test
