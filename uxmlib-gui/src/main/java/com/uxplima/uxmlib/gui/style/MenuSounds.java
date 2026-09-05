@@ -85,9 +85,17 @@ public record MenuSounds(Sound open, Sound click, Sound page, Sound denied) {
      * {@code block.note_block.pling}, so some of those underscores are dots and one is an underscore, and nothing in
      * the constant says which. Replacing every underscore with a dot gives {@code block.note.block.pling}, and lower-
      * casing alone gives {@code block_note_block_pling}: both are well formed keys, both name no sound, and both play
-     * silence with no diagnostic. Only the sound registry can answer it, which is why {@link com.uxplima.uxmlib.gui.config.MenuAction} defers a
-     * constant until the moment it plays. Nothing here reads a registry, because that is what lets a configuration
-     * file be tested with no server under it, so the constant form falls back to the shipped tone.
+     * silence with no diagnostic.
+     *
+     * <p>It is undecodable <em>from the string</em>, not undecodable. Against a registry it is exact: flatten every
+     * registry key's dots to underscores and the constant matches one and only one of them, because
+     * {@code block.note_block.pling} flattens to {@code block_note_block_pling} and nothing else does. So the mapping
+     * is recovered by asking the server, which is why {@link com.uxplima.uxmlib.gui.config.MenuAction} defers a
+     * constant until the moment it plays. This record refuses it because <em>this type has nothing to ask</em>, not
+     * because the form cannot be decoded: reading no registry is what lets a configuration file be tested with no
+     * server under it, and that is worth more here than the spelling is. A reader who needs the decode should walk
+     * {@code Registry#keyStream}: on the Paper 26.2 line {@code Sound.valueOf}, {@code Registry#match},
+     * {@code Sound#getKey} and {@code Sound#key} are all deprecated for removal and fail a {@code -Werror} build.
      *
      * <p>The fallback is audible but not yet diagnosable. It is silent: an operator who wrote a constant hears the
      * shipped click and is told nothing, so they can only report it if they already know what their own click sounds
