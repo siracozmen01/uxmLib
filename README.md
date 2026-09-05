@@ -789,14 +789,25 @@ bus.publish("party-updates", encode(update));                  // fail-degraded,
 
 ### Update checker
 
-Notify-only: it logs to the console and shows a permission-gated clickable message on join. It never
-self-downloads.
+Notify-only: it logs to the console and shows a permission-gated message on join. It never self-downloads.
+
+It decides when to speak and never what is said. The sentence is an `UpdateAnnouncement` you supply, and it
+is required rather than defaulted: a version notice is one of the few lines a plugin sends that has no entry
+in its own message file, so a shipped one would put English, in colours nobody chose, into a plugin that
+translates everything else.
 
 ```java
 UpdateChecker checker = new UpdateChecker(
         scheduler, new GitHubReleaseProvider("you", "your-plugin"), UxmLibVersion.VERSION);
 
-new UpdateNotifier(plugin, scheduler, checker, "yourplugin.update.notify")
+UpdateAnnouncement announcement = (name, current, release) -> messages.render(
+                MyKeys.UPDATE_AVAILABLE,
+                Text.placeholder("name", name),
+                Text.placeholder("current", current),
+                Text.placeholder("latest", release.version()))
+        .clickEvent(ClickEvent.openUrl(release.url()));
+
+new UpdateNotifier(plugin, scheduler, checker, "yourplugin.update.notify", announcement)
         .start(Duration.ofSeconds(40), Duration.ofHours(6));
 ```
 

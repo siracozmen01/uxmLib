@@ -43,6 +43,11 @@ import com.uxplima.uxmlib.common.ServerVersion;
  * {@code onCancel} instead of touching the absent API (a consumer on an older server degrades cleanly rather
  * than hitting a {@code NoClassDefFoundError}); {@link #build(Consumer, Runnable)} on such a server throws,
  * since there is nothing to build.
+ *
+ * <p>Both button labels are given to {@link #create} and neither is shipped. A label is a word a player reads,
+ * so it belongs in the message file the consumer translates, not in this jar. The field's size and its
+ * pre-filled value do have defaults, because a character cap and a pixel width are geometry rather than
+ * words: nobody has to translate 128.
  */
 public final class DialogInputScreen {
 
@@ -53,26 +58,32 @@ public final class DialogInputScreen {
     private final Component title;
     private final String key;
     private final Component label;
+    private final Component submitLabel;
+    private final Component cancelLabel;
     private String initial = "";
     private int maxLength = DEFAULT_MAX_LENGTH;
     private int width = DEFAULT_WIDTH;
-    private Component submitLabel = Component.text("Confirm");
-    private Component cancelLabel = Component.text("Cancel");
 
-    private DialogInputScreen(Component title, String key, Component label) {
+    private DialogInputScreen(
+            Component title, String key, Component label, Component submitLabel, Component cancelLabel) {
         this.title = Objects.requireNonNull(title, "title");
         this.key = requireKey(key);
         this.label = Objects.requireNonNull(label, "label");
+        this.submitLabel = Objects.requireNonNull(submitLabel, "submitLabel");
+        this.cancelLabel = Objects.requireNonNull(cancelLabel, "cancelLabel");
     }
 
     /**
      * A text-input dialog with the given window {@code title}, the input {@code key} the typed line is read
-     * back by, and the {@code label} shown beside the field.
+     * back by, the {@code label} shown beside the field, and the words on its two buttons.
      *
+     * @param submitLabel the word on the button that delivers the typed line, from your own message file
+     * @param cancelLabel the word on the button that abandons it, from your own message file
      * @throws IllegalArgumentException if {@code key} is blank
      */
-    public static DialogInputScreen create(Component title, String key, Component label) {
-        return new DialogInputScreen(title, key, label);
+    public static DialogInputScreen create(
+            Component title, String key, Component label, Component submitLabel, Component cancelLabel) {
+        return new DialogInputScreen(title, key, label, submitLabel, cancelLabel);
     }
 
     /** Whether the running server supports the Dialog API (Minecraft 1.21.6 or newer). */
@@ -101,18 +112,6 @@ public final class DialogInputScreen {
             throw new IllegalArgumentException("width must be within 1.." + MAX_WIDTH + ", was " + width);
         }
         this.width = width;
-        return this;
-    }
-
-    /** Set the submit button's label (default "Confirm"); its press delivers the typed line. */
-    public DialogInputScreen submitLabel(Component submitLabel) {
-        this.submitLabel = Objects.requireNonNull(submitLabel, "submitLabel");
-        return this;
-    }
-
-    /** Set the cancel button's label (default "Cancel"); its press runs {@code onCancel}. */
-    public DialogInputScreen cancelLabel(Component cancelLabel) {
-        this.cancelLabel = Objects.requireNonNull(cancelLabel, "cancelLabel");
         return this;
     }
 

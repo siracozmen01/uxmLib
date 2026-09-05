@@ -44,57 +44,72 @@ class DialogInputScreenTest {
     @Test
     @SuppressWarnings("NullAway") // intentionally passes null to assert the requireNonNull guards fire
     void createRejectsNullTitleKeyAndLabel() {
+        assertThatNullPointerException().isThrownBy(() -> screen(null, "name", Component.text("Name")));
+        assertThatNullPointerException().isThrownBy(() -> screen(Component.text("t"), null, Component.text("Name")));
+        assertThatNullPointerException().isThrownBy(() -> screen(Component.text("t"), "name", null));
+    }
+
+    /** A button label is required, so a caller that forgets one fails here rather than at a player. */
+    @Test
+    @SuppressWarnings("NullAway") // intentionally passes null to assert the requireNonNull guards fire
+    void createRejectsAMissingButtonLabel() {
         assertThatNullPointerException()
-                .isThrownBy(() -> DialogInputScreen.create(null, "name", Component.text("Name")));
+                .isThrownBy(() -> DialogInputScreen.create(
+                        Component.text("t"), "k", Component.text("L"), null, Component.text("Cancel")));
         assertThatNullPointerException()
-                .isThrownBy(() -> DialogInputScreen.create(Component.text("t"), null, Component.text("Name")));
-        assertThatNullPointerException().isThrownBy(() -> DialogInputScreen.create(Component.text("t"), "name", null));
+                .isThrownBy(() -> DialogInputScreen.create(
+                        Component.text("t"), "k", Component.text("L"), Component.text("Confirm"), null));
     }
 
     @Test
     void createRejectsBlankKey() {
         assertThatIllegalArgumentException()
-                .isThrownBy(() -> DialogInputScreen.create(Component.text("t"), "  ", Component.text("Name")));
+                .isThrownBy(() -> screen(Component.text("t"), "  ", Component.text("Name")));
     }
 
+    /**
+     * The two button words are the caller's and nothing is shipped, so they come back exactly as given. They
+     * are not English here on purpose: a library that wrote "Confirm" would put it on a screen no translator
+     * can reach.
+     */
     @Test
-    void carriesTitleKeyLabelAndDefaults() {
-        DialogInputScreen screen =
-                DialogInputScreen.create(Component.text("Set warp"), "warp", Component.text("Warp name"));
+    void carriesTitleKeyLabelAndTheWordsItWasGiven() {
+        DialogInputScreen screen = DialogInputScreen.create(
+                Component.text("Set warp"),
+                "warp",
+                Component.text("Warp name"),
+                Component.text("Kaydet"),
+                Component.text("Vazgec"));
 
         assertThat(screen.title()).isEqualTo(Component.text("Set warp"));
         assertThat(screen.key()).isEqualTo("warp");
         assertThat(screen.label()).isEqualTo(Component.text("Warp name"));
         assertThat(screen.initialValue()).isEmpty();
-        assertThat(screen.submitLabelValue()).isEqualTo(Component.text("Confirm"));
-        assertThat(screen.cancelLabelValue()).isEqualTo(Component.text("Cancel"));
+        assertThat(screen.submitLabelValue()).isEqualTo(Component.text("Kaydet"));
+        assertThat(screen.cancelLabelValue()).isEqualTo(Component.text("Vazgec"));
     }
 
+    /** The field's geometry keeps its defaults: a character cap and a pixel width are not words. */
     @Test
     void fluentSettersApply() {
-        DialogInputScreen screen = DialogInputScreen.create(Component.text("t"), "k", Component.text("L"))
+        DialogInputScreen screen = screen(Component.text("t"), "k", Component.text("L"))
                 .initial("home")
                 .maxLength(64)
-                .width(300)
-                .submitLabel(Component.text("Save"))
-                .cancelLabel(Component.text("Back"));
+                .width(300);
 
         assertThat(screen.initialValue()).isEqualTo("home");
         assertThat(screen.maxLengthValue()).isEqualTo(64);
         assertThat(screen.widthValue()).isEqualTo(300);
-        assertThat(screen.submitLabelValue()).isEqualTo(Component.text("Save"));
-        assertThat(screen.cancelLabelValue()).isEqualTo(Component.text("Back"));
     }
 
     @Test
     @SuppressWarnings("NullAway") // intentionally passes null to assert the requireNonNull guards fire
     void settersRejectOutOfRangeAndNull() {
-        DialogInputScreen screen = DialogInputScreen.create(Component.text("t"), "k", Component.text("L"));
+        DialogInputScreen screen = screen(Component.text("t"), "k", Component.text("L"));
         assertThatIllegalArgumentException().isThrownBy(() -> screen.maxLength(0));
         assertThatIllegalArgumentException().isThrownBy(() -> screen.width(0));
         assertThatIllegalArgumentException().isThrownBy(() -> screen.width(2048));
         assertThatNullPointerException().isThrownBy(() -> screen.initial(null));
-        assertThatNullPointerException().isThrownBy(() -> screen.submitLabel(null));
     }
 
     @Test
@@ -102,7 +117,7 @@ class DialogInputScreenTest {
         // DialogInput.text routes through Paper's dialog instances provider, which MockBukkit does not back,
         // so toInput() may throw here; when it succeeds it carries the fluent state. Pure smoke; the mapping
         // is API-verified by compilation.
-        DialogInputScreen screen = DialogInputScreen.create(Component.text("t"), "warp", Component.text("Name"))
+        DialogInputScreen screen = screen(Component.text("t"), "warp", Component.text("Name"))
                 .initial("spawn")
                 .maxLength(48)
                 .width(250);
@@ -120,7 +135,7 @@ class DialogInputScreenTest {
 
     @Test
     void submitCallbackDeliversTheTypedLine() {
-        DialogInputScreen screen = DialogInputScreen.create(Component.text("t"), "warp", Component.text("Name"));
+        DialogInputScreen screen = screen(Component.text("t"), "warp", Component.text("Name"));
         DialogResponseView response = mock(DialogResponseView.class);
         when(response.getText("warp")).thenReturn("mybase");
 
@@ -132,7 +147,7 @@ class DialogInputScreenTest {
 
     @Test
     void submitCallbackTreatsAMissingValueAsEmpty() {
-        DialogInputScreen screen = DialogInputScreen.create(Component.text("t"), "warp", Component.text("Name"));
+        DialogInputScreen screen = screen(Component.text("t"), "warp", Component.text("Name"));
         DialogResponseView response = mock(DialogResponseView.class);
         when(response.getText("warp")).thenReturn(null);
 
@@ -142,7 +157,7 @@ class DialogInputScreenTest {
     @Test
     @SuppressWarnings("NullAway") // intentionally passes null to assert the requireNonNull guards fire
     void promptRejectsNullArguments() {
-        DialogInputScreen screen = DialogInputScreen.create(Component.text("t"), "k", Component.text("L"));
+        DialogInputScreen screen = screen(Component.text("t"), "k", Component.text("L"));
         Player player = MockBukkit.getMock().addPlayer();
         assertThatNullPointerException().isThrownBy(() -> screen.prompt(null, s -> {}, () -> {}));
         assertThatNullPointerException().isThrownBy(() -> screen.prompt(player, null, () -> {}));
@@ -151,7 +166,7 @@ class DialogInputScreenTest {
 
     @Test
     void degradesToOnCancelWhenUnsupported() {
-        DialogInputScreen screen = DialogInputScreen.create(Component.text("t"), "k", Component.text("L"));
+        DialogInputScreen screen = screen(Component.text("t"), "k", Component.text("L"));
         Player player = MockBukkit.getMock().addPlayer();
         AtomicInteger submits = new AtomicInteger();
         AtomicInteger cancels = new AtomicInteger();
@@ -168,5 +183,10 @@ class DialogInputScreenTest {
         boolean supported = DialogInputScreen.isSupported();
         assertThat(supported)
                 .isEqualTo(com.uxplima.uxmlib.common.ServerVersion.current().isAtLeast(1, 21, 6));
+    }
+
+    /** A screen whose button words this test does not care about, so the cases that do care stand out. */
+    private static DialogInputScreen screen(Component title, String key, Component label) {
+        return DialogInputScreen.create(title, key, label, Component.text("submit"), Component.text("cancel"));
     }
 }

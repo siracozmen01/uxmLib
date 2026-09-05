@@ -30,6 +30,10 @@ import com.uxplima.uxmlib.common.ServerVersion;
  * <p>The feature is version-gated. On a server older than 1.21.6 the Dialog API does not exist, so
  * {@link #isSupported()} returns {@code false} and {@link #show(Player)} is a no-op (it never throws);
  * {@link #build()} on such a server throws, since there is nothing to build.
+ *
+ * <p>Every button label is given at construction and none is shipped. A label is a word a player reads, so it
+ * belongs in the message file the consumer translates, not in this jar: a library that wrote "Yes" would put
+ * one English word on a screen no translator can reach.
  */
 public final class DialogScreen {
 
@@ -39,21 +43,33 @@ public final class DialogScreen {
     private Button primary;
     private Button secondary;
 
-    private DialogScreen(Component title, boolean confirmation) {
+    private DialogScreen(Component title, boolean confirmation, Component primaryLabel, Component secondaryLabel) {
         this.title = Objects.requireNonNull(title, "title");
         this.confirmation = confirmation;
-        this.primary = new Button(Component.text(confirmation ? "Yes" : "OK"), audience -> {});
-        this.secondary = new Button(Component.text("No"), audience -> {});
+        this.primary = new Button(primaryLabel, audience -> {});
+        this.secondary = new Button(secondaryLabel, audience -> {});
     }
 
-    /** A notice dialog: a title, optional body, and a single acknowledge button (default label "OK"). */
-    public static DialogScreen notice(Component title) {
-        return new DialogScreen(title, false);
+    /**
+     * A notice dialog: a title, optional body, and a single acknowledge button worded by the caller.
+     *
+     * @param acknowledgeLabel the word on the one button, from your own message file
+     */
+    public static DialogScreen notice(Component title, Component acknowledgeLabel) {
+        Objects.requireNonNull(acknowledgeLabel, "acknowledgeLabel");
+        return new DialogScreen(title, false, acknowledgeLabel, acknowledgeLabel);
     }
 
-    /** A confirmation dialog: a title, optional body, and yes / no buttons (default labels "Yes" / "No"). */
-    public static DialogScreen confirmation(Component title) {
-        return new DialogScreen(title, true);
+    /**
+     * A confirmation dialog: a title, optional body, and two buttons worded by the caller.
+     *
+     * @param yesLabel the word on the accepting button, from your own message file
+     * @param noLabel the word on the refusing button, from your own message file
+     */
+    public static DialogScreen confirmation(Component title, Component yesLabel, Component noLabel) {
+        Objects.requireNonNull(yesLabel, "yesLabel");
+        Objects.requireNonNull(noLabel, "noLabel");
+        return new DialogScreen(title, true, yesLabel, noLabel);
     }
 
     /** Whether the running server supports the Dialog API (Minecraft 1.21.6 or newer). */
