@@ -11,8 +11,12 @@ import java.util.Objects;
  *
  * <p>Iteration order is deterministic: managed keys first (in their order), then any extra user keys the
  * managed map does not know about. The result is a fresh map; neither input is mutated.
+ *
+ * <p>Package private. It was published, and nothing in this library or its README ever named it, so it was
+ * surface we owed a consumer without ever offering it to one. Out of the published API it can change, or
+ * find the caller it was written for, without either being a break.
  */
-public final class MapMerge {
+final class MapMerge {
 
     private MapMerge() {}
 
