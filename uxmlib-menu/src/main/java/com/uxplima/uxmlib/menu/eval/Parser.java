@@ -147,7 +147,10 @@ final class Parser {
             advance();
             return Boolean.parseBoolean(name);
         }
-        if (Functions.isFunction(name) && lookahead(1).kind() == Token.Kind.LPAREN) {
+        if (Functions.isFunction(name)) {
+            if (lookahead(1).kind() != Token.Kind.LPAREN) {
+                throw new ExpressionException(name + " is a function and needs brackets: " + name + "(...)");
+            }
             return call(name);
         }
         throw new ExpressionException("unknown identifier: " + name);
@@ -235,7 +238,16 @@ final class Parser {
         return arithmeticOp("==", "!=", "<", "<=", ">", ">=");
     }
 
+    /**
+     * Names a token in an operator-facing message. A number keeps its value in its own slot and leaves its text
+     * empty, so reaching for the text alone would end the message on nothing; it is formatted the way the
+     * evaluator formats every other number instead, so "found 2" reads the same as the expression that produced it.
+     */
     private static String describe(Token token) {
-        return token.kind() == Token.Kind.END ? "end of input" : token.text();
+        return switch (token.kind()) {
+            case END -> "end of input";
+            case NUMBER -> Values.format(token.number());
+            default -> token.text();
+        };
     }
 }
