@@ -522,8 +522,9 @@ the roles of the theme, and a line that starts with `tile:` is drawn as the whol
 > One piece of that package was working code rather than an old reader, and it kept its own home:
 > `MenuActionRunner` was the only place that resolved the constant spelling of a sound, the
 > `BLOCK_NOTE_BLOCK_PLING` an operator copies out of the API. That is `gui.style.SoundNames` now. A
-> consumer that registers a `sound` action for the engine resolves the name through it, and a file that
-> writes a constant keeps playing what it always did.
+> consumer that registers a `sound` action for the engine resolves the name through it, and `MenuBasics`
+> is the registration most consumers want, so a file that writes a constant keeps playing what it always
+> did.
 
 ### Menu engine
 
@@ -543,6 +544,11 @@ bindings.pagedList("shop:archive", (ctx, page) -> archivePage(ctx.viewer(), page
 ItemRenderer items = new ItemRenderer(guiText, this::theme, bindings.placeholders());
 MenuRenderer renderer = new MenuRenderer(items, bindings.conditions(), bindings.contents());
 Menus menus = new Menus(renderer, scheduler, bindings.lists());
+
+// close, open:<menu>, command:<line>, message:<line> and sound:<name> <volume> <pitch>: the five verbs
+// that mean the same thing in every menu of every plugin. They are a call and never automatic, so a
+// plugin that wants its own keeps the names and registers those instead.
+MenuBasics.register(bindings, menus);
 
 // The operator's file when they have one, the bundled copy when they do not.
 MenuSpec shop = MenuSpecs.loadOrBundled("menus/shop.conf", dataFolder, 6, log);
