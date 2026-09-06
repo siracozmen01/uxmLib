@@ -30,11 +30,14 @@ final class MMOItemsIconProvider extends ReflectiveItemProvider {
     @Override
     protected @Nullable ItemStack lookup(String id) throws ReflectiveOperationException {
         int separator = id.indexOf(':');
-        if (separator <= 0 || separator == id.length() - 1) {
+        if (separator < 0) {
             return null;
         }
         String type = id.substring(0, separator).trim();
         String itemId = id.substring(separator + 1).trim();
+        // Both halves are judged after trimming rather than by where the colon sits, because an operator may write
+        // "SWORD : CUTLASS" and a half that is only spaces is as absent as a half that is not there. Asking the same
+        // question a second time by the colon's position answers nothing this does not.
         if (type.isEmpty() || itemId.isEmpty()) {
             return null;
         }

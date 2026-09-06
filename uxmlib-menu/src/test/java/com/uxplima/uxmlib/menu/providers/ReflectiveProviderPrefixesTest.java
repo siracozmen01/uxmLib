@@ -145,7 +145,7 @@ class ReflectiveProviderPrefixesTest {
         when(plugins.isPluginEnabled("MMOItems")).thenReturn(true);
         IconProvider provider = new MMOItemsIconProvider(server, log);
 
-        for (String malformed : new String[] {"SWORD", ":ID", "SWORD:", "  :ID", "SWORD:  "}) {
+        for (String malformed : new String[] {"SWORD", ":ID", "SWORD:", "  :ID", "SWORD:  ", " : "}) {
             assertThat(provider.icon("mmoitems:" + malformed, ctx))
                     .as(malformed)
                     .isEmpty();
@@ -167,5 +167,21 @@ class ReflectiveProviderPrefixesTest {
         assertThat(provider.icon("mmoitems:SWORD:CUTLASS", ctx)).isEmpty();
 
         assertThat(log.lines).containsExactly("warn");
+    }
+
+    /**
+     * A value written with spaces around its inner colon is well formed. The halves are trimmed, so it reaches for
+     * the SDK exactly as the tight spelling does: what an operator sees is the same item, not a silent nothing.
+     */
+    @Test
+    void spacesAroundTheInnerColonAreTrimmedRatherThanMakingTheValueMalformed() {
+        when(plugins.isPluginEnabled("MMOItems")).thenReturn(true);
+        IconProvider provider = new MMOItemsIconProvider(server, log);
+
+        assertThat(provider.icon("mmoitems:SWORD : CUTLASS", ctx)).isEmpty();
+
+        assertThat(log.lines)
+                .as("it tried, which is what a well formed value does")
+                .containsExactly("warn");
     }
 }
