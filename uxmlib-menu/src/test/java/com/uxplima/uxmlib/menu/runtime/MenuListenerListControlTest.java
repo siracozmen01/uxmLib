@@ -560,6 +560,49 @@ class MenuListenerListControlTest {
         assertThat(prompt.opened).isZero();
     }
 
+    /**
+     * The same for the control's own hop rather than the click's. The click is let through first, so the search is
+     * already past the dispatch and waiting on the viewer's thread when the viewer leaves. That is the case the guard
+     * inside the control is written for, and the only way to reach it is to stand between the two hops.
+     */
+    @Test
+    void aSearchWhoseOwnHopLandsAfterTheViewerLeftOpensNoPrompt() {
+        registerCorpusSource();
+        open();
+        DeferringEntity deferring = new DeferringEntity();
+        listener = deferringListener(deferring);
+
+        click(4);
+        deferring.drainOnce();
+        assertThat(prompt.opened)
+                .as("the click is dispatched, the control's own hop is still in the air")
+                .isZero();
+        viewer.disconnect();
+        deferring.drain();
+
+        assertThat(prompt.opened).isZero();
+    }
+
+    /** The engine under test, wired to {@code deferring} so both of its hops onto the viewer's thread are queued. */
+    private MenuListener deferringListener(DeferringEntity deferring) {
+        return new MenuListener(
+                new MenuRenderer(
+                        new ItemRenderer(new PlainText(), Theme::defaults, new PlaceholderRegistry()),
+                        new ConditionRegistry()),
+                actions,
+                new ConditionRegistry(),
+                deferring,
+                plugin,
+                null,
+                null,
+                null,
+                0L,
+                () -> 1_000_000L,
+                paged,
+                prompt,
+                null);
+    }
+
     /** Queues the hop onto the viewer's thread instead of taking it, so a viewer can leave while it is in the air. */
     private static final class DeferringEntity extends SameThreadScheduler {
 
@@ -569,6 +612,13 @@ class MenuListenerListControlTest {
         public TaskHandle entity(org.bukkit.entity.Entity entity, Runnable task) {
             queued.add(task);
             return FINISHED;
+        }
+
+        /** Runs one round only, so a test can stand between two hops and change the world in between. */
+        void drainOnce() {
+            List<Runnable> due = List.copyOf(queued);
+            queued.clear();
+            due.forEach(Runnable::run);
         }
 
         /** Runs what is queued, and what those tasks queue in turn, so a hop behind a hop is not left in the air. */
