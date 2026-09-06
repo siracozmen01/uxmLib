@@ -112,10 +112,19 @@ public record Ref(
      * Resolve this ref against a registry of ids, doing the split {@link #parse} is too registry-blind to do. When the
      * whole id is already registered, or it carries no colon, the ref is returned unchanged: a feature ref
      * ({@code economy:open-bank}) and an already-split generic ({@code sound:x}) both take that path, so their identity
-     * is preserved byte-for-byte. Otherwise the token is split on its first colon, and when the head is a registered id
-     * this returns a copy re-keyed to that head with the tail carried as {@code value} (the per-action modifiers ride
-     * along through {@link #withIdAndArgs}); when neither the whole id nor the head is known, the ref is returned
-     * unchanged so it misses the registry exactly as it would have.
+     * is preserved byte-for-byte.
+     *
+     * <p>Otherwise <strong>the longest registered head wins</strong>. The colon-delimited heads are tried from the
+     * longest down, and the first one the registry knows takes the id, with everything after it carried as
+     * {@code value} (the per-action modifiers ride along through {@link #withIdAndArgs}). That is what lets a plugin
+     * namespace its verbs and still give one a value: {@code auction:sort:newest} finds {@code auction:sort} and
+     * carries {@code newest}, where a split at the first colon could only ever have offered {@code auction}. When no
+     * head at any length is known, the ref is returned unchanged so it misses the registry exactly as it would have.
+     *
+     * <p>The precedence matters only to a consumer that registers both a head and a longer head under it: register
+     * {@code auction} and {@code auction:sort} together, and {@code auction:sort:newest} reaches {@code auction:sort}
+     * rather than {@code auction} with a value of {@code sort:newest}. A consumer that wants the catch-all to see the
+     * whole tail must not also register the longer name. {@code RefTest} pins this.
      *
      * <p>Pure by design: the caller supplies {@code isRegistered}: an action registry's or a condition registry's
      * {@code has}, so this stays Bukkit-free and is shared by both the runtime's action path and the three condition
@@ -124,18 +133,22 @@ public record Ref(
      */
     public Ref resolve(Predicate<String> isRegistered) {
         Objects.requireNonNull(isRegistered, "isRegistered");
-        int colon = id.indexOf(':');
-        if (colon < 0 || isRegistered.test(id)) {
+        if (isRegistered.test(id)) {
             return this;
         }
-        String head = id.substring(0, colon);
-        if (!isRegistered.test(head)) {
-            return this;
+        // The longest registered head wins, so a plugin that namespaces its verbs can still give one a value:
+        // "auction:sort:newest" finds "auction:sort" and carries "newest", where splitting on the first colon
+        // could only ever have found "auction". A shorter head is tried only when no longer one is registered,
+        // so "message:hello:there" still reaches "message" with the whole of "hello:there".
+        for (int colon = id.lastIndexOf(':'); colon > 0; colon = id.lastIndexOf(':', colon - 1)) {
+            String head = id.substring(0, colon);
+            if (isRegistered.test(head)) {
+                Map<String, String> merged = new HashMap<>(args);
+                merged.put("value", id.substring(colon + 1));
+                return withIdAndArgs(head, merged);
+            }
         }
-        // Split on the first colon only, so a value that itself carries colons ("Steve hi:there") stays whole.
-        Map<String, String> merged = new HashMap<>(args);
-        merged.put("value", id.substring(colon + 1));
-        return withIdAndArgs(head, merged);
+        return this;
     }
 
     /**

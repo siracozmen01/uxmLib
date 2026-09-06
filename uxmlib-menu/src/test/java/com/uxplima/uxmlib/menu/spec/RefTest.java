@@ -121,7 +121,7 @@ class RefTest {
     }
 
     @Test
-    void resolveSplitsOnTheFirstColonOnly() {
+    void resolveCarriesAValueThatHoldsAColonOfItsOwn() {
         Ref resolved = Ref.parse("has-money:50 coinsengine:gold").resolve(Set.of("has-money")::contains);
         assertThat(resolved.id()).isEqualTo("has-money");
         assertThat(resolved.value())
@@ -172,5 +172,49 @@ class RefTest {
         assertThat(quarter.deniedAt(24.999)).isFalse();
         assertThat(quarter.deniedAt(25.0)).isTrue();
         assertThat(quarter.deniedAt(80.0)).isTrue();
+    }
+
+    @Test
+    void resolveFindsTheLongestRegisteredHead() {
+        // A plugin namespaces its verbs, so the name of one holds a colon of its own. Splitting on the first
+        // colon could only ever find "auction", which nothing registers, and the click would do nothing.
+        Ref whole = Ref.parse("auction:sort:newest");
+
+        Ref resolved = whole.resolve(Set.of("auction:sort")::contains);
+
+        assertThat(resolved.id()).isEqualTo("auction:sort");
+        assertThat(resolved.value()).isEqualTo("newest");
+    }
+
+    @Test
+    void resolveTakesTheLongerHeadWhenBothAreRegistered() {
+        // The one case where the precedence decides anything. A consumer that registers a catch-all beside its own
+        // namespaced verbs gets the verb, not the catch-all with the verb name inside the value.
+        Ref whole = Ref.parse("auction:sort:newest");
+
+        Ref resolved = whole.resolve(Set.of("auction", "auction:sort")::contains);
+
+        assertThat(resolved.id()).isEqualTo("auction:sort");
+        assertThat(resolved.value()).isEqualTo("newest");
+    }
+
+    @Test
+    void resolveFallsBackToTheShorterHead() {
+        Ref whole = Ref.parse("auction:sort:newest");
+
+        Ref resolved = whole.resolve(Set.of("auction")::contains);
+
+        assertThat(resolved.id()).isEqualTo("auction");
+        assertThat(resolved.value()).isEqualTo("sort:newest");
+    }
+
+    @Test
+    void resolveLeavesAnUnknownNameAlone() {
+        Ref whole = Ref.parse("auction:sort:newest");
+
+        Ref resolved = whole.resolve(Set.<String>of()::contains);
+
+        assertThat(resolved.id()).isEqualTo("auction:sort:newest");
+        assertThat(resolved.value()).isEmpty();
     }
 }
