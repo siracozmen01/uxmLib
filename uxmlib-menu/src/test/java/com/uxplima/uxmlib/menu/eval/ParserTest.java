@@ -170,10 +170,17 @@ class ParserTest {
         assertThat(Expressions.evaluateNumber("2 ^ -1")).isEqualTo(0.5d);
     }
 
-    /** A unary sign takes a number, so it cannot be put in front of a boolean or a string. */
+    /**
+     * A unary sign takes a number, so it cannot be put in front of a boolean or a string. Both signs are checked:
+     * a leading plus changes nothing about the value, which makes it easy to write as a pass-through, and a
+     * pass-through would let {@code +true} evaluate to true instead of failing.
+     */
     @Test
     void aSignInFrontOfSomethingThatIsNotANumberIsRefused() {
         assertThatThrownBy(() -> Expressions.evaluateNumber("-true"))
+                .isInstanceOf(ExpressionException.class)
+                .hasMessageContaining("expected a number");
+        assertThatThrownBy(() -> Expressions.evaluateBoolean("+true"))
                 .isInstanceOf(ExpressionException.class)
                 .hasMessageContaining("expected a number");
     }

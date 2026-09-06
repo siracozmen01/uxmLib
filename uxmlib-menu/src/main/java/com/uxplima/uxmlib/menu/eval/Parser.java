@@ -28,7 +28,7 @@ final class Parser {
 
     Object parse() throws ExpressionException {
         Object value = expression();
-        expect(Token.Kind.END);
+        require(Token.Kind.END);
         return value;
     }
 
@@ -148,7 +148,7 @@ final class Parser {
             return Boolean.parseBoolean(name);
         }
         if (Functions.isFunction(name)) {
-            if (lookahead(1).kind() != Token.Kind.LPAREN) {
+            if (next().kind() != Token.Kind.LPAREN) {
                 throw new ExpressionException(name + " is a function and needs brackets: " + name + "(...)");
             }
             return call(name);
@@ -179,22 +179,34 @@ final class Parser {
         return tokens.get(index);
     }
 
-    private Token lookahead(int ahead) {
-        int at = Math.min(index + ahead, tokens.size() - 1);
-        return tokens.get(at);
+    /**
+     * The token after the current one. It needs no bound check: it is only ever asked while the current token is an
+     * identifier, and the token list always ends in an END token, so an identifier is never the last entry.
+     */
+    private Token next() {
+        return tokens.get(index + 1);
     }
 
+    /**
+     * Step to the next token. It needs no stop at the end of the list. Every caller checks the current token's kind
+     * first and END matches none of those checks, and the walk finishes on {@link #require} rather than
+     * {@link #expect}, so no step is ever taken from the END token.
+     */
     private void advance() {
-        if (index < tokens.size() - 1) {
-            index++;
-        }
+        index++;
     }
 
+    /** Check the current token's kind and consume it. */
     private void expect(Token.Kind kind) throws ExpressionException {
+        require(kind);
+        advance();
+    }
+
+    /** Check the current token's kind and leave it where it is: the one check that ends the walk. */
+    private void require(Token.Kind kind) throws ExpressionException {
         if (peek().kind() != kind) {
             throw new ExpressionException("expected " + kind + " but found " + describe(peek()));
         }
-        advance();
     }
 
     private boolean matchType(Token.Kind kind) {
