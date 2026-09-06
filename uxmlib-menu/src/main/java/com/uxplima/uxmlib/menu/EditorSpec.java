@@ -36,22 +36,24 @@ public final class EditorSpec {
     private final BiFunction<Player, @Nullable Object, Component> title;
     private final String valueLore;
     private final String backName;
-    private final @Nullable String deleteName;
-    private final @Nullable String deleteConfirmTitle;
+    private final @Nullable Delete delete;
     private final Function<@Nullable Object, List<EditableProperty>> properties;
     private final Consumer<Player> onBack;
-    private final @Nullable BiConsumer<Player, @Nullable Object> onDelete;
+
+    /**
+     * The three parts of the optional delete button. They are one field rather than three because they are wired
+     * together or not at all: a button with a handler but no confirm title is not a state this spec can hold.
+     */
+    private record Delete(String name, String confirmTitle, BiConsumer<Player, @Nullable Object> handler) {}
 
     private EditorSpec(Builder builder) {
         this.layout = Objects.requireNonNull(builder.layout, "layout");
         this.title = Objects.requireNonNull(builder.title, "title");
         this.valueLore = Objects.requireNonNull(builder.valueLore, "valueLore");
         this.backName = Objects.requireNonNull(builder.backName, "backName");
-        this.deleteName = builder.deleteName;
-        this.deleteConfirmTitle = builder.deleteConfirmTitle;
+        this.delete = builder.delete;
         this.properties = Objects.requireNonNull(builder.properties, "properties");
         this.onBack = Objects.requireNonNull(builder.onBack, "onBack");
-        this.onDelete = builder.onDelete;
     }
 
     /** Start building an editor spec; required fields are validated at {@link Builder#build}. */
@@ -72,11 +74,11 @@ public final class EditorSpec {
     }
 
     public Optional<String> deleteName() {
-        return Optional.ofNullable(deleteName);
+        return delete == null ? Optional.empty() : Optional.of(delete.name());
     }
 
     public Optional<String> deleteConfirmTitle() {
-        return Optional.ofNullable(deleteConfirmTitle);
+        return delete == null ? Optional.empty() : Optional.of(delete.confirmTitle());
     }
 
     public Consumer<Player> onBack() {
@@ -84,7 +86,7 @@ public final class EditorSpec {
     }
 
     public Optional<BiConsumer<Player, @Nullable Object>> onDelete() {
-        return Optional.ofNullable(onDelete);
+        return delete == null ? Optional.empty() : Optional.of(delete.handler());
     }
 
     /** Resolve the editor title for {@code viewer} editing {@code subject}, the same per-open title the view shows. */
@@ -98,12 +100,12 @@ public final class EditorSpec {
         return properties.apply(subject);
     }
 
-    /** Whether the optional delete button is fully configured (label, confirm title, handler, and a layout slot). */
+    /**
+     * Whether the delete button is drawn: the caller wired one, and the layout gave it a slot to sit in. The two
+     * are independent, because a layout is chosen without knowing whether the editor it serves can delete.
+     */
     public boolean hasDelete() {
-        return onDelete != null
-                && deleteName != null
-                && deleteConfirmTitle != null
-                && layout.deleteSlot().isPresent();
+        return delete != null && layout.deleteSlot().isPresent();
     }
 
     /** Fluent builder; required fields are checked at {@link #build}. */
@@ -112,11 +114,9 @@ public final class EditorSpec {
         private @Nullable BiFunction<Player, @Nullable Object, Component> title;
         private @Nullable String valueLore;
         private @Nullable String backName;
-        private @Nullable String deleteName;
-        private @Nullable String deleteConfirmTitle;
+        private @Nullable Delete delete;
         private @Nullable Function<@Nullable Object, List<EditableProperty>> properties;
         private @Nullable Consumer<Player> onBack;
-        private @Nullable BiConsumer<Player, @Nullable Object> onDelete;
 
         private Builder() {}
 
@@ -155,9 +155,10 @@ public final class EditorSpec {
         /** Wire the optional delete button: its name, the confirm title, and the delete handler. */
         public Builder onDelete(
                 String deleteName, String deleteConfirmTitle, BiConsumer<Player, @Nullable Object> onDelete) {
-            this.deleteName = Objects.requireNonNull(deleteName, "deleteName");
-            this.deleteConfirmTitle = Objects.requireNonNull(deleteConfirmTitle, "deleteConfirmTitle");
-            this.onDelete = Objects.requireNonNull(onDelete, "onDelete");
+            this.delete = new Delete(
+                    Objects.requireNonNull(deleteName, "deleteName"),
+                    Objects.requireNonNull(deleteConfirmTitle, "deleteConfirmTitle"),
+                    Objects.requireNonNull(onDelete, "onDelete"));
             return this;
         }
 
