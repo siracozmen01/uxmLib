@@ -143,7 +143,7 @@ class MenuListenerListControlTest {
 
     private MenuListener listener;
 
-    private Player viewer;
+    private org.mockbukkit.mockbukkit.entity.PlayerMock viewer;
 
     private Plugin plugin;
 
@@ -163,6 +163,7 @@ class MenuListenerListControlTest {
         actions.register("search", ctx -> ctx.control().searchList("warps", "owner"));
         actions.register("reset", ctx -> ctx.control().resetPagination());
         actions.register("elsewhere", ctx -> ctx.control().sortList("kits", SortDirection.NEXT));
+        actions.register("search-elsewhere", ctx -> ctx.control().searchList("kits", "owner"));
         prompt = new RecordingPrompt();
         MenuRenderer renderer = new MenuRenderer(
                 new ItemRenderer(new PlainText(), Theme::defaults, new PlaceholderRegistry()), new ConditionRegistry());
@@ -432,5 +433,136 @@ class MenuListenerListControlTest {
 
         assertThat(lastRequest().page()).isZero();
         assertThat(holder().ctx().page()).isZero();
+    }
+
+    /**
+     * A control that names a list the menu does not carry is a file mistake, and the only place it can be seen is the
+     * log: nothing is queried, nothing changes on screen, and the click looks the same as one that worked.
+     */
+    @Test
+    void aControlNamingAnUnknownListSaysSoInTheLog() {
+        registerCorpusSource();
+        open(SPEC.replace("[\"sort-next\"]", "[\"elsewhere\"]"));
+
+        List<java.util.logging.LogRecord> logged = logsOf(this::clickSort);
+
+        assertThat(logged).extracting(java.util.logging.LogRecord::getMessage).anySatisfy(message -> assertThat(message)
+                .contains("list_control_unknown_list", "kits"));
+    }
+
+    /** The same for a search: an unknown list opens no prompt, and says why in the log. */
+    @Test
+    void aSearchNamingAnUnknownListOpensNoPromptAndSaysSoInTheLog() {
+        registerCorpusSource();
+        open(SPEC.replace("[\"search\"]", "[\"search-elsewhere\"]"));
+
+        List<java.util.logging.LogRecord> logged = logsOf(this::clickSearch);
+
+        assertThat(prompt.opened)
+                .as("a prompt for a list that is not there would ask for a line nobody can use")
+                .isZero();
+        assertThat(logged).extracting(java.util.logging.LogRecord::getMessage).anySatisfy(message -> assertThat(message)
+                .contains("list_control_unknown_list"));
+    }
+
+    /**
+     * A viewer who left between the click and the hop gets no prompt. The control hops to the viewer's entity thread
+     * before it opens anything, and on a real server that hop is a later tick; only a scheduler that defers it can
+     * show that the guard on the far side of the hop does any work.
+     */
+    @Test
+    void aSearchByAViewerWhoLeftBeforeTheHopLandsOpensNoPrompt() {
+        registerCorpusSource();
+        open();
+        DeferringEntity deferring = new DeferringEntity();
+        listener = new MenuListener(
+                new MenuRenderer(
+                        new ItemRenderer(new PlainText(), Theme::defaults, new PlaceholderRegistry()),
+                        new ConditionRegistry()),
+                actions,
+                new ConditionRegistry(),
+                deferring,
+                plugin,
+                null,
+                null,
+                null,
+                0L,
+                () -> 1_000_000L,
+                paged,
+                prompt,
+                null);
+
+        click(4);
+        assertThat(prompt.opened)
+                .as("the control has not reached the entity thread yet")
+                .isZero();
+        viewer.disconnect();
+        deferring.drain();
+
+        assertThat(prompt.opened).isZero();
+    }
+
+    /** Queues the hop onto the viewer's thread instead of taking it, so a viewer can leave while it is in the air. */
+    private static final class DeferringEntity extends SameThreadScheduler {
+
+        private final List<Runnable> queued = new ArrayList<>();
+
+        @Override
+        public TaskHandle entity(org.bukkit.entity.Entity entity, Runnable task) {
+            queued.add(task);
+            return FINISHED;
+        }
+
+        void drain() {
+            List<Runnable> due = List.copyOf(queued);
+            queued.clear();
+            due.forEach(Runnable::run);
+        }
+    }
+
+    /**
+     * A sort chosen on a later page comes back to the first one. The rows the new sort puts on page three have
+     * nothing to do with the rows the old sort had there, so staying on the page number would show the viewer an
+     * arbitrary slice of a list they just reordered.
+     */
+    @Test
+    void aSortChosenOnALaterPageComesBackToTheFirstPage() {
+        registerCorpusSource();
+        open();
+        clickNextPage();
+        assertThat(lastRequest().page())
+                .as("the arrow moved the list off page one")
+                .isEqualTo(1);
+        asked.clear();
+
+        clickSort();
+
+        assertThat(lastRequest().page()).isZero();
+        assertThat(holder().ctx().page()).isZero();
+    }
+
+    /** Collects what the engine logs while {@code body} runs, so a no-op that only reports itself can be read back. */
+    private static List<java.util.logging.LogRecord> logsOf(Runnable body) {
+        java.util.logging.Logger logger = java.util.logging.Logger.getLogger(MenuListener.class.getName());
+        List<java.util.logging.LogRecord> records = new ArrayList<>();
+        java.util.logging.Handler handler = new java.util.logging.Handler() {
+            @Override
+            public void publish(java.util.logging.LogRecord record) {
+                records.add(record);
+            }
+
+            @Override
+            public void flush() {}
+
+            @Override
+            public void close() {}
+        };
+        logger.addHandler(handler);
+        try {
+            body.run();
+        } finally {
+            logger.removeHandler(handler);
+        }
+        return records;
     }
 }
