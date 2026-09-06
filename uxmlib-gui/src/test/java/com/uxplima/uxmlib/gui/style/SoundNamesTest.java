@@ -61,6 +61,17 @@ class SoundNamesTest {
     }
 
     /**
+     * A sound another plugin registered carries its own namespace and need carry no dot at all. The colon is
+     * what says that is a key: without it the name would be put to the registry as a constant, miss, and come
+     * back as nothing at all.
+     */
+    @Test
+    void aNamespacedNameWithNoDotInItIsStillAKey() {
+        assertThat(SoundNames.key("MYPLUGIN:BEEP"))
+                .hasValueSatisfying(key -> assertThat(key.asString()).isEqualTo("myplugin:beep"));
+    }
+
+    /**
      * The shape decides, not the case. A name with a dot in it is a key even when it is upper case, so it is
      * never put to the registry as a constant, and a constant is never lower cased into a well formed key that
      * names no sound.
