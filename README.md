@@ -41,6 +41,8 @@ and depend on it as a normal plugin. Both work.
   - [Scheduling (Folia-ready)](#scheduling-folia-ready)
   - [Items](#items)
   - [GUIs](#guis)
+  - [Menu engine](#menu-engine)
+  - [Bedrock forms](#bedrock-forms)
   - [Commands](#commands)
   - [Configuration](#configuration)
   - [Storage](#storage)
@@ -103,6 +105,8 @@ what you use. Modules marked **experimental** are previews with unstable APIs (s
 | `uxmlib-common` | The shared foundation: a Folia-ready `Scheduler`, MiniMessage `Text`, a config-driven style layer (`Theme`/`Styler`/`Typography`/`StyleTokens`), node-based `HoconConfig` and typed-record `RecordConfig` with hot reload and live `ConfigProperty`, a MiniMessage-native i18n message catalog, a ReDoS-guarded `TimedRegex`, a `BackupParticipants` seam that lets a plugin flush its state before something copies its files, type-safe particle spawning, and `Durations`/`Numbers`/`Sounds`/`SemanticVersion`/`ServerVersion` helpers. |
 | `uxmlib-item` | A fluent `ItemBuilder` (name, lore, enchantments, attributes, flags, durability, banners, components, with removers), sealed `SkullData` player heads with an async skin resolver, registry lookups for the key-based enchantments and attributes, component-safe and gzip serialization, single-key `isSimilar`, and typed persistent-data helpers. |
 | `uxmlib-gui` | An inventory-menu framework: simple / paginated / scrolling / storage / typed (hopper, dispenser, …) menus; static, animated, dynamic, and per-viewer stateful items; border/row/column/rect fillers; interaction control; multi-screen navigation; menus defined in HOCON; unified anvil/chat/sign text input; the tile/lore/title/sound side of the style layer; and a facade over Paper's server-side Dialogs. |
+| `uxmlib-bedrock` | Native Bedrock forms for a server that lets Bedrock clients in through Geyser or Floodgate: a `BedrockDetector` that answers whether a viewer is a Bedrock player, and a `BedrockScreen` that sends them a simple, modal, input, or custom form. The vocabulary a caller builds a form out of (`BedrockButton`, `BedrockWidget`, `BedrockImage`, `BedrockIcons`) names no SDK type, so a form is built and tested with nothing on the classpath. Each interface has a `NONE` constant and a `forServer` factory, so a Java-only server loads no Geyser or Floodgate class at all and a caller never guards the call itself. |
+| `uxmlib-menu` | The data-driven menu engine: a menu is a file, and this module reads one and runs it. A HOCON spec parses into an immutable, platform-free model, which a renderer draws and a runtime clicks through. It carries paged and scrolling lists with a query and a sort, a requirement and an action on each of the four click sides, an expression language for slots and computed numbers, a property editor (text, number, toggle, enum, colour, list) over the unified text input, confirm and selector windows, and an icon provider registry that reads a head, a serialized stack, or an item from ItemsAdder, Oraxen, Nexo, CraftEngine, MMOItems, ExecutableItems, HeadDatabase and EntryStack past a plugin-present guard. A Bedrock viewer is handed the same menu as a native form. It names no colour and no wording of its own: a consumer registers what its menus may say and do through `MenuBindings`. |
 | `uxmlib-command` | A thin facade over Paper's Brigadier (`Cmd`/`Args`/`Sender`/`CommandRegistrar`) **and** an annotation DSL on top of it: `@Command`/`@Subcommand`/`@Arg`, permissions, `@Range`/`@Length`, `@Cooldown`, flags and switches, async execution, help pagination, and resolver/validator/condition SPIs. |
 | `uxmlib-storage` | Plain-JDBC persistence: a HikariCP-pooled `Database` (SQLite default; MySQL/MariaDB, PostgreSQL, H2 opt-in), an injection-safe `SelectBuilder`, parameterised `Sql`/`TxSql`, versioned migrations, a Caffeine-backed write-through / write-behind cache, a two-tier player-profile cache, and cross-server row sync. |
 | `uxmlib-redis` | A low-level binary (`byte[]`) Redis pub/sub bus for fanning an opaque frame across the server nodes sharing one Redis (fail-degraded publish, per-subscription auto-reconnect), with no relational dependencies (Lettuce is a compile-only soft-dependency). |
@@ -121,8 +125,13 @@ graph TD
     common[uxmlib-common]
     item[uxmlib-item] --> common
     command[uxmlib-command] --> common
+    bedrock[uxmlib-bedrock]
     gui[uxmlib-gui] --> common
     gui --> item
+    gui --> bedrock
+    menu[uxmlib-menu] --> gui
+    menu --> item
+    menu --> bedrock
     storage[uxmlib-storage] --> common
     integration[uxmlib-integration] --> common
     hud[uxmlib-hud] --> common
@@ -166,8 +175,8 @@ dependencies {
     implementation("com.github.UXPLIMA.uxm-lib:uxmlib-gui:VERSION")
     implementation("com.github.UXPLIMA.uxm-lib:uxmlib-item:VERSION")
     implementation("com.github.UXPLIMA.uxm-lib:uxmlib-command:VERSION")
-    // ...and uxmlib-common / uxmlib-storage / uxmlib-integration / uxmlib-hud /
-    // uxmlib-update / uxmlib-condition as needed
+    // ...and uxmlib-common / uxmlib-menu / uxmlib-bedrock / uxmlib-storage /
+    // uxmlib-integration / uxmlib-hud / uxmlib-update / uxmlib-condition as needed
 }
 ```
 
@@ -521,10 +530,152 @@ MenuDraw draw = new MenuDraw(actions, conditions, lists, this::words, this::open
 draw.open(MenuSpec.read(configNode), player);
 ```
 
+`MenuConfig` and `MenuSpec` are the smaller, older readers, kept for the plugins already written against
+them. A new plugin that wants a file-driven menu should take the [menu engine](#menu-engine) instead.
+
 A row carries the values and never the look: the file still writes the name and the lore over the icon the
 row gives. Every line a player reads goes through the `Words` the plugin passed, which looks a key such as
 `@shop.title` up in the catalogue, writes the values of the row in, and paints the result in the colours of
 the server. The library parses no text of its own, so it decides no look and holds no language.
+
+### Menu engine
+
+`uxmlib-gui` draws a menu. `uxmlib-menu` reads one. A menu is a file, and the engine is what turns that
+file into a window a player clicks through. A consumer writes no layout code at all: it registers the
+names its menus may say and do, and everything else lives in HOCON that an operator owns.
+
+```java
+// The whole vocabulary a file may reach. A name that is not registered here does not exist.
+MenuBindings bindings = new MenuBindings();
+bindings.action("shop:buy", ctx -> buy(ctx.viewer(), ctx.subject(Offer.class)));
+bindings.condition("shop:can-afford", (ctx, args) -> balance(ctx.viewer()) >= price(ctx));
+bindings.placeholder("shop:balance", ctx -> format(balance(ctx.viewer())));
+bindings.list("shop:offers", ctx -> offersFor(ctx.viewer()));
+bindings.pagedList("shop:archive", (ctx, page) -> archivePage(ctx.viewer(), page));  // asks the store per page
+
+ItemRenderer items = new ItemRenderer(guiText, this::theme, bindings.placeholders());
+MenuRenderer renderer = new MenuRenderer(items, bindings.conditions(), bindings.contents());
+Menus menus = new Menus(renderer, scheduler, bindings.lists());
+
+// The operator's file when they have one, the bundled copy when they do not.
+MenuSpec shop = MenuSpecs.loadOrBundled("menus/shop.conf", dataFolder, 6, log);
+menus.registerSpec("shop", shop);
+
+// A file that names an action, a condition, a placeholder, or a list source that nobody registered is
+// reported here, with every offending name, rather than on the click that would have reached it.
+List<String> problems = bindings.validate(List.of(shop));
+
+menus.open(player, "shop", null);                  // no subject
+menus.open(player, "offer", offer, 2);             // a subject and a page
+menus.back(player);                                // the back stack the engine keeps per viewer
+menus.confirm(player, Text.mini("<red>Sell everything?"), this::sellAll, () -> menus.reopenLast(player));
+menus.openEditor(player, editorSpec, offer);       // a property editor over one object
+```
+
+The file carries the layout, the words, the conditions, and the actions:
+
+```hocon
+title = "@shop.title"
+rows = 6
+open-requirement = ["shop:unlocked"]
+open-actions = ["sound:ITEM_BOOK_PAGE_TURN 0.7 1.2"]
+
+items {
+  filler { slots = ["0-53"], material = GRAY_STAINED_GLASS_PANE, name = " ", priority = 0 }
+
+  offers {
+    slots = ["10-16", "19-25"], priority = 5
+    list {
+      source = "shop:offers"
+      page-size = 14
+      sorts = ["price", "name"]
+      template { material = "%offer_icon%", name = "@shop.offer", lore = ["<gray>%offer_price%"] }
+    }
+  }
+
+  buy {
+    slot = 49, material = EMERALD, name = "@shop.buy", priority = 10
+    permission = "shop.buy"
+    view = ["shop:can-afford"]
+    click {
+      left  = { do = ["shop:buy", "close"], requirements = ["shop:can-afford"], deny = ["message:@shop.poor"] }
+      right = { do = "confirm:shop:buy-all", title = "@shop.confirm-all" }
+      shift-left = { do = "input:shop:buy-amount", prompt = "@shop.amount" }
+    }
+  }
+
+  next { slot = 53, material = ARROW, type = next, priority = 10 }
+}
+
+bedrock {
+  title = "@shop.title"
+  widgets = [{ type = dropdown, name = offer, label = "@shop.offer", options = ["Sword", "Shield"] }]
+  on-submit = ["shop:buy"]
+}
+```
+
+What the engine adds over a plain layout reader:
+
+- **Paged and scrolling lists.** A slot range is filled from a registered source, sorted by the names the
+  file asks for, and paged over the range. A paged source is asked for one page rather than for everything.
+- **An expression language.** Any rendered line may carry a `{math: ...}` block, evaluated after the
+  placeholders in it are substituted: `{math: %price% * %amount%}`, `{math: min(%stock%, 45)}`. Seven
+  functions are callable and nothing else (`min`, `max`, `abs`, `floor`, `ceil`, `round`, `sqrt`), and a
+  block that cannot be read renders blank rather than leaking its own text at a player.
+- **A requirement and an action chain on each of the eight click gestures** (left, right, the two shifted
+  forms, middle, drop, control-drop, and double-click), with a `deny` fallback, a `delay`, and a `chance`
+  on any single action.
+- **Continuations.** An `input:` or a `confirm:` action splits the chain: the rest of it runs when the
+  viewer answers, through the same anvil, chat, sign, or dialog input `uxmlib-gui` installs.
+- **A property editor.** Text, number, toggle, enum, colour, and list properties over one object, each
+  with its own picker window, so a plugin that edits a configuration object writes no menu for it.
+- **Icons from other plugins.** An icon spec may name a head, a serialized stack, or an item held by
+  ItemsAdder, Oraxen, Nexo, CraftEngine, MMOItems, ExecutableItems, HeadDatabase, or EntryStack. Every
+  such lookup sits behind a plugin-present guard and falls back to a plain material when the plugin is not
+  there.
+- **A Bedrock viewer sees a form.** When the spec carries a `bedrock` block and the viewer is a Bedrock
+  player, the engine sends the native form instead of the chest. See [Bedrock forms](#bedrock-forms).
+
+The model under all of this names no platform type at all: a spec parses, validates, and is asserted on
+with no server running, and `ArchitectureTest.theMenuModelTouchesNoPlatform` fails the build on the first
+import that would break that.
+
+The engine names no colour and no wording. `@shop.title` is a key in the consumer's own catalogue, and the
+colours come from the consumer's `Theme`. The library ships neither.
+
+### Bedrock forms
+
+A Bedrock client cannot see a chest menu the way a Java client does, so a plugin that draws a menu has two
+questions: is this viewer a Bedrock player, and how do I send them a form. `uxmlib-bedrock` answers both,
+and the menu engine uses it for you.
+
+```java
+BedrockDetector bedrock = BedrockDetector.forServer(server);   // NONE on a Java-only server
+BedrockScreen screen = BedrockScreen.forServer(server);
+
+if (bedrock.isBedrock(player.getUniqueId())) {
+    screen.sendSimpleForm(player, "Shop", "Pick a category", List.of(
+                    new BedrockButton("Swords", new BedrockImage(BedrockImage.Kind.PATH, "textures/items/iron_sword")),
+                    new BedrockButton("Shields", null)),
+            index -> scheduler.entity(player, () -> openCategory(player, index)));
+
+    screen.sendCustomForm(player, "Buy", null, List.of(
+                    new BedrockWidget.Dropdown("offer", "Offer", List.of("Sword", "Shield"), 0),
+                    new BedrockWidget.Slider("amount", "Amount", 1, 64, 1, 1)),
+            answers -> buy(player, answers), () -> {});
+}
+```
+
+Four form kinds are covered: simple (a list of buttons), modal (two buttons), input (one text field), and
+custom (any widget list). `BedrockIcons.forMaterialSpec` turns a material name or a head reference into a
+button image, so a menu file that already names an icon needs no second Bedrock-only spelling.
+
+Both interfaces follow one shape. Each has a `NONE` constant that names no SDK type and a `forServer`
+factory that returns a backed implementation only when Geyser or Floodgate is enabled. The backed
+implementations are package-private, so `org.geysermc` is named in exactly two files and reached only
+inside the enabled branch. On a Java-only server the factories answer `NONE`, no Geyser or Floodgate class
+is ever loaded, and a caller never has to guard the call itself. A response from Cumulus arrives off the
+main thread, so a callback hops back onto the viewer's entity thread before it touches the world.
 
 ### Commands
 
