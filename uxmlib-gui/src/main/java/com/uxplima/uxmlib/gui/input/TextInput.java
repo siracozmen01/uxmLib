@@ -58,6 +58,15 @@ public final class TextInput {
     /** The catalog key for the line a viewer is sent when a prompt ends without a submission. */
     public static final String CANCELLED_KEY = "gui.input.cancelled";
 
+    /**
+     * The catalog key for the word on the button that delivers a typed line. Only the dialog prompt has buttons;
+     * an anvil and a chat prompt have none, so a caller that never reaches a Dialog-capable server never needs it.
+     */
+    public static final String SUBMIT_KEY = "gui.input.submit";
+
+    /** The catalog key for the word on the button that abandons a dialog prompt. */
+    public static final String CANCEL_KEY = "gui.input.cancel";
+
     private final InputSettings settings;
     private final GuiText guiText;
     private final Scheduler scheduler;

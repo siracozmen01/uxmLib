@@ -1,5 +1,6 @@
 package com.uxplima.uxmlib.gui.input;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 
@@ -7,6 +8,7 @@ import org.bukkit.entity.Player;
 
 import net.kyori.adventure.text.Component;
 
+import com.uxplima.uxmlib.gui.GuiText;
 import com.uxplima.uxmlib.gui.dialog.DialogInputScreen;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
@@ -20,8 +22,13 @@ import org.jspecify.annotations.Nullable;
  * adapter exactly like {@link SignTextBackend}: it never schedules for itself.
  *
  * <p>A live {@link DialogInputScreen} cannot be driven under MockBukkit, so the show step is the {@link Prompt} seam:
- * production supplies the native, screen-backed one via {@link #paperNative()}; a test supplies a fake that drives the
- * submit and cancel callbacks directly, so the submit/cancel contract is covered without a live Paper dialog.
+ * production supplies the native, screen-backed one via {@link #paperNative(GuiText)}; a test supplies a fake that
+ * drives the submit and cancel callbacks directly, so the submit/cancel contract is covered without a live Paper
+ * dialog.
+ *
+ * <p>The two button words are the only text this backend needs that the prompt does not carry. They are asked of the
+ * caller's catalog, per viewer, under {@link TextInput#SUBMIT_KEY} and {@link TextInput#CANCEL_KEY}: the screen
+ * demands them, and this library ships no words of its own.
  */
 @NullMarked
 final class DialogTextBackend implements TextInputBackend {
@@ -40,20 +47,24 @@ final class DialogTextBackend implements TextInputBackend {
                 Player player,
                 Component title,
                 Component label,
+                Component submitLabel,
+                Component cancelLabel,
                 @Nullable String initial,
                 Consumer<String> onSubmit,
                 Runnable onCancel);
     }
 
     private final Prompt prompt;
+    private final GuiText guiText;
 
-    DialogTextBackend(Prompt prompt) {
+    DialogTextBackend(Prompt prompt, GuiText guiText) {
         this.prompt = Objects.requireNonNull(prompt, "prompt");
+        this.guiText = Objects.requireNonNull(guiText, "guiText");
     }
 
     /** The production backend, prompting through a native {@link DialogInputScreen}. */
-    static DialogTextBackend paperNative() {
-        return new DialogTextBackend(DialogTextBackend::showNative);
+    static DialogTextBackend paperNative(GuiText guiText) {
+        return new DialogTextBackend(DialogTextBackend::showNative, guiText);
     }
 
     @Override
@@ -67,6 +78,8 @@ final class DialogTextBackend implements TextInputBackend {
                 player,
                 promptText,
                 promptText,
+                guiText.text(player, TextInput.SUBMIT_KEY, Map.of()),
+                guiText.text(player, TextInput.CANCEL_KEY, Map.of()),
                 initialText,
                 line -> outcome.accept(new InputResult.Submitted(line)),
                 () -> outcome.accept(InputResult.Cancelled.INSTANCE));
@@ -76,10 +89,12 @@ final class DialogTextBackend implements TextInputBackend {
             Player player,
             Component title,
             Component label,
+            Component submitLabel,
+            Component cancelLabel,
             @Nullable String initial,
             Consumer<String> onSubmit,
             Runnable onCancel) {
-        DialogInputScreen screen = DialogInputScreen.create(title, FIELD_KEY, label);
+        DialogInputScreen screen = DialogInputScreen.create(title, FIELD_KEY, label, submitLabel, cancelLabel);
         if (initial != null) {
             screen.initial(initial);
         }
