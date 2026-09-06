@@ -5,7 +5,7 @@ import java.util.Objects;
 
 /**
  * One page of rows plus the size of the whole filtered corpus. The total is what lets the engine render
- * {@code %max_page%} and decide whether a next-page button applies, without ever holding more than a page.
+ * a page count and decide whether a next-page button applies, without ever holding more than a page.
  *
  * <p>{@code pinned} rows claim a fixed content slot through {@link PinnedEntry} and sit outside the page's flow:
  * a sponsored entry that must appear on every page, for instance. They are not counted in {@code totalCount}.

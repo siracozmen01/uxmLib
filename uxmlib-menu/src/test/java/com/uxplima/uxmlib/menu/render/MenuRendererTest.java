@@ -22,6 +22,7 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import com.uxplima.uxmlib.gui.GuiText;
 import com.uxplima.uxmlib.menu.binding.ConditionRegistry;
 import com.uxplima.uxmlib.menu.binding.ContentProviderRegistry;
+import com.uxplima.uxmlib.menu.binding.MenuPlaceholders;
 import com.uxplima.uxmlib.menu.binding.PlaceholderRegistry;
 import com.uxplima.uxmlib.menu.providers.ContentProvider;
 import com.uxplima.uxmlib.menu.runtime.MenuContext;
@@ -140,8 +141,7 @@ class MenuRendererTest {
     @Test
     void theStaticPageIndicatorCountsTheListDrawnNearestTheStartOfTheWindow() {
         PlaceholderRegistry tokens = new PlaceholderRegistry();
-        tokens.register("page", ctx -> String.valueOf(ctx.page() + 1));
-        tokens.register("max_page", ctx -> String.valueOf(ctx.pageCount()));
+        MenuPlaceholders.registerPaging(tokens);
         MenuRenderer counting =
                 new MenuRenderer(new ItemRenderer(new PlainText(), Theme::defaults, tokens), conditions, contents);
         MenuSpec spec = spec(
@@ -169,8 +169,7 @@ class MenuRendererTest {
     @Test
     void aMenuWithNoListReportsASinglePage() {
         PlaceholderRegistry tokens = new PlaceholderRegistry();
-        tokens.register("page", ctx -> String.valueOf(ctx.page() + 1));
-        tokens.register("max_page", ctx -> String.valueOf(ctx.pageCount()));
+        MenuPlaceholders.registerPaging(tokens);
         MenuRenderer counting =
                 new MenuRenderer(new ItemRenderer(new PlainText(), Theme::defaults, tokens), conditions, contents);
         MenuSpec spec = spec(

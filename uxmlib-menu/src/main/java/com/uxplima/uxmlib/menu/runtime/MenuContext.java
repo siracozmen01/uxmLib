@@ -140,7 +140,8 @@ public final class MenuContext {
     /**
      * The paged lists this render draws, keyed by list-source id, as immutable snapshots: empty for an open that
      * queried no paged source. The renderer reads it to tell a paged list (already one page) from an in-memory one (the
-     * whole corpus, sliced here) and to source the paged list's {@code %page%}/{@code %max_page%}.
+     * whole corpus, sliced here) and to source the paged list's page numbers, which a host turns into {@code %page%} and
+     * {@code %max_page%} by registering {@link com.uxplima.uxmlib.menu.binding.MenuPlaceholders#registerPaging}.
      */
     public Map<String, PagedListView> pagedViews() {
         return pagedViews;
@@ -190,7 +191,7 @@ public final class MenuContext {
                 viewer, subject, page, pageCount, entry, arguments, localPlaceholders, passthrough, pagedViews);
     }
 
-    /** A copy carrying the page count the renderer computed, so a static item's {@code %max_page%} can read it. */
+    /** A copy carrying the page count the renderer computed, so a registered {@code %max_page%} can read it. */
     public MenuContext withPageCount(int pageCount) {
         return new MenuContext(
                 viewer, subject, page, pageCount, entry, arguments, localPlaceholders, passthrough, pagedViews);

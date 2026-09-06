@@ -335,7 +335,8 @@ public final class MenuRenderer {
     }
 
     /**
-     * The context a static item renders with, carrying the {@code %page%}/{@code %max_page%} its page indicator reads:
+     * The context a static item renders with, carrying the page numbers its indicator reads (as {@code %page%} and {@code
+     * %max_page%} where the host registered them):
      * computed once before static items draw so the indicator matches the count {@link #populateList} pages across. A
      * spec with no list item stays a single page. Only one list is consulted, {@link MenuSpec#pagedListItem()}: a menu
      * pairs one scrollable list with its page controls, and the page count those controls report is that list's. It is

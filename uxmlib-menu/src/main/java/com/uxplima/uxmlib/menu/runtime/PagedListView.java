@@ -7,7 +7,8 @@ import org.jspecify.annotations.NullMarked;
  * assembled and carried to the renderer on the {@link MenuContext}. Its presence in {@link MenuContext#pagedViews()} is
  * the engine's signal that a list-backed item's rows are already exactly one page (the renderer places them without re-
  * slicing, since slicing an already-paged result at the viewer's page index would show page zero of a later page) and
- * it carries the {@code %page%}/{@code %max_page%} the static page indicator reads, derived from the {@link
+ * it carries the page numbers a static page indicator reads through {@link
+ * com.uxplima.uxmlib.menu.binding.MenuPlaceholders}, derived from the {@link
  * ListQueryState}'s recorded corpus total rather than the rendered page's length.
  */
 @NullMarked
