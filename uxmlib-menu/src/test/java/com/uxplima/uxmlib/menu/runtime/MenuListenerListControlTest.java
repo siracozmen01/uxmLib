@@ -571,10 +571,13 @@ class MenuListenerListControlTest {
             return FINISHED;
         }
 
+        /** Runs what is queued, and what those tasks queue in turn, so a hop behind a hop is not left in the air. */
         void drain() {
-            List<Runnable> due = List.copyOf(queued);
-            queued.clear();
-            due.forEach(Runnable::run);
+            while (!queued.isEmpty()) {
+                List<Runnable> due = List.copyOf(queued);
+                queued.clear();
+                due.forEach(Runnable::run);
+            }
         }
     }
 
