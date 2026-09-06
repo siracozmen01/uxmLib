@@ -541,6 +541,92 @@ class MenuListenerPagedFlipTest {
         assertThat(rowsOnScreen()).containsExactly("c", "d");
     }
 
+    /**
+     * Two lists drawn into the same slots is a mistaken file, but a mistaken file still has to behave the same way
+     * twice. The nearer-slot rule cannot separate them, so the item id does: the arrows drive the same one on every
+     * server start rather than falling back to the map order the nearer-slot rule was added to escape.
+     */
+    @Test
+    void twoListsClaimingTheSameSlotsAreSeparatedByTheirIdsRatherThanByTheMap() {
+        List<PageRequest> kitPages = new ArrayList<>();
+        registerCorpusSource();
+        paged.register("kits", (ctx, request) -> {
+            kitPages.add(request);
+            return PagedResult.of(List.of("stone", "iron"), 4);
+        });
+        menus.registerSpec(
+                "menu",
+                new MenuSpecLoader()
+                        .parse(
+                                """
+                                rows = 3
+                                items {
+                                  warps { slots = [0, 1], list { source = warps, template { material = PAPER, name = "warp" } } }
+                                  kits { slots = [0, 1], list { source = kits, template { material = CHEST, name = "kit" } } }
+                                  next { slot = 8, material = ARROW, name = "next", type = next }
+                                }
+                                """));
+        menus.open(viewer, "menu", null);
+        scheduler.drain();
+        asked.clear();
+        kitPages.clear();
+
+        clickNext();
+        scheduler.drain();
+
+        assertThat(kitPages)
+                .as("'kits' sorts before 'warps', so the tie goes to the kits")
+                .hasSize(1);
+        assertThat(asked).as("and the warps are left where they were").isEmpty();
+    }
+
+    /**
+     * A page click on a menu carrying no list at all still moves the page. Nothing is fetched, because there is
+     * nothing to fetch, but the page is the context the whole window renders with: a conditional item may show itself
+     * only on page two, and a menu that pages nothing must still be able to reach it.
+     */
+    @Test
+    void aMenuCarryingNoListStillMovesItsPageWhenTheArrowIsClicked() {
+        menus.registerSpec(
+                "menu",
+                new MenuSpecLoader()
+                        .parse(
+                                """
+                                rows = 3
+                                items {
+                                  next { slot = 8, material = ARROW, name = "next", type = next }
+                                }
+                                """));
+        menus.open(viewer, "menu", null);
+        scheduler.drain();
+
+        clickNext();
+
+        assertThat(holder().ctx().page())
+                .as("the page moves on the entity thread, with no query to wait for")
+                .isEqualTo(1);
+        assertThat(asked).isEmpty();
+    }
+
+    /**
+     * The page that lands is written into the list's view, not only into the context. The view is what the renderer
+     * reads to size a page indicator, so a view left on the old page draws "Page 1" over the second page of rows.
+     */
+    @Test
+    void theViewCommittedByAFlipCarriesThePageThatLandedAndTheCorpusItLandedFrom() {
+        registerCorpusSource();
+        open();
+
+        clickNext();
+        scheduler.drain();
+
+        PagedListView view = java.util.Objects.requireNonNull(
+                holder().ctx().pagedViews().get("warps"), "the flip commits a view for the list it moved");
+        assertThat(view.page()).isEqualTo(1);
+        assertThat(view.totalCount()).isEqualTo(CORPUS.size());
+        assertThat(view.pageCount()).as("five rows over pages of two").isEqualTo(3);
+    }
+
     /** Collects what the engine logs while {@code body} runs, so a failure's own report can be read back. */
     private static List<java.util.logging.LogRecord> logsOf(Runnable body) {
         java.util.logging.Logger logger = java.util.logging.Logger.getLogger(MenuListener.class.getName());

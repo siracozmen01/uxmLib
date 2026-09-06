@@ -91,6 +91,48 @@ public record MenuSpec(
     }
 
     /**
+     * The list-backed item the page controls drive: the arrows, the Bedrock form's page buttons, and the {@code
+     * %page%}/{@code %max_page%} indicator all read this one. It is the list drawn nearest the start of the window,
+     * which is the one a viewer would name if asked which list "the list" is; on a tie (two lists claiming the same
+     * first slot, which only a mistaken file produces) the item whose id sorts first wins, so even a mistaken file
+     * behaves the same way twice. Empty for a menu that carries no list.
+     *
+     * <p>The choice is made from the file and not from the item map. These items arrive from the config library in an
+     * order that is neither the order they were written in nor stable from one run to the next, so "the first
+     * list-backed item" named a different list on different server starts, and the three readers above could disagree
+     * with each other inside one render.
+     */
+    public Optional<MenuItemSpec> pagedListItem() {
+        String chosenId = null;
+        MenuItemSpec chosen = null;
+        int chosenSlot = Integer.MAX_VALUE;
+        for (Map.Entry<String, MenuItemSpec> entry : items.entrySet()) {
+            if (entry.getValue().list().isEmpty()) {
+                continue;
+            }
+            int slot = earliestSlot(entry.getValue());
+            boolean nearer = slot < chosenSlot;
+            boolean tiedAndEarlierId =
+                    slot == chosenSlot && chosenId != null && entry.getKey().compareTo(chosenId) < 0;
+            if (nearer || tiedAndEarlierId) {
+                chosen = entry.getValue();
+                chosenId = entry.getKey();
+                chosenSlot = slot;
+            }
+        }
+        return Optional.ofNullable(chosen);
+    }
+
+    /** The lowest slot {@code item} draws into, or {@link Integer#MAX_VALUE} when it draws into none. */
+    private static int earliestSlot(MenuItemSpec item) {
+        int lowest = Integer.MAX_VALUE;
+        for (int slot : item.slots().slots()) {
+            lowest = Math.min(lowest, slot);
+        }
+        return lowest;
+    }
+
+    /**
      * The thirteen-argument shape that carries a Bedrock block but no content region, kept so every existing
      * {@code new MenuSpec(...)} call site compiles unchanged. It delegates to the canonical constructor with no
      * regions, i.e. a menu the engine draws and routes entirely from its own items.

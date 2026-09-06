@@ -1385,30 +1385,11 @@ public final class Menus {
     }
 
     /**
-     * The list-backed item whose entries page as form buttons: the one drawn nearest the start of the window, matching
-     * the list the chest's page arrows drive. Empty for a static-only menu.
-     *
-     * <p>Chosen by slot, not by the order the items arrive in: a spec's item map comes from the config library, whose
-     * iteration order is not the order the file was written in, so a menu carrying two lists would otherwise page one
-     * of them on one server start and the other on the next.
+     * The list-backed item the form's page buttons drive, empty when the menu carries no list. The choice lives in
+     * {@link MenuSpec#pagedListItem()} so a Bedrock viewer pages the same list a Java viewer does.
      */
     private static Optional<MenuItemSpec> firstListItem(MenuSpec spec) {
-        MenuItemSpec nearest = null;
-        int nearestSlot = Integer.MAX_VALUE;
-        for (MenuItemSpec item : spec.items().values()) {
-            if (item.list().isEmpty()) {
-                continue;
-            }
-            int slot = Integer.MAX_VALUE;
-            for (int candidate : item.slots().slots()) {
-                slot = Math.min(slot, candidate);
-            }
-            if (slot < nearestSlot) {
-                nearest = item;
-                nearestSlot = slot;
-            }
-        }
-        return Optional.ofNullable(nearest);
+        return spec.pagedListItem();
     }
 
     /**

@@ -92,6 +92,53 @@ class MenuSpecRecordsTest {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
+    @Test
+    void thePagedListIsTheOneDrawnNearestTheStartOfTheWindow() {
+        Map<String, MenuItemSpec> items = new java.util.LinkedHashMap<>();
+        items.put("kits", listAt(20));
+        items.put("warps", listAt(3));
+        items.put("filler", itemAt(1));
+
+        assertThat(plainMenu(items).pagedListItem())
+                .as("the warps open at slot 3 and the kits at slot 20, whatever order the map hands them over in")
+                .contains(items.get("warps"));
+    }
+
+    @Test
+    void aTieOnTheFirstSlotIsBrokenByTheItemIdSoTheAnswerIsTheSameTwice() {
+        Map<String, MenuItemSpec> items = new java.util.LinkedHashMap<>();
+        items.put("warps", listAt(3));
+        items.put("kits", listAt(3));
+
+        assertThat(plainMenu(items).pagedListItem())
+                .as("two lists on one slot is a mistaken file, and a mistaken file still behaves the same way twice")
+                .contains(items.get("kits"));
+    }
+
+    @Test
+    void aMenuCarryingNoListNamesNoPagedItem() {
+        assertThat(plainMenu(Map.of("filler", itemAt(1))).pagedListItem())
+                .as("a menu with nothing to page has no page controls to point anywhere")
+                .isEmpty();
+    }
+
+    /** A list-backed item drawing into two slots, the first of them {@code firstSlot}. */
+    private static MenuItemSpec listAt(int firstSlot) {
+        MenuItemSpec template = itemAt(0);
+        return new MenuItemSpec(
+                SlotSet.parse(List.of(String.valueOf(firstSlot), String.valueOf(firstSlot + 1)), 90),
+                0,
+                "STONE",
+                "",
+                List.of(),
+                new ItemDecor(1, Optional.empty(), false, List.of()),
+                List.<Ref>of(),
+                new ClickSpec(Map.of(), Map.of()),
+                false,
+                Optional.of(new ListSpec(Ref.parse("src"), template)),
+                ItemType.NONE);
+    }
+
     /** A minimal static item occupying one slot, sized against the 90-slot bottom-inventory ceiling. */
     private static MenuItemSpec itemAt(int slot) {
         return new MenuItemSpec(

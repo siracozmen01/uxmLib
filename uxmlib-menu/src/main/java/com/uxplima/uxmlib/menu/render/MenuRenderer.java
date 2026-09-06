@@ -222,7 +222,7 @@ public final class MenuRenderer {
             (item.list().isPresent() ? listItems : staticItems).add(item);
         }
         Map<Integer, @Nullable ItemStack> held = initialPaint ? Map.of() : holdViewerFilledRegions(inv, spec);
-        MenuContext staticCtx = pagedAwareStaticCtx(ctx, listItems, resolvedLists);
+        MenuContext staticCtx = pagedAwareStaticCtx(ctx, spec, resolvedLists);
         Map<Integer, MenuItemSpec> placed = populateStatic(inv, staticItems, staticCtx, clickSink);
         for (MenuItemSpec listItem : listItems) {
             populateList(inv, listItem, ctx, staticCtx, placed, clickSink, resolvedLists);
@@ -321,7 +321,7 @@ public final class MenuRenderer {
         for (MenuItemSpec item : spec.items().values()) {
             (item.list().isPresent() ? listItems : staticItems).add(item);
         }
-        MenuContext staticCtx = pagedAwareStaticCtx(ctx, listItems, resolvedLists);
+        MenuContext staticCtx = pagedAwareStaticCtx(ctx, spec, resolvedLists);
         Map<Integer, MenuItemSpec> placed = PriorityLayering.resolve(staticItems, it -> viewPasses(it, staticCtx));
         for (Map.Entry<Integer, MenuItemSpec> entry : placed.entrySet()) {
             int rawSlot = entry.getKey();
@@ -337,20 +337,20 @@ public final class MenuRenderer {
     /**
      * The context a static item renders with, carrying the {@code %page%}/{@code %max_page%} its page indicator reads:
      * computed once before static items draw so the indicator matches the count {@link #populateList} pages across. A
-     * spec with no list item stays a single page. Only the first list item is consulted: a spec pairs one scrollable
-     * list with its page controls, and the page count those controls report is that list's.
+     * spec with no list item stays a single page. Only one list is consulted, {@link MenuSpec#pagedListItem()}: a menu
+     * pairs one scrollable list with its page controls, and the page count those controls report is that list's. It is
+     * the same list the arrows drive, so an indicator that reads "Page 2/4" is naming the pages the arrows turn.
      *
      * <p>When that list is a paged source (its id is in {@link MenuContext#pagedViews()}), the page and count come from
      * its snapshot (the corpus total the source reported, not the length of the one rendered page) so a "Page x/y"
      * indicator is right even though the engine holds only the page it can see. An in-memory list keeps the historic
      * behaviour: it paginates its whole corpus in place to learn the count.
      */
-    private MenuContext pagedAwareStaticCtx(
-            MenuContext ctx, List<MenuItemSpec> listItems, Map<String, List<?>> resolvedLists) {
-        if (listItems.isEmpty()) {
+    private MenuContext pagedAwareStaticCtx(MenuContext ctx, MenuSpec spec, Map<String, List<?>> resolvedLists) {
+        MenuItemSpec listItem = spec.pagedListItem().orElse(null);
+        if (listItem == null) {
             return ctx.withPageCount(1);
         }
-        MenuItemSpec listItem = listItems.get(0);
         PagedListView view =
                 ctx.pagedViews().get(listItem.list().orElseThrow().source().id());
         if (view != null) {
