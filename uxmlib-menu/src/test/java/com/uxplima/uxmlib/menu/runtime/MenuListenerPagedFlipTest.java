@@ -535,4 +535,74 @@ class MenuListenerPagedFlipTest {
                 .isEmpty();
         assertThat(rowsOnScreen()).containsExactly("c", "d");
     }
+
+    /** Collects what the engine logs while {@code body} runs, so a failure's own report can be read back. */
+    private static List<java.util.logging.LogRecord> logsOf(Runnable body) {
+        java.util.logging.Logger logger = java.util.logging.Logger.getLogger(MenuListener.class.getName());
+        List<java.util.logging.LogRecord> records = new ArrayList<>();
+        java.util.logging.Handler handler = new java.util.logging.Handler() {
+            @Override
+            public void publish(java.util.logging.LogRecord record) {
+                records.add(record);
+            }
+
+            @Override
+            public void flush() {}
+
+            @Override
+            public void close() {}
+        };
+        logger.addHandler(handler);
+        try {
+            body.run();
+        } finally {
+            logger.removeHandler(handler);
+        }
+        return records;
+    }
+
+    /**
+     * A failed flip is silent to the viewer, so the log is the only place it exists. It names the list and the page,
+     * which is what an operator has to go on when a player says the arrows stopped working.
+     */
+    @Test
+    void aFailedQueryNamesTheListAndThePageInTheLog() {
+        paged.register("warps", (ctx, request) -> {
+            if (request.page() == 0) {
+                return PagedResult.of(CORPUS.subList(0, 2), CORPUS.size());
+            }
+            throw new IllegalStateException("the database is down");
+        });
+        open();
+
+        List<java.util.logging.LogRecord> logged = logsOf(() -> {
+            clickNext();
+            scheduler.drain();
+        });
+
+        assertThat(logged).hasSize(1);
+        assertThat(logged.get(0).getMessage()).contains("warps").contains("page=1");
+    }
+
+    /**
+     * A source that hands back nothing is named for what it is. Without the check the same flip fails as a null
+     * pointer thrown somewhere inside the page assembly, which says nothing about whose source returned it.
+     */
+    @Test
+    void aNullPageIsNamedRatherThanArrivingAsANullPointer() {
+        paged.register(
+                "warps",
+                (ctx, request) -> request.page() == 0 ? PagedResult.of(CORPUS.subList(0, 2), CORPUS.size()) : null);
+        open();
+
+        List<java.util.logging.LogRecord> logged = logsOf(() -> {
+            clickNext();
+            scheduler.drain();
+        });
+
+        assertThat(logged).hasSize(1);
+        assertThat(logged.get(0).getThrown())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("warps");
+    }
 }
