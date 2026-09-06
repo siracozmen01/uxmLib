@@ -271,6 +271,25 @@ class EditorRefreshTest {
         assertThat(holder.editor().orElseThrow().propertyAt(10)).isPresent();
     }
 
+    /**
+     * A second window of the same menu is somebody else's window. The check is on the holder itself and not on what
+     * the holder is a holder of, because two opens of one editor carry two holders that agree about everything
+     * except which window each one owns. Painting into the wrong one leaves the viewer clicking a window whose
+     * routing belongs to the other.
+     */
+    @Test
+    void aSecondWindowOfTheSameMenuIsStillNotThisHoldersWindow() {
+        EditorSpec spec = spec();
+        MenuHolder first = openEditor(spec);
+        Inventory firstWindow = first.getInventory();
+        openEditor(spec);
+
+        EditorRefresh.reRender(first, renderer(), new SameThreadScheduler());
+
+        assertThat(first.getInventory()).isNotSameAs(firstWindow);
+        assertThat(viewer.getOpenInventory().getTopInventory()).isSameAs(first.getInventory());
+    }
+
     /** A window opened over the editor belongs to somebody else, so the editor is rebuilt rather than painted into. */
     @Test
     void aWindowThatIsNotThisHoldersIsNotPaintedInto() {
@@ -308,15 +327,21 @@ class EditorRefreshTest {
     /**
      * A viewer who left the server between the write and the hop gets no window. The hop itself does not drop the
      * task, because the entity is still the one the scheduler was handed, so the check has to be made here.
+     *
+     * <p>What is asserted is that nothing happened at all, not that no window was opened. Both repaint branches
+     * clear the slot routing before they draw, so routing that is still there is the only evidence that the walk
+     * stopped before either branch was chosen.
      */
     @Test
     void aViewerWhoWentOfflineIsNotSentAWindow() {
         MenuHolder holder = openEditor(spec());
         Inventory before = holder.getInventory();
+        holder.editor().orElseThrow().recordProperty(44, new Fixed("stale", "gone"));
         viewer.disconnect();
 
         EditorRefresh.reRender(holder, renderer(), new SameThreadScheduler());
 
+        assertThat(holder.editor().orElseThrow().propertyAt(44)).isPresent();
         assertThat(holder.getInventory()).isSameAs(before);
     }
 }
