@@ -105,14 +105,33 @@ class MenuSpecRecordsTest {
     }
 
     @Test
-    void aTieOnTheFirstSlotIsBrokenByTheItemIdSoTheAnswerIsTheSameTwice() {
+    void aListIsMeasuredByTheSlotItOpensOnAndNotByTheSlotItEndsOn() {
         Map<String, MenuItemSpec> items = new java.util.LinkedHashMap<>();
-        items.put("warps", listAt(3));
-        items.put("kits", listAt(3));
+        items.put("wide", listSpanning(0, 30));
+        items.put("narrow", listSpanning(5, 6));
 
         assertThat(plainMenu(items).pagedListItem())
+                .as("the wide list opens at slot 0, so it is the nearer one even though it ends far later")
+                .contains(items.get("wide"));
+    }
+
+    @Test
+    void aTieOnTheFirstSlotIsBrokenByTheItemIdSoTheAnswerIsTheSameTwice() {
+        MenuItemSpec warps = listAt(3);
+        MenuItemSpec kits = listAt(3);
+        Map<String, MenuItemSpec> warpsFirst = new java.util.LinkedHashMap<>();
+        warpsFirst.put("warps", warps);
+        warpsFirst.put("kits", kits);
+        Map<String, MenuItemSpec> kitsFirst = new java.util.LinkedHashMap<>();
+        kitsFirst.put("kits", kits);
+        kitsFirst.put("warps", warps);
+
+        assertThat(plainMenu(warpsFirst).pagedListItem())
                 .as("two lists on one slot is a mistaken file, and a mistaken file still behaves the same way twice")
-                .contains(items.get("kits"));
+                .contains(kits);
+        assertThat(plainMenu(kitsFirst).pagedListItem())
+                .as("the same two items handed over in the other order give the same answer")
+                .contains(kits);
     }
 
     @Test
@@ -124,9 +143,14 @@ class MenuSpecRecordsTest {
 
     /** A list-backed item drawing into two slots, the first of them {@code firstSlot}. */
     private static MenuItemSpec listAt(int firstSlot) {
+        return listSpanning(firstSlot, firstSlot + 1);
+    }
+
+    /** A list-backed item drawing into exactly two slots, {@code first} and {@code last}. */
+    private static MenuItemSpec listSpanning(int first, int last) {
         MenuItemSpec template = itemAt(0);
         return new MenuItemSpec(
-                SlotSet.parse(List.of(String.valueOf(firstSlot), String.valueOf(firstSlot + 1)), 90),
+                SlotSet.parse(List.of(String.valueOf(first), String.valueOf(last)), 90),
                 0,
                 "STONE",
                 "",
