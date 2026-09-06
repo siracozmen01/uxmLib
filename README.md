@@ -366,7 +366,7 @@ tag, which is why the choice is one line at a time rather than one switch for th
 
 Menus draw from the same theme: `MenuTitles.centre` pads a window title into the middle of the frame,
 `Tiles` puts a tile's title on the first lore line under a blank name (a single space: an empty one makes
-the client fall back to the material's name) and paints it with a gradient the caller names, `Lore` builds
+the client fall back to the material's name) and paints it with a gradient the caller names, `LoreWrap` builds
 the tooltip in one fixed order and wraps a description at a width the caller may set, and
 `MenuSounds` reads the three menu sounds from config. Lore an operator wrote in a config file goes through
 `Lore.lines`, which reads every line as body text and gives it the same column, padding and closing air as
@@ -663,7 +663,7 @@ EconomyBridge.orDummy().deposit(player, 100);
 LuckPermsHook.find().flatMap(lp -> lp.prefix(player)).ifPresent(prefix -> applyPrefix(prefix));
 
 // PlaceholderAPI: a no-op pass-through without PlaceholderAPI installed:
-String text = Placeholders.apply(player, "Hi %player_name%");
+String text = PlaceholderApi.apply(player, "Hi %player_name%");
 
 // Region queries against WorldGuard or Towny behind one provider-agnostic contract:
 RegionHooks regions = new RegionHooks();
