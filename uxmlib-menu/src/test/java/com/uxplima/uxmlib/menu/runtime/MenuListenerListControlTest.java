@@ -117,12 +117,14 @@ class MenuListenerListControlTest {
             items {
               row {
                 slots = [0, 1]
-                list { source = warps, sorts = ["name", "date"], template { material = PAPER, name = "warp" } }
+                list { source = warps, sorts = ["name", "date", "owner"], template { material = PAPER, name = "warp" } }
               }
               sortNext { slot = 6, material = HOPPER, name = "sort", click { left = ["sort-next"] } }
               filter { slot = 5, material = HOPPER, name = "filter", click { left = ["filter"] } }
               search { slot = 4, material = HOPPER, name = "search", click { left = ["search"] } }
               reset { slot = 3, material = HOPPER, name = "reset", click { left = ["reset"] } }
+              sortPrev { slot = 2, material = HOPPER, name = "back", click { left = ["sort-previous"] } }
+              sortReset { slot = 7, material = HOPPER, name = "plain", click { left = ["sort-reset"] } }
               next { slot = 8, material = ARROW, name = "next", type = next }
             }
             """;
@@ -236,6 +238,16 @@ class MenuListenerListControlTest {
         scheduler.drain();
     }
 
+    private void clickSortPrevious() {
+        click(2);
+        scheduler.drain();
+    }
+
+    private void clickSortReset() {
+        click(7);
+        scheduler.drain();
+    }
+
     private void clickFilter() {
         click(5);
         scheduler.drain();
@@ -297,6 +309,41 @@ class MenuListenerListControlTest {
         assertThat(lastRequest().sort()).isEqualTo("date");
 
         clickSort();
+        assertThat(lastRequest().sort()).isEqualTo("owner");
+
+        clickSort();
+        assertThat(lastRequest().sort())
+                .as("past the last declared sort it comes round to the first")
+                .isEqualTo("name");
+    }
+
+    /**
+     * The other direction, which needs three declared sorts to exist at all: over two, stepping back and stepping on
+     * land in the same place, and a menu file that binds both to different buttons would look correct either way.
+     */
+    @Test
+    void steppingBackThroughTheSortsIsNotTheSameAsSteppingOn() {
+        registerCorpusSource();
+        open();
+
+        clickSortPrevious();
+
+        assertThat(lastRequest().sort())
+                .as("back from the first declared sort is the last one")
+                .isEqualTo("owner");
+    }
+
+    /** A reset returns to the first declared sort from wherever the viewer had got to. */
+    @Test
+    void resettingTheSortReturnsToTheFirstDeclaredOne() {
+        registerCorpusSource();
+        open();
+        clickSort();
+        clickSort();
+        assertThat(lastRequest().sort()).isEqualTo("owner");
+
+        clickSortReset();
+
         assertThat(lastRequest().sort()).isEqualTo("name");
     }
 
