@@ -12,7 +12,6 @@ import org.bukkit.entity.Player;
 import net.kyori.adventure.text.Component;
 
 import com.mojang.authlib.GameProfile;
-import com.uxplima.uxmlib.pipeline.PacketSender;
 import com.uxplima.uxmlib.packet.Components;
 import com.uxplima.uxmlib.packet.GameProfiles;
 import com.uxplima.uxmlib.packet.tablist.PlayerInfoEntry;
@@ -22,6 +21,7 @@ import com.uxplima.uxmlib.packet.tablist.PlayerInfoValue;
 import com.uxplima.uxmlib.packet.tablist.TabEntry;
 import com.uxplima.uxmlib.packet.tablist.TabListPackets;
 import com.uxplima.uxmlib.packet.tablist.TabSkin;
+import com.uxplima.uxmlib.pipeline.PacketSender;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoRemovePacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket.Action;

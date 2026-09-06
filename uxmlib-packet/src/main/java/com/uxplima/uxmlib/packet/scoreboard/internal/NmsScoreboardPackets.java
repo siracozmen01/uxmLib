@@ -6,7 +6,6 @@ import java.util.Optional;
 
 import org.bukkit.entity.Player;
 
-import com.uxplima.uxmlib.pipeline.PacketSender;
 import com.uxplima.uxmlib.packet.Bundles;
 import com.uxplima.uxmlib.packet.Components;
 import com.uxplima.uxmlib.packet.scoreboard.ScoreboardDisplaySlot;
@@ -15,6 +14,7 @@ import com.uxplima.uxmlib.packet.scoreboard.ScoreboardObjective;
 import com.uxplima.uxmlib.packet.scoreboard.ScoreboardPackets;
 import com.uxplima.uxmlib.packet.scoreboard.ScoreboardRenderType;
 import com.uxplima.uxmlib.packet.scoreboard.ScoreboardScore;
+import com.uxplima.uxmlib.pipeline.PacketSender;
 import net.minecraft.network.chat.numbers.BlankFormat;
 import net.minecraft.network.chat.numbers.FixedFormat;
 import net.minecraft.network.chat.numbers.NumberFormat;
