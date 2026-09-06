@@ -374,10 +374,14 @@ class MenuListenerListControlTest {
         open();
         int before = asked.size();
 
-        clickSearch();
+        List<java.util.logging.LogRecord> logged = logsOf(this::clickSearch);
 
         assertThat(prompt.opened).isZero();
         assertThat(asked).hasSize(before);
+        assertThat(logged)
+                .as("a click that can never open anything has to say why somewhere")
+                .extracting(java.util.logging.LogRecord::getMessage)
+                .anySatisfy(message -> assertThat(message).contains("list_search_unavailable"));
     }
 
     // -- what a control refuses to do --------------------------------------------------------------------------
