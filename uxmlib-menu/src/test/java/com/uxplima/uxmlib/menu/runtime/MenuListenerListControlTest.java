@@ -125,7 +125,7 @@ class MenuListenerListControlTest {
               reset { slot = 3, material = HOPPER, name = "reset", click { left = ["reset"] } }
               sortPrev { slot = 2, material = HOPPER, name = "back", click { left = ["sort-previous"] } }
               sortReset { slot = 7, material = HOPPER, name = "plain", click { left = ["sort-reset"] } }
-              capture { slot = 9, material = HOPPER, name = "capture", click { right = ["capture"] } }
+              capture { slot = 9, material = HOPPER, name = "capture", click { left = ["capture"] } }
               next { slot = 8, material = ARROW, name = "next", type = next }
             }
             """;
@@ -239,13 +239,6 @@ class MenuListenerListControlTest {
 
     private void clickSort() {
         click(6);
-        scheduler.drain();
-    }
-
-    private void rightClick(int rawSlot) {
-        InventoryView view = viewer.getOpenInventory();
-        listener.onClick(new InventoryClickEvent(
-                view, InventoryType.SlotType.CONTAINER, rawSlot, ClickType.RIGHT, InventoryAction.PICKUP_ALL));
         scheduler.drain();
     }
 
@@ -627,7 +620,7 @@ class MenuListenerListControlTest {
         open();
         DeferringEntity deferring = new DeferringEntity();
         listener = deferringListener(deferring);
-        rightClick(9);
+        click(9);
         deferring.drain();
         MenuControl control = Objects.requireNonNull(captured, "the click hands the engine's own control over");
 
