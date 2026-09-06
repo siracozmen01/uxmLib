@@ -1522,9 +1522,11 @@ public final class Menus {
     public void shutdown() {
         scheduler.global(() -> {
             for (Player player : Bukkit.getOnlinePlayers()) {
-                InventoryHolder open =
-                        player.getOpenInventory().getTopInventory().getHolder();
-                if (open instanceof MenuHolder holder) {
+                // The same null guard the quit path takes. A disable sweeps every online player, including one
+                // whose view is being torn down as the server stops, and a throw here would leave every window
+                // after it in the roster open with its refresh still running.
+                Inventory top = player.getOpenInventory().getTopInventory();
+                if (top != null && top.getHolder() instanceof MenuHolder holder) {
                     holder.cancelRefresh();
                     player.closeInventory();
                 }
