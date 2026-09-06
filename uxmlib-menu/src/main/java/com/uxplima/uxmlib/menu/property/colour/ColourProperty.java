@@ -1,0 +1,223 @@
+package com.uxplima.uxmlib.menu.property.colour;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Function;
+import java.util.function.IntConsumer;
+import java.util.function.IntSupplier;
+
+import org.bukkit.Material;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemFlag;
+import org.bukkit.inventory.ItemStack;
+
+import com.uxplima.uxmlib.gui.GuiText;
+import com.uxplima.uxmlib.gui.input.InputRequest;
+import com.uxplima.uxmlib.item.ItemBuilder;
+import com.uxplima.uxmlib.menu.SlotFit;
+import com.uxplima.uxmlib.menu.property.CatalogTextPrompt;
+import com.uxplima.uxmlib.menu.property.EditableProperty;
+import com.uxplima.uxmlib.menu.property.PropertyClick;
+import com.uxplima.uxmlib.menu.property.SelectorButton;
+import com.uxplima.uxmlib.menu.property.SelectorOpener;
+import com.uxplima.uxmlib.scheduler.Scheduler;
+import org.jspecify.annotations.NullMarked;
+
+/**
+ * A property whose click opens a config-driven colour-picker sub-menu: a palette of the 16 standard Minecraft named
+ * colours (each a coloured icon at a configured slot), a custom-hex button that opens an anvil parsing {@code #RRGGBB}
+ * / {@code #AARRGGBB} into a packed ARGB int, a clear button that resets the value to the property's "no override"
+ * sentinel, and a back button. Selecting a swatch or submitting a valid hex hands the chosen ARGB int to the {@link
+ * IntConsumer} setter; the clear button fires the clear {@link Runnable}; an invalid hex re-opens the picker without
+ * writing.
+ *
+ * <p>The consumer supplies the current-value getter, the ARGB setter, the clear runnable, the sentinel, and the catalog
+ * keys: so the same widget edits a hologram's background colour, its glow colour, or any other packed ARGB field. Every
+ * write runs off the tick thread through the shared {@link Scheduler}, then the editor is redrawn. The setters are the
+ * module's existing application use cases wrapped as callbacks; this property holds no domain logic. Geometry and
+ * materials come from a {@link ColourPickerLayout} loaded from conf, so nothing is hardcoded.
+ *
+ * <p>The picker opens as an engine child window the one menu listener routes (its swatch/custom/clear/back buttons are
+ * single-gesture {@code SelectorButton}s and a swatch, clear, or back reopens the parent editor through the click's
+ * reopen hook) so the whole flow stays on a single holder and teardown.
+ */
+@NullMarked
+public final class ColourProperty implements EditableProperty {
+
+    private static final int OPAQUE_ALPHA = 0xFF;
+    private static final int BYTE_MASK = 0xFF;
+    private static final String INPUT_KEY = "editor.colour-hex";
+
+    private final String label;
+    private final Material icon;
+    private final IntSupplier current;
+    private final IntConsumer setter;
+    private final Runnable clear;
+    private final int sentinel;
+    private final Function<Player, String> clearedDisplay;
+    private final GuiText guiText;
+    private final ColourPickerText text;
+    private final ColourPickerLayout layout;
+    private final CatalogTextPrompt textPrompt;
+    private final Scheduler scheduler;
+
+    public ColourProperty(
+            String label,
+            Material icon,
+            IntSupplier current,
+            IntConsumer setter,
+            Runnable clear,
+            int sentinel,
+            Function<Player, String> clearedDisplay,
+            GuiText guiText,
+            ColourPickerText text,
+            ColourPickerLayout layout,
+            CatalogTextPrompt textPrompt,
+            Scheduler scheduler) {
+        this.label = Objects.requireNonNull(label, "label");
+        this.icon = Objects.requireNonNull(icon, "icon");
+        this.current = Objects.requireNonNull(current, "current");
+        this.setter = Objects.requireNonNull(setter, "setter");
+        this.clear = Objects.requireNonNull(clear, "clear");
+        this.sentinel = sentinel;
+        this.clearedDisplay = Objects.requireNonNull(clearedDisplay, "clearedDisplay");
+        this.guiText = Objects.requireNonNull(guiText, "guiText");
+        this.text = Objects.requireNonNull(text, "text");
+        this.layout = Objects.requireNonNull(layout, "layout");
+        this.textPrompt = Objects.requireNonNull(textPrompt, "textPrompt");
+        this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
+    }
+
+    @Override
+    public String label() {
+        return label;
+    }
+
+    @Override
+    public Material icon() {
+        return icon;
+    }
+
+    @Override
+    public String valueLore(Player viewer) {
+        Objects.requireNonNull(viewer, "viewer");
+        int value = current.getAsInt();
+        return value == sentinel ? clearedDisplay.apply(viewer) : toHex(value);
+    }
+
+    @Override
+    public void onClick(PropertyClick click) {
+        Objects.requireNonNull(click, "click");
+        scheduler.entity(click.viewer(), () -> open(click));
+    }
+
+    /**
+     * Open the picker as an engine child window: the swatch/custom/clear/back buttons are handed to the engine opener
+     * as single-gesture {@link SelectorButton}s so the one menu listener routes them. A swatch writes its packed ARGB
+     * and reopens the parent editor; custom opens the anvil seam; clear fires the clear runnable then reopens the
+     * parent; back reopens the parent: all through the {@code click.reopen()} contract.
+     */
+    private void open(PropertyClick click) {
+        SelectorOpener opener = click.opener();
+        int selected = current.getAsInt();
+        List<ColourSwatch> palette = ColourSwatch.palette();
+        List<Integer> slots = layout.paletteSlots();
+        List<Material> icons = layout.paletteIcons();
+        List<SelectorButton> buttons = new ArrayList<>();
+        int drawn = SlotFit.fit(palette.size(), slots.size(), "colour palette", layout);
+        for (int i = 0; i < drawn; i++) {
+            ColourSwatch swatch = palette.get(i);
+            ItemStack icon = swatchIcon(click.viewer(), swatch, icons.get(i), selected);
+            buttons.add(SelectorButton.of(slots.get(i), icon, () -> pick(click, swatch.argb())));
+        }
+        buttons.add(SelectorButton.of(layout.customSlot(), customIcon(click), () -> openCustom(click)));
+        buttons.add(SelectorButton.of(layout.clearSlot(), clearIcon(click), () -> clear(click)));
+        buttons.add(SelectorButton.of(
+                layout.backSlot(), backIcon(click), () -> click.reopen().run()));
+        opener.openSelector(
+                click.viewer(), guiText.text(click.viewer(), text.title()), layout.rows(), layout.filler(), buttons);
+    }
+
+    private ItemStack swatchIcon(Player viewer, ColourSwatch swatch, Material material, int selected) {
+        ItemBuilder builder = ItemBuilder.of(material).name(guiText.text(viewer, swatch.nameKey()));
+        if (swatch.argb() == selected) {
+            // A glint marks the live colour; HIDE_ENCHANTS keeps the enchant invisible in the lore.
+            builder.enchant(Enchantment.UNBREAKING, 1).flags(ItemFlag.HIDE_ENCHANTS);
+        }
+        return builder.build();
+    }
+
+    private ItemStack customIcon(PropertyClick click) {
+        return ItemBuilder.of(layout.customIcon())
+                .name(guiText.text(click.viewer(), text.customName()))
+                .build();
+    }
+
+    private ItemStack clearIcon(PropertyClick click) {
+        return ItemBuilder.of(layout.clearIcon())
+                .name(guiText.text(click.viewer(), text.clearName()))
+                .build();
+    }
+
+    private ItemStack backIcon(PropertyClick click) {
+        return ItemBuilder.of(layout.backIcon())
+                .name(guiText.text(click.viewer(), text.backName()))
+                .build();
+    }
+
+    private void openCustom(PropertyClick click) {
+        textPrompt.prompt(
+                click.viewer(),
+                InputRequest.of(INPUT_KEY, text.customPrompt()),
+                raw -> applyCustom(click, raw),
+                () -> open(click));
+    }
+
+    /**
+     * Apply a typed custom-hex line: a valid {@code #RRGGBB}/{@code #AARRGGBB} writes through the setter and
+     * redraws the editor; an invalid line re-opens the picker without writing. Exposed package-private as the
+     * seam a test drives directly, the same pattern {@code TextProperty.applyInput} uses.
+     */
+    public void applyCustom(PropertyClick click, String raw) {
+        Objects.requireNonNull(click, "click");
+        Objects.requireNonNull(raw, "raw");
+        Optional<Integer> parsed = ColourHex.parse(raw);
+        if (parsed.isEmpty()) {
+            open(click);
+            return;
+        }
+        pick(click, parsed.get());
+    }
+
+    private void pick(PropertyClick click, int argb) {
+        scheduler.async(() -> {
+            setter.accept(argb);
+            scheduler.entity(click.viewer(), click.reopen());
+        });
+    }
+
+    private void clear(PropertyClick click) {
+        scheduler.async(() -> {
+            clear.run();
+            scheduler.entity(click.viewer(), click.reopen());
+        });
+    }
+
+    /** Render a packed ARGB int as {@code #AARRGGBB}, or {@code #RRGGBB} when fully opaque, for the value lore. */
+    private static String toHex(int argb) {
+        int alpha = argb >>> 24 & BYTE_MASK;
+        if (alpha == OPAQUE_ALPHA) {
+            return "#" + pad(argb & 0xFFFFFF, 6);
+        }
+        return "#" + pad(argb, 8);
+    }
+
+    private static String pad(int value, int width) {
+        String hex = Integer.toHexString(value).toUpperCase(Locale.ROOT);
+        return "0".repeat(Math.max(0, width - hex.length())) + hex;
+    }
+}

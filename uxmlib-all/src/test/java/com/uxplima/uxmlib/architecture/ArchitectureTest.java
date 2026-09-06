@@ -34,6 +34,21 @@ class ArchitectureTest {
             .haveFullyQualifiedName("org.bukkit.command.TabCompleter")
             .because("commands use Brigadier via the command module, not CommandExecutor/TabCompleter");
 
+    /**
+     * The menu engine's pure model stays platform-free. {@code spec/} is the type model a HOCON menu parses into and
+     * {@code eval/} is the expression language over it, and both are documented as Bukkit-free so they can be
+     * unit-tested without a server. The documentation said that boundary was enforced before anything enforced it;
+     * this is the enforcement.
+     */
+    @ArchTest
+    static final ArchRule theMenuModelTouchesNoPlatform = noClasses()
+            .that()
+            .resideInAnyPackage("com.uxplima.uxmlib.menu.spec..", "com.uxplima.uxmlib.menu.eval..")
+            .should()
+            .dependOnClassesThat()
+            .resideInAnyPackage("org.bukkit..", "net.minecraft..")
+            .because("a menu's model and expression language are plain values, testable without a server");
+
     /** The common module is the root: it must not depend on any feature module. */
     @ArchTest
     static final ArchRule commonDependsOnNoFeatureModule = noClasses()
@@ -52,7 +67,9 @@ class ArchitectureTest {
                     "com.uxplima.uxmlib.storage..",
                     "com.uxplima.uxmlib.hook..",
                     "com.uxplima.uxmlib.hologram..",
-                    "com.uxplima.uxmlib.discord..")
+                    "com.uxplima.uxmlib.discord..",
+                    "com.uxplima.uxmlib.menu..",
+                    "com.uxplima.uxmlib.bedrock..")
             .because("common is the foundation; features build on it, not the other way around");
 
     /** The item module must not depend on the GUI that is built on top of it. */
@@ -64,6 +81,22 @@ class ArchitectureTest {
             .dependOnClassesThat()
             .resideInAPackage("com.uxplima.uxmlib.gui..")
             .because("gui depends on item, never the reverse");
+
+    /**
+     * The menu engine sits on the gui module, so the gui module must not reach back up into it.
+     *
+     * <p>Written in the same shape as {@link #itemDoesNotDependOnGui} and for the same reason: a consumer
+     * may want the inventory layer without the engine that reads menu files, and the day gui names a menu
+     * type that stops being possible without anything saying so.
+     */
+    @ArchTest
+    static final ArchRule guiDoesNotDependOnMenu = noClasses()
+            .that()
+            .resideInAPackage("com.uxplima.uxmlib.gui..")
+            .should()
+            .dependOnClassesThat()
+            .resideInAPackage("com.uxplima.uxmlib.menu..")
+            .because("menu depends on gui, never the reverse");
 
     /** The gui module stays UI-only: PlaceholderAPI/integration glue is an injected seam, not a dependency. */
     @ArchTest
@@ -77,5 +110,10 @@ class ArchitectureTest {
                     "com.uxplima.uxmlib.hologram..",
                     "com.uxplima.uxmlib.discord..",
                     "com.uxplima.uxmlib.advancement..")
-            .because("gui is UI-only; the placeholder resolver is injected, so gui must not pull integration");
+            .because("those four are data sources, and gui is handed its data rather than fetching it: a GUI"
+                    + " module reaching into PlaceholderAPI to learn what a string should say is pulling in a"
+                    + " system it should have been given. uxmlib-bedrock is deliberately not on this list,"
+                    + " because it is a rendering target rather than a data source: asking what the viewer's"
+                    + " client can draw, and choosing an anvil, a dialog or a form, is the thing a GUI module"
+                    + " is for, and a UI library that cannot make that choice is not UI complete");
 }

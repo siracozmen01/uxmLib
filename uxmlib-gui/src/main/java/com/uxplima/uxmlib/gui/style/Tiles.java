@@ -1,5 +1,7 @@
 package com.uxplima.uxmlib.gui.style;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 import net.kyori.adventure.text.Component;
@@ -79,6 +81,69 @@ public final class Tiles {
         Objects.requireNonNull(title, "title");
         Objects.requireNonNull(lore, "lore");
         return isBlank(title) ? lore : box(head(theme, title, position), lore);
+    }
+
+    /**
+     * The lore of a tile whose lore is a list of lines rather than one component with newlines in it: the
+     * title line, the lines as they were written, and a blank line to close the box.
+     *
+     * <p>Lore with nothing in it is a button and not a tile. A page arrow or a filler pane carries no lore and
+     * keeps the one-line name it was written with, so it comes back untitled, and so does a tile whose title is
+     * blank because there is nothing to move. A caller may therefore route every item through this.
+     *
+     * <p>This is where the list form and the component form part, and they part because their inputs do. An
+     * empty list is genuinely no lore, while {@link Component#empty()} is a blank line somebody asked for, so
+     * the component form boxes it and this one does not. For the same reason the test here is that the list
+     * holds no lines at all and not that every line in it is blank: a list holding one blank line is a caller
+     * asking for a blank line, which is the position {@link #blankName()} already takes.
+     *
+     * <p>The returned list is unmodifiable and is always a new list, including in the two cases where nothing is
+     * added. A caller that has to know whether a title was moved therefore cannot compare the result against what
+     * it passed in: it asks {@link #isUntitled}, which is the question it actually means and which answers by the
+     * same rule this method decides by.
+     */
+    public static List<Component> titled(Theme theme, Component title, List<Component> lore) {
+        return titled(theme, title, lore, HEADER);
+    }
+
+    /** The same, with the title painted across the theme gradient named {@code gradient}. */
+    public static List<Component> titled(Theme theme, Component title, List<Component> lore, String gradient) {
+        Objects.requireNonNull(theme, "theme");
+        Objects.requireNonNull(title, "title");
+        Objects.requireNonNull(lore, "lore");
+        Objects.requireNonNull(gradient, "gradient");
+        return isUntitled(title, lore) ? List.copyOf(lore) : box(head(theme, title, gradient), lore);
+    }
+
+    /** The same, with the title painted with the arc the theme's wheel holds at {@code position}. */
+    public static List<Component> titled(Theme theme, Component title, List<Component> lore, int position) {
+        Objects.requireNonNull(theme, "theme");
+        Objects.requireNonNull(title, "title");
+        Objects.requireNonNull(lore, "lore");
+        return isUntitled(title, lore) ? List.copyOf(lore) : box(head(theme, title, position), lore);
+    }
+
+    /**
+     * Whether there is nothing to title: a button carrying no lore, or a tile whose title is blank. This is the rule
+     * {@link #titled(Theme, Component, List)} decides by, exposed because the caller that titles an item usually has
+     * to make a second decision from the same answer: an item that kept its title needs its name left alone, and one
+     * whose title moved into the lore needs {@link #blankName()} instead.
+     */
+    public static boolean isUntitled(Component title, List<Component> lore) {
+        Objects.requireNonNull(title, "title");
+        Objects.requireNonNull(lore, "lore");
+        return lore.isEmpty() || isBlank(title);
+    }
+
+    /** The list form of the box: the head, the lines, and the closing blank when the last line is not one. */
+    private static List<Component> box(Component head, List<Component> lore) {
+        List<Component> titled = new ArrayList<>(lore.size() + 2);
+        titled.add(head);
+        titled.addAll(lore);
+        if (!isBlank(lore.get(lore.size() - 1))) {
+            titled.add(Component.text(PADDING));
+        }
+        return List.copyOf(titled);
     }
 
     /** The title line, the lore, and the blank line that closes the box when the lore does not. */

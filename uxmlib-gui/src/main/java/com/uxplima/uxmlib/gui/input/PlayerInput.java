@@ -25,13 +25,18 @@ import com.uxplima.uxmlib.text.Text;
 import org.jspecify.annotations.Nullable;
 
 /**
- * One front door for asking a player to type a line of text, over three native backends: {@code ANVIL}
+ * The mechanism floor of this package: it opens one native prompt and reports what came back, and decides
+ * nothing about which prompt a given call should use. {@link TextInput} is the floor above, which reads an
+ * operator's configuration and chooses.
+ *
+ * <p>One front door for asking a player to type a line of text, over three native backends: {@code ANVIL}
  * (the existing {@link AnvilInput}), {@code CHAT} (the player's next chat message), {@code SIGN} (a
  * transient sign), all delivering the same {@link InputResult} through one callback. Per-player pending
  * state lives on the instance via an {@link InputRouter}; there is no static mutable state.
  *
  * <p>Construct one per plugin, {@link #install()} it once on enable, then {@link #open} as needed, and
- * {@link #uninstall()} it on disable. A configurable cancel keyword aborts any backend, and pending requests
+ * {@link #uninstall()} it on disable. A configurable cancel keyword aborts any backend when the prompt was
+ * given one, and {@link #withoutCancelKeyword} builds one that was not, and pending requests
  * auto-clean on quit. When a {@link Scheduler} is supplied, results from the async chat backend are
  * marshalled back onto the player's region thread before the callback runs, so a callback may safely touch
  * the Bukkit API.
@@ -51,10 +56,33 @@ public final class PlayerInput implements Listener {
         this(plugin, null, DEFAULT_CANCEL_KEYWORD);
     }
 
+    /**
+     * A {@code PlayerInput} that applies no cancel keyword: every line the player types comes back as a
+     * submission, and only a structural dismissal (the prompt closed, a disconnect, a backend that would not
+     * open) is a cancellation.
+     *
+     * <p>This is what a caller uses when it owns the cancel policy itself. A seam that reads a configurable
+     * list of cancel words from an operator's file has to be the only floor that applies them: if this class
+     * also applied one, a word the operator deliberately left out would still cancel, and nothing would say
+     * why. The library owns the mechanism and the caller owns the words.
+     */
+    public static PlayerInput withoutCancelKeyword(Plugin plugin) {
+        return withoutCancelKeyword(plugin, null);
+    }
+
+    /** The same, on a server whose caller has a {@link Scheduler} to hop the callback with. */
+    public static PlayerInput withoutCancelKeyword(Plugin plugin, @Nullable Scheduler scheduler) {
+        return new PlayerInput(plugin, scheduler, new InputRouter(null));
+    }
+
     public PlayerInput(Plugin plugin, @Nullable Scheduler scheduler, String cancelKeyword) {
+        this(plugin, scheduler, new InputRouter(Objects.requireNonNull(cancelKeyword, "cancelKeyword")));
+    }
+
+    private PlayerInput(Plugin plugin, @Nullable Scheduler scheduler, InputRouter router) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
         this.scheduler = scheduler;
-        this.router = new InputRouter(Objects.requireNonNull(cancelKeyword, "cancelKeyword"));
+        this.router = router;
         this.anvil = new AnvilInput(plugin);
     }
 

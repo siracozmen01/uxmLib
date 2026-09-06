@@ -7,6 +7,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * The per-player pending-input state machine behind {@link PlayerInput}, with no Bukkit dependency so every
  * branch is unit-testable. It records which player is awaiting which backend, applies the cancel keyword,
@@ -18,11 +20,11 @@ import java.util.function.Consumer;
  */
 final class InputRouter {
 
-    private final String cancelKeyword;
+    private final @Nullable String cancelKeyword;
     private final ConcurrentHashMap<UUID, Pending> pending = new ConcurrentHashMap<>();
 
-    InputRouter(String cancelKeyword) {
-        this.cancelKeyword = Objects.requireNonNull(cancelKeyword, "cancelKeyword");
+    InputRouter(@Nullable String cancelKeyword) {
+        this.cancelKeyword = cancelKeyword;
     }
 
     /** Begin awaiting a line from {@code id} via {@code type}; any earlier pending request is cancelled. */
@@ -47,6 +49,10 @@ final class InputRouter {
      * Feed a captured {@code line} for {@code id}. The cancel keyword (case-insensitive, after sanitizing)
      * yields {@link InputResult.Cancelled}; otherwise the sanitized text is submitted. Returns {@code true}
      * when a pending request was consumed, {@code false} when there was none.
+     *
+     * <p>A null keyword means this router applies no keyword policy at all, and every line comes back as
+     * {@link InputResult.Submitted}. That is not the same as an empty keyword, which would make an empty
+     * submission a cancellation: absent and blank are different tests.
      */
     boolean submit(UUID id, String line) {
         Objects.requireNonNull(id, "id");
@@ -56,7 +62,7 @@ final class InputRouter {
             return false;
         }
         String clean = sanitize(line);
-        InputResult result = clean.equalsIgnoreCase(cancelKeyword)
+        InputResult result = cancelKeyword != null && clean.equalsIgnoreCase(cancelKeyword)
                 ? InputResult.Cancelled.INSTANCE
                 : new InputResult.Submitted(clean);
         current.dispatch(result);

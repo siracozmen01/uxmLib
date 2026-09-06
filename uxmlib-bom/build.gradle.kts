@@ -19,6 +19,7 @@ dependencies {
         api(project(":uxmlib-condition"))
         api(project(":uxmlib-pipeline"))
         api(project(":uxmlib-packet"))
+        api(project(":uxmlib-menu"))
         api(project(":uxmlib-nametags"))
     }
 }

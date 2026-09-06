@@ -26,6 +26,7 @@ include(
     ":uxmlib-condition",
     ":uxmlib-pipeline",
     ":uxmlib-packet",
+    ":uxmlib-menu",
     ":uxmlib-nametags",
     ":uxmlib-all",
 )

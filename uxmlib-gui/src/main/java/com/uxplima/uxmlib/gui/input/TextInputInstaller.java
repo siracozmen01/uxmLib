@@ -1,0 +1,111 @@
+package com.uxplima.uxmlib.gui.input;
+
+import java.nio.file.Path;
+import java.util.Objects;
+
+import org.bukkit.plugin.Plugin;
+
+import com.uxplima.uxmlib.bedrock.BedrockDetector;
+import com.uxplima.uxmlib.bedrock.BedrockScreen;
+import com.uxplima.uxmlib.common.Log;
+import com.uxplima.uxmlib.gui.GuiText;
+import com.uxplima.uxmlib.gui.anvil.AnvilInput;
+import com.uxplima.uxmlib.gui.dialog.DialogInputScreen;
+import com.uxplima.uxmlib.scheduler.Scheduler;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
+
+/**
+ * Builds the text-input seam once at bootstrap: loads {@link InputSettings} from {@code text-input.conf}, wraps the
+ * already-installed shared {@link AnvilInput} as the anvil backend, installs the single shared chat backend, installs a
+ * uxmLib {@link PlayerInput} the sign backend drives, wires the native dialog backend where the server supports it, and
+ * hands back the {@link TextInput} every GUI-using context shares. The chat listener and the {@code PlayerInput} sign
+ * listener are registered here and torn down through {@link Installed#uninstall()}, so on disable/reload exactly the
+ * listeners this installs come and go: mirroring how the anvil input and the menu listener are installed once in {@code
+ * PluginModule}.
+ */
+@NullMarked
+public final class TextInputInstaller {
+
+    private TextInputInstaller() {}
+
+    /**
+     * Wire the seam with no Bedrock redirect: every player gets the anvil/chat prompt. Kept so tests that only need a
+     * working seam stay a delegating call.
+     */
+    public static Installed install(
+            Plugin plugin, Path dataFolder, AnvilInput anvil, GuiText guiText, Scheduler scheduler, Log log) {
+        return install(plugin, dataFolder, anvil, guiText, scheduler, log, BedrockDetector.NONE, BedrockScreen.NONE);
+    }
+
+    /**
+     * Wire the seam.
+     *
+     * @param plugin the plugin the chat listener registers against
+     * @param dataFolder the data folder; the input config is read from {@code text-input.conf} under it
+     * @param anvil the shared, already-installed anvil input the anvil backend delegates to
+     * @param guiText the catalog-to-component resolver the prompt labels go through
+     * @param scheduler the Folia scheduler the seam hops callbacks onto the player's region with
+     * @param log the operator logger the config codec warns through
+     * @param bedrock the resolved detector; a Bedrock player gets a Cumulus CustomForm instead of the anvil/chat prompt
+     * @param bedrockScreen the resolved screen the CustomForm is sent through; {@code NONE} on a Java-only server
+     */
+    public static Installed install(
+            Plugin plugin,
+            Path dataFolder,
+            AnvilInput anvil,
+            GuiText guiText,
+            Scheduler scheduler,
+            Log log,
+            BedrockDetector bedrock,
+            BedrockScreen bedrockScreen) {
+        Objects.requireNonNull(plugin, "plugin");
+        Objects.requireNonNull(dataFolder, "dataFolder");
+        Objects.requireNonNull(anvil, "anvil");
+        Objects.requireNonNull(guiText, "guiText");
+        Objects.requireNonNull(scheduler, "scheduler");
+        Objects.requireNonNull(log, "log");
+        Objects.requireNonNull(bedrock, "bedrock");
+        Objects.requireNonNull(bedrockScreen, "bedrockScreen");
+        InputSettings settings = new InputSettings(dataFolder.resolve("text-input.conf"), log);
+        AnvilTextBackend anvilBackend = new AnvilTextBackend(anvil);
+        ChatTextBackend chatBackend = new ChatTextBackend(plugin);
+        chatBackend.install();
+        // PlayerInput owns the transient-sign mechanism; the sign backend only ever asks it for SIGN, and the seam
+        // does its own entity-thread hop, so it is built without a scheduler and torn down on disable. It is built
+        // without a cancel keyword because the keyword policy belongs to this floor, which reads the operator's live
+        // list: a keyword applied downstairs would arrive already Cancelled, so a word the operator removed would
+        // still abort a sign prompt and nothing would say why.
+        PlayerInput playerInput = PlayerInput.withoutCancelKeyword(plugin);
+        playerInput.install();
+        SignTextBackend signBackend = new SignTextBackend(playerInput);
+        // Wire the dialog backend only where the native Dialog API exists (Minecraft 1.21.6+). On an older server it
+        // stays null, so a dialog-mode input point falls back with a logged warning rather than an immediate cancel.
+        @Nullable DialogTextBackend dialogBackend = DialogInputScreen.isSupported() ? DialogTextBackend.paperNative() : null;
+        TextInput textInput = new TextInput(
+                settings,
+                guiText,
+                scheduler,
+                anvilBackend,
+                chatBackend,
+                bedrock,
+                bedrockScreen,
+                signBackend,
+                dialogBackend,
+                log);
+        return new Installed(textInput, settings, () -> {
+            chatBackend.uninstall();
+            playerInput.uninstall();
+        });
+    }
+
+    /** The wired seam plus its teardown hook. {@code settings} is exposed so a reload can re-read the config. */
+    public record Installed(TextInput textInput, InputSettings settings, Runnable uninstall) {
+
+        public Installed {
+            Objects.requireNonNull(textInput, "textInput");
+            Objects.requireNonNull(settings, "settings");
+            Objects.requireNonNull(uninstall, "uninstall");
+        }
+    }
+}
