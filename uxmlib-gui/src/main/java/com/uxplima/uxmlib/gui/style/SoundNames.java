@@ -15,11 +15,19 @@ import org.jspecify.annotations.Nullable;
  * The two ways an operator writes a sound, and the one key both of them name.
  *
  * <p>A file may say {@code block.note_block.pling} or {@code BLOCK_NOTE_BLOCK_PLING}. The first is the key the
- * server itself uses and is taken as written. The second is the constant an operator copies out of the Bukkit
- * API, and only the server knows what it is called this release, so it is resolved by asking: every sound the
- * server has is walked once and its key folded into the constant spelling, dots to underscores and upper case.
- * The fold runs forwards, from the key the server gave to the constant an operator wrote, so it is exact:
- * folding the other way would have to guess which underscores were dots.
+ * server itself uses. The second is the constant an operator copies out of the Bukkit API, and only the server
+ * knows what it is called this release, so it is resolved by asking: every sound the server has is walked once
+ * and its key folded into the constant spelling, dots to underscores and upper case. The fold runs forwards,
+ * from the key the server gave to the constant an operator wrote, so it is exact: folding the other way would
+ * have to guess which underscores were dots.
+ *
+ * <p>Which of the two a name is gets decided first, by its shape, and case plays no part in that decision. A
+ * name carrying a dot or a colon is a key, and it is lower cased before it is parsed, because the key grammar
+ * holds lower case only and an operator who writes {@code MINECRAFT:BLOCK.BELL.USE} is writing the sound the
+ * server prints in the case the server prints it. A name carrying neither is put to the registry as the
+ * constant it looks like. Deciding on the shape rather than on whether the string happens to parse is what
+ * keeps the two apart: a constant lower cased first is a well formed key that names no sound, and the registry
+ * would never be asked.
  *
  * <p>A name the server does not have answers empty. A menu that names a sound this version dropped is silent
  * on that click and never a broken one.
@@ -35,7 +43,8 @@ public final class SoundNames {
     private SoundNames() {}
 
     /**
-     * The key {@code written} names, in either spelling, or empty when this server has no such sound.
+     * The key {@code written} names, in either spelling and in any case, or empty when this server has no such
+     * sound.
      *
      * <p>Walks the sound registry only for the constant form. A key is answered without asking the server at
      * all, which is the spelling every file this library ships uses.
@@ -46,10 +55,22 @@ public final class SoundNames {
         if (name.isEmpty()) {
             return Optional.empty();
         }
-        if (Key.parseable(name)) {
-            return Optional.of(Key.key(name));
+        if (namesAKey(name)) {
+            String lowered = name.toLowerCase(Locale.ROOT);
+            return Key.parseable(lowered) ? Optional.of(Key.key(lowered)) : Optional.empty();
         }
-        return constant(name);
+        Optional<Key> constant = constant(name);
+        if (constant.isPresent()) {
+            return constant;
+        }
+        // A name of one word with no dot in it is neither shape on sight. The registry has already said it is
+        // no constant, so what is left is a key whose value happens to be one word, and a server may have one.
+        return Key.parseable(name) ? Optional.of(Key.key(name)) : Optional.empty();
+    }
+
+    /** Whether {@code name} is written as a key: the parts of one are separated by dots, the namespace by a colon. */
+    private static boolean namesAKey(String name) {
+        return name.indexOf('.') >= 0 || name.indexOf(':') >= 0;
     }
 
     /** The key of the sound this server calls {@code name}, or empty when it calls nothing that. */

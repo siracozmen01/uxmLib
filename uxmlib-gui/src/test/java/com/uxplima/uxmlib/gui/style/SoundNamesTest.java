@@ -47,6 +47,29 @@ class SoundNamesTest {
                 .hasValueSatisfying(key -> assertThat(key.asString()).isEqualTo("minecraft:item.book.page_turn"));
     }
 
+    /**
+     * The same key in the case the server prints it. Two of this library's three sound readers already lower
+     * case before parsing, and an operator writing one file writes it once: a name that plays through the other
+     * two and is silent through this one is the worst kind of defect, because silence is what a sound that is
+     * not there sounds like.
+     */
+    @Test
+    void aKeyInTheCaseTheServerPrintsIsTheSameKey() {
+        assertThat(SoundNames.key("MINECRAFT:BLOCK.NOTE_BLOCK.PLING"))
+                .isEqualTo(SoundNames.key("block.note_block.pling"));
+        assertThat(SoundNames.key("BLOCK.NOTE_BLOCK.PLING")).isEqualTo(SoundNames.key("block.note_block.pling"));
+    }
+
+    /**
+     * The shape decides, not the case. A name with a dot in it is a key even when it is upper case, so it is
+     * never put to the registry as a constant, and a constant is never lower cased into a well formed key that
+     * names no sound.
+     */
+    @Test
+    void aKeyShapedNameTheGrammarStillRefusesIsEmpty() {
+        assertThat(SoundNames.key("block bell.use")).isEmpty();
+    }
+
     /** A name written with space around it is the same name. An operator's formatting is not part of it. */
     @Test
     void spaceAroundTheNameIsNotPartOfIt() {
@@ -60,6 +83,17 @@ class SoundNamesTest {
     @Test
     void aConstantTheServerDoesNotHaveIsEmpty() {
         assertThat(SoundNames.key("BLOCK_NOTE_BLOCK_NOTHING_LIKE_THIS")).isEmpty();
+    }
+
+    /**
+     * A name of one word is neither shape on sight, and the registry decides it. When the server calls no sound
+     * that, what is left is a key whose value happens to be one word, which a server may have: it comes back as
+     * that key rather than as nothing.
+     */
+    @Test
+    void aOneWordNameTheRegistryDoesNotKnowIsStillReadAsAKey() {
+        assertThat(SoundNames.key("beep"))
+                .hasValueSatisfying(key -> assertThat(key.asString()).isEqualTo("minecraft:beep"));
     }
 
     /** Nothing written is nothing named, and it is not the first sound in the registry either. */
