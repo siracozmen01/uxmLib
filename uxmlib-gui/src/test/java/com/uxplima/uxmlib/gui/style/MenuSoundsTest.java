@@ -140,25 +140,44 @@ class MenuSoundsTest {
     }
 
     /**
-     * A constant an action file writes is not a name this record can hold, and it falls back rather than
-     * guessing. The two readers of a sound name disagree on the spelling on purpose: the menu engine stores a
-     * constant and resolves it against the registry when the sound plays, and this record has no registry, so
-     * it refuses one. The engine's half of the pair is pinned in its own module, because gui may not name the
-     * engine. Widen either side and the two stop agreeing about what an operator wrote.
+     * The two readers of a sound name disagree on the constant spelling, and this pins the disagreement rather
+     * than the agreement. {@link SoundNames} has the server to ask and resolves a constant; this record is built
+     * from a file at startup with no registry at hand, so it refuses one and falls back to the shipped tone.
+     * Their character class is identical today, which is exactly why it is worth asking: a shared helper would
+     * weld two questions into one, and a widening on either side would move the other without saying so.
      */
     @Test
-    void aConstantTheEngineWouldResolveIsOneThisRecordRefuses(@TempDir Path dir) throws Exception {
-        for (String constant : List.of("ITEM_BOOK_PAGE_TURN", "BLOCK_NOTE_BLOCK_PLING", "UI_BUTTON_CLICK", "A1_B2")) {
-            Path file = dir.resolve(constant + ".conf");
-            Files.writeString(file, "menu { sounds { click { name = \"" + constant + "\" } } }\n");
+    void everyConstantTheServerResolvesIsOneThisRecordRefuses(@TempDir Path dir) throws Exception {
+        for (String constant : List.of("ITEM_BOOK_PAGE_TURN", "BLOCK_NOTE_BLOCK_PLING", "UI_BUTTON_CLICK")) {
+            assertThat(SoundNames.key(constant))
+                    .as("the server knows this constant: " + constant)
+                    .isPresent();
 
-            assertThat(MenuSounds.from(HoconConfig.load(file), "menu.sounds")
-                            .click()
-                            .name()
-                            .asString())
+            assertThat(clickOf(dir, constant))
                     .as("this record cannot resolve it without a registry, so it refuses: " + constant)
                     .isEqualTo("minecraft:block.note_block.pling");
         }
+    }
+
+    /**
+     * The two gates coincide in shape and not in meaning, and this is where that shows. A name spelled like a
+     * constant that names no sound is refused by both, for two different reasons: the server has nothing to
+     * answer with, and this record would not have asked it anyway.
+     */
+    @Test
+    void aConstantShapedNameThatNamesNoSoundIsRefusedByBoth(@TempDir Path dir) throws Exception {
+        assertThat(SoundNames.key("A1_B2")).isEmpty();
+        assertThat(clickOf(dir, "A1_B2")).isEqualTo("minecraft:block.note_block.pling");
+    }
+
+    /** The click sound a configuration naming {@code written} ends up with. */
+    private static String clickOf(Path dir, String written) throws Exception {
+        Path file = dir.resolve(written + ".conf");
+        Files.writeString(file, "menu { sounds { click { name = \"" + written + "\" } } }\n");
+        return MenuSounds.from(HoconConfig.load(file), "menu.sounds")
+                .click()
+                .name()
+                .asString();
     }
 
     @Test

@@ -126,6 +126,10 @@ public record MenuSounds(Sound open, Sound click, Sound page, Sound denied) {
      * them: teach that one a third accepted spelling and this one would silently start refusing it in the same edit,
      * with nothing saying that was a decision.
      *
+     * <p>Refusing here is not the library refusing the spelling. {@link SoundNames} honours it, by asking the
+     * server, which is what this record cannot do when it is built. A caller with a player to play to goes
+     * through there.
+     *
      * <p>What holds the two apart is not this note. MenuSoundsTest runs a table of constant spellings through both
      * public seams and asserts they disagree, so widening either side turns that test red and the widening has to say
      * what this record does with the new spelling.

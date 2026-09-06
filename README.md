@@ -507,7 +507,8 @@ are in a message catalogue: a key is looked up in the language of the viewer, a 
 the roles of the theme, and a line that starts with `tile:` is drawn as the whole tooltip through
 `MenuTiles`. The library parses no text of its own, so it decides no look and holds no language.
 
-> **Removed in 0.46.0.** `com.uxplima.uxmlib.gui.config` is gone: `MenuConfig.load`, `MenuSpec.read`,
+> **Removed in 0.46.0.** `com.uxplima.uxmlib.gui.config` shipped in 49 of this library's 50 tags, so it is
+> the largest published surface any release has removed. It is gone: `MenuConfig.load`, `MenuSpec.read`,
 > `MenuDraw`, `MenuActions`, `MenuConditions`, `MenuLists`, `MenuFiles`, `MenuAction`,
 > `MenuActionRunner`, `MenuSlots`, `IconOptions`, `ConfigEditorGui` and `ConfigValueEditor` were the
 > smaller, older menu readers, and `uxmlib-menu` replaces all of them. Two classes of that package
@@ -517,6 +518,12 @@ the roles of the theme, and a line that starts with `tile:` is drawn as the whol
 > spellings, and an action or a condition named in an old file points at a handler registered in Java
 > rather than at anything the engine can resolve. Move the file to the engine's shape and register the
 > vocabulary through `MenuBindings`.
+>
+> One piece of that package was working code rather than an old reader, and it kept its own home:
+> `MenuActionRunner` was the only place that resolved the constant spelling of a sound, the
+> `BLOCK_NOTE_BLOCK_PLING` an operator copies out of the API. That is `gui.style.SoundNames` now. A
+> consumer that registers a `sound` action for the engine resolves the name through it, and a file that
+> writes a constant keeps playing what it always did.
 
 ### Menu engine
 
