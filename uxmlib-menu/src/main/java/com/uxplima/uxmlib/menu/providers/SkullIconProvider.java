@@ -58,7 +58,10 @@ final class SkullIconProvider implements IconProvider {
         try {
             return Optional.of(SkullData.parse(rest));
         } catch (IllegalArgumentException unparseable) {
-            // A blank or otherwise unusable skull value should fall through to the material fallback, not abort.
+            // SkullData.parse documents a blank value as its only refusal, and blank is already answered above, so
+            // nothing here can reach this today. It stays because SkullData is another module's public API: a value
+            // it comes to refuse for a reason it has not documented yet should show the material fallback rather
+            // than take the whole window down over one icon.
             return Optional.empty();
         }
     }
