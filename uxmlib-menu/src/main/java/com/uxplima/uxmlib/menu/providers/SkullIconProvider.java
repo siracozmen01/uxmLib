@@ -49,6 +49,9 @@ final class SkullIconProvider implements IconProvider {
     /** The skull source for a {@code skull:}/{@code head:} value: {@code self} is the viewer, else parse the value. */
     private Optional<SkullData> parse(String value, MenuContext ctx) {
         String rest = value.trim();
+        // The catch below would answer a blank the same way, so this line changes no outcome here. It is not the
+        // same in texture(), which has no catch and where the identical line is the only thing between a blank
+        // basehead and an exception out of a draw. Keep both.
         if (rest.isBlank()) {
             return Optional.empty();
         }
