@@ -117,8 +117,8 @@ class MenuSpecRecordsTest {
 
     @Test
     void aTieOnTheFirstSlotIsBrokenByTheItemIdSoTheAnswerIsTheSameTwice() {
-        MenuItemSpec warps = listAt(3);
-        MenuItemSpec kits = listAt(3);
+        MenuItemSpec warps = listNamed(3, "warp");
+        MenuItemSpec kits = listNamed(3, "kit");
         Map<String, MenuItemSpec> warpsFirst = new java.util.LinkedHashMap<>();
         warpsFirst.put("warps", warps);
         warpsFirst.put("kits", kits);
@@ -144,6 +144,28 @@ class MenuSpecRecordsTest {
     /** A list-backed item drawing into two slots, the first of them {@code firstSlot}. */
     private static MenuItemSpec listAt(int firstSlot) {
         return listSpanning(firstSlot, firstSlot + 1);
+    }
+
+    /**
+     * The same, carrying a name, so two lists claiming one slot are two different records. Without it they are equal
+     * by value and an assertion cannot tell which of them the rule chose.
+     */
+    private static MenuItemSpec listNamed(int firstSlot, String name) {
+        MenuItemSpec plain = listSpanning(firstSlot, firstSlot + 1);
+        return new MenuItemSpec(
+                plain.slots(),
+                plain.priority(),
+                plain.material(),
+                name,
+                plain.lore(),
+                plain.decor(),
+                plain.loreMode(),
+                plain.view(),
+                plain.click(),
+                plain.update(),
+                plain.list(),
+                plain.type(),
+                plain.itemDrag());
     }
 
     /** A list-backed item drawing into exactly two slots, {@code first} and {@code last}. */
