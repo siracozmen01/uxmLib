@@ -210,6 +210,16 @@ class MenuBasicsTest {
     }
 
     @Test
+    void spaceAroundTheSoundNameIsNotPartOfItEither() {
+        run("sound: block.note_block.pling ");
+
+        assertThat(onlySound().getSound())
+                .as("a space after the colon reads the same here as it does after open:, and without the"
+                        + " strip the name is the empty string and the click is silent")
+                .isEqualTo("minecraft:block.note_block.pling");
+    }
+
+    @Test
     void aSoundThisServerDoesNotHaveIsSilence() {
         run("sound:NO_SUCH_SOUND_AT_ALL");
 
