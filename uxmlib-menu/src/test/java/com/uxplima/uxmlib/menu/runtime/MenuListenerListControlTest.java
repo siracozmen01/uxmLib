@@ -609,6 +609,26 @@ class MenuListenerListControlTest {
     }
 
     /**
+     * The handle a plugin keeps from a click still drives the menu a tick later. This is the other half of the test
+     * below it: without it, a control that quietly did nothing at all would make that one pass for the wrong reason.
+     */
+    @Test
+    void aControlHeldFromAnEarlierClickStillDrivesTheMenuTheViewerIsLookingAt() {
+        registerCorpusSource();
+        open();
+        DeferringEntity deferring = new DeferringEntity();
+        listener = deferringListener(deferring);
+        click(9);
+        deferring.drain();
+        MenuControl control = Objects.requireNonNull(captured, "the click hands the engine's own control over");
+
+        control.searchList("warps", "owner");
+        deferring.drain();
+
+        assertThat(prompt.opened).isOne();
+    }
+
+    /**
      * The guard inside the control itself, reached the only way it can be. A click cannot get there once the viewer
      * has gone, because the click's own dispatch gives up first when the window is no longer open, so the control has
      * to be held from an earlier click and called after it. That is what a plugin's own scheduled work does too: it
