@@ -30,7 +30,7 @@ public final class MenuSpecs {
      *
      * @param resource classpath and on-disk resource path of the spec
      * @param dataFolder plugin data folder searched first
-     * @param fallbackRows row count for the empty last-resort spec
+     * @param fallbackRows row count for the empty last-resort spec, 1..6
      * @param log where load failures are reported
      * @return a usable spec, never null
      */
@@ -38,6 +38,11 @@ public final class MenuSpecs {
         Objects.requireNonNull(resource, "resource");
         Objects.requireNonNull(dataFolder, "dataFolder");
         Objects.requireNonNull(log, "log");
+        // Checked here and not left to the empty spec: that spec is built only when both the operator's copy and the
+        // bundled one are missing, so a wrong row count would first show on a server rather than at the call.
+        if (fallbackRows < 1 || fallbackRows > 6) {
+            throw new IllegalArgumentException("fallbackRows must be in 1..6: " + fallbackRows);
+        }
         MenuSpecLoader specLoader = new MenuSpecLoader();
         Path onDisk = dataFolder.resolve(resource);
         if (Files.isRegularFile(onDisk)) {
