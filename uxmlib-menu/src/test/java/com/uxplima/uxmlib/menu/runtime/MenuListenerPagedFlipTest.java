@@ -2,6 +2,7 @@ package com.uxplima.uxmlib.menu.runtime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -542,42 +543,27 @@ class MenuListenerPagedFlipTest {
     }
 
     /**
-     * Two lists drawn into the same slots is a mistaken file, but a mistaken file still has to behave the same way
-     * twice. The nearer-slot rule cannot separate them, so the item id does: the arrows drive the same one on every
-     * server start rather than falling back to the map order the nearer-slot rule was added to escape.
+     * Two lists drawn into the same slots cannot both be seen: whichever is drawn second paints over the first, and
+     * which one that is comes from the item map rather than from the file. The engine refuses such a menu where it is
+     * parsed, so no arrow ever has to guess which of the two it drives.
      */
     @Test
-    void twoListsClaimingTheSameSlotsAreSeparatedByTheirIdsRatherThanByTheMap() {
-        List<PageRequest> kitPages = new ArrayList<>();
-        registerCorpusSource();
-        paged.register("kits", (ctx, request) -> {
-            kitPages.add(request);
-            return PagedResult.of(List.of("stone", "iron"), 4);
-        });
-        menus.registerSpec(
-                "menu",
-                new MenuSpecLoader()
-                        .parse(
-                                """
+    void aMenuWhoseListsShareSlotsIsRefusedWhereItIsParsedRatherThanPagedAtRandom() {
+        assertThatThrownBy(
+                        () -> new MenuSpecLoader()
+                                .parse(
+                                        """
                                 rows = 3
                                 items {
                                   warps { slots = [0, 1], list { source = warps, template { material = PAPER, name = "warp" } } }
-                                  kits { slots = [0, 1], list { source = kits, template { material = CHEST, name = "kit" } } }
+                                  kits { slots = [1, 2], list { source = kits, template { material = CHEST, name = "kit" } } }
                                   next { slot = 8, material = ARROW, name = "next", type = next }
                                 }
-                                """));
-        menus.open(viewer, "menu", null);
-        scheduler.drain();
-        asked.clear();
-        kitPages.clear();
-
-        clickNext();
-        scheduler.drain();
-
-        assertThat(kitPages)
-                .as("'kits' sorts before 'warps', so the tie goes to the kits")
-                .hasSize(1);
-        assertThat(asked).as("and the warps are left where they were").isEmpty();
+                                """))
+                .isInstanceOf(com.uxplima.uxmlib.menu.spec.MenuSpecException.class)
+                .hasMessageContaining("kits")
+                .hasMessageContaining("warps")
+                .hasMessageContaining("slot 1");
     }
 
     /**

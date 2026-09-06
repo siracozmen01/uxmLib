@@ -116,22 +116,39 @@ class MenuSpecRecordsTest {
     }
 
     @Test
-    void aTieOnTheFirstSlotIsBrokenByTheItemIdSoTheAnswerIsTheSameTwice() {
-        MenuItemSpec warps = listNamed(3, "warp");
-        MenuItemSpec kits = listNamed(3, "kit");
-        Map<String, MenuItemSpec> warpsFirst = new java.util.LinkedHashMap<>();
-        warpsFirst.put("warps", warps);
-        warpsFirst.put("kits", kits);
-        Map<String, MenuItemSpec> kitsFirst = new java.util.LinkedHashMap<>();
-        kitsFirst.put("kits", kits);
-        kitsFirst.put("warps", warps);
+    void twoListsDrawingIntoOneSlotAreRefusedWhereTheMenuIsBuilt() {
+        Map<String, MenuItemSpec> items = new java.util.LinkedHashMap<>();
+        items.put("warps", listNamed(3, "warp"));
+        items.put("kits", listNamed(3, "kit"));
 
-        assertThat(plainMenu(warpsFirst).pagedListItem())
-                .as("two lists on one slot is a mistaken file, and a mistaken file still behaves the same way twice")
-                .contains(kits);
-        assertThat(plainMenu(kitsFirst).pagedListItem())
-                .as("the same two items handed over in the other order give the same answer")
-                .contains(kits);
+        assertThatThrownBy(() -> plainMenu(items))
+                .as("two lists over one cell cannot both be seen, so the menu is named rather than half drawn")
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("kits")
+                .hasMessageContaining("warps")
+                .hasMessageContaining("slot 3");
+    }
+
+    @Test
+    void aListMaySharplyAbutAnotherWithoutOverlappingIt() {
+        Map<String, MenuItemSpec> items = new java.util.LinkedHashMap<>();
+        items.put("warps", listSpanning(0, 1));
+        items.put("kits", listSpanning(2, 3));
+
+        assertThatCode(() -> plainMenu(items))
+                .as("neighbouring lists are ordinary, only a shared cell is the mistake")
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void aStaticItemMayStillSitOverAListCell() {
+        Map<String, MenuItemSpec> items = new java.util.LinkedHashMap<>();
+        items.put("warps", listSpanning(0, 1));
+        items.put("frame", itemAt(1));
+
+        assertThatCode(() -> plainMenu(items))
+                .as("priority layering already decides a static item against a list cell, and operators use it")
+                .doesNotThrowAnyException();
     }
 
     @Test

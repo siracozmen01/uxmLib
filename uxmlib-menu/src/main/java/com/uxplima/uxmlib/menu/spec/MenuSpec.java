@@ -87,15 +87,16 @@ public record MenuSpec(
         Objects.requireNonNull(bedrock, "bedrock");
         contents = Map.copyOf(Objects.requireNonNull(contents, "contents"));
         checkSlotsFit(items, rows, bottomInventory);
+        checkListsDoNotShareASlot(items);
         checkRegionsFit(contents, rows, bottomInventory);
     }
 
     /**
      * The list-backed item the page controls drive: the arrows, the Bedrock form's page buttons, and the {@code
      * %page%}/{@code %max_page%} indicator all read this one. It is the list drawn nearest the start of the window,
-     * which is the one a viewer would name if asked which list "the list" is; on a tie (two lists claiming the same
-     * first slot, which only a mistaken file produces) the item whose id sorts first wins, so even a mistaken file
-     * behaves the same way twice. Empty for a menu that carries no list.
+     * which is the one a viewer would name if asked which list "the list" is. Empty for a menu that carries no list.
+     * There is no tie to break: two lists sharing a slot is refused where the menu is built, because such a menu
+     * cannot draw both of them anyway.
      *
      * <p>The choice is made from the file and not from the item map. These items arrive from the config library in an
      * order that is neither the order they were written in nor stable from one run to the next, so "the first
@@ -103,20 +104,15 @@ public record MenuSpec(
      * with each other inside one render.
      */
     public Optional<MenuItemSpec> pagedListItem() {
-        String chosenId = null;
         MenuItemSpec chosen = null;
         int chosenSlot = Integer.MAX_VALUE;
-        for (Map.Entry<String, MenuItemSpec> entry : items.entrySet()) {
-            if (entry.getValue().list().isEmpty()) {
+        for (MenuItemSpec item : items.values()) {
+            if (item.list().isEmpty()) {
                 continue;
             }
-            int slot = earliestSlot(entry.getValue());
-            boolean nearer = slot < chosenSlot;
-            boolean tiedAndEarlierId =
-                    slot == chosenSlot && chosenId != null && entry.getKey().compareTo(chosenId) < 0;
-            if (nearer || tiedAndEarlierId) {
-                chosen = entry.getValue();
-                chosenId = entry.getKey();
+            int slot = earliestSlot(item);
+            if (slot < chosenSlot) {
+                chosen = item;
                 chosenSlot = slot;
             }
         }
@@ -341,6 +337,31 @@ public record MenuSpec(
                 if (slot >= capacity) {
                     throw new IllegalArgumentException(
                             "content region '" + region.id() + "' slot " + slot + " exceeds capacity " + capacity);
+                }
+            }
+        }
+    }
+
+    /**
+     * Refuse a menu whose lists draw into the same slot. Two list-backed items over one cell cannot both be seen: the
+     * one drawn second paints over the first, and which one that is comes from the item map's order rather than from
+     * the file. Refusing the menu where it is built turns a window that silently showed the wrong half of itself into
+     * a named error the operator can act on, and it is what lets {@link #pagedListItem()} choose on the slot alone.
+     */
+    private static void checkListsDoNotShareASlot(Map<String, MenuItemSpec> items) {
+        Map<Integer, String> claimed = new java.util.HashMap<>();
+        List<String> ids = new java.util.ArrayList<>(items.keySet());
+        java.util.Collections.sort(ids);
+        for (String id : ids) {
+            MenuItemSpec item = items.get(id);
+            if (item == null || item.list().isEmpty()) {
+                continue;
+            }
+            for (int slot : item.slots().slots()) {
+                String other = claimed.putIfAbsent(slot, id);
+                if (other != null) {
+                    throw new IllegalArgumentException(
+                            "items '" + other + "' and '" + id + "' both draw a list into slot " + slot);
                 }
             }
         }
