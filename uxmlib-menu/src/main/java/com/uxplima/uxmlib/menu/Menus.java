@@ -1332,9 +1332,9 @@ public final class Menus {
     /**
      * Append one button per list entry on the current page, labelling each with the list template stamped for that
      * entry and routing a tap through the template's click actions bound to that entry: the form stand-in for a chest
-     * list cell's {@code RenderedSlot(template, entry)}. Only the first list-backed item is paged (a spec pairs one
-     * scrollable list with its controls, mirroring the chest renderer's page-count rule); a static-only menu has none
-     * and stays a single page. Returns the page count so the caller knows whether to add page-nav buttons.
+     * list cell's {@code RenderedSlot(template, entry)}. Only one list-backed item is paged, the one drawn nearest the
+     * start of the window (a spec pairs one scrollable list with its controls, mirroring the chest renderer's page-
+     * count rule); a static-only menu has none and stays a single page. Returns the page count so the caller knows whether to add page-nav buttons.
      */
     private int appendListButtons(
             MenuSpec spec,
@@ -1384,14 +1384,31 @@ public final class Menus {
         }
     }
 
-    /** The first list-backed item in a spec, the one whose entries page as form buttons; empty for a static-only menu. */
+    /**
+     * The list-backed item whose entries page as form buttons: the one drawn nearest the start of the window, matching
+     * the list the chest's page arrows drive. Empty for a static-only menu.
+     *
+     * <p>Chosen by slot, not by the order the items arrive in: a spec's item map comes from the config library, whose
+     * iteration order is not the order the file was written in, so a menu carrying two lists would otherwise page one
+     * of them on one server start and the other on the next.
+     */
     private static Optional<MenuItemSpec> firstListItem(MenuSpec spec) {
+        MenuItemSpec nearest = null;
+        int nearestSlot = Integer.MAX_VALUE;
         for (MenuItemSpec item : spec.items().values()) {
-            if (item.list().isPresent()) {
-                return Optional.of(item);
+            if (item.list().isEmpty()) {
+                continue;
+            }
+            int slot = Integer.MAX_VALUE;
+            for (int candidate : item.slots().slots()) {
+                slot = Math.min(slot, candidate);
+            }
+            if (slot < nearestSlot) {
+                nearest = item;
+                nearestSlot = slot;
             }
         }
-        return Optional.empty();
+        return Optional.ofNullable(nearest);
     }
 
     /**

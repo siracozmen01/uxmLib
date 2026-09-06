@@ -1802,14 +1802,38 @@ public final class MenuListener implements Listener {
         repaint(holder);
     }
 
-    /** The first list-backed item of {@code spec} in declaration order (the list the nav buttons page) or null. */
+    /**
+     * The list-backed item the page arrows drive: the one whose earliest slot sits nearest the start of the window, or
+     * null when the menu carries no list. Almost every menu pairs one scrollable list with its controls, so this is
+     * the only candidate; when a menu carries two, the one a viewer reads first is the one the arrows move.
+     *
+     * <p>It is chosen by slot and not by the order the items arrive in. A spec's item map comes from the config
+     * library, whose iteration order is its own business and is not the order the file was written in, so choosing on
+     * it made the same file page one list on one server start and the other list on the next.
+     */
     @Nullable private static MenuItemSpec firstListItem(MenuSpec spec) {
+        MenuItemSpec nearest = null;
+        int nearestSlot = Integer.MAX_VALUE;
         for (MenuItemSpec item : spec.items().values()) {
-            if (item.list().isPresent()) {
-                return item;
+            if (item.list().isEmpty()) {
+                continue;
+            }
+            int slot = earliestSlot(item);
+            if (slot < nearestSlot) {
+                nearest = item;
+                nearestSlot = slot;
             }
         }
-        return null;
+        return nearest;
+    }
+
+    /** The lowest slot {@code item} draws into, or {@link Integer#MAX_VALUE} when it draws into none. */
+    private static int earliestSlot(MenuItemSpec item) {
+        int lowest = Integer.MAX_VALUE;
+        for (int slot : item.slots().slots()) {
+            lowest = Math.min(lowest, slot);
+        }
+        return lowest;
     }
 
     /**
