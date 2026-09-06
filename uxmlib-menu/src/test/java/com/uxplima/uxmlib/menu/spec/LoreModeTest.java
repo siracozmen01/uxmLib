@@ -2,8 +2,6 @@ package com.uxplima.uxmlib.menu.spec;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.Locale;
-
 import org.junit.jupiter.api.Test;
 
 /**
@@ -28,17 +26,13 @@ class LoreModeTest {
     }
 
     @Test
-    void aTurkishLocaleReadsTheSameTokensAsEveryOtherOne() {
-        // The dotless i. Lower-casing "APPEND" in a Turkish default locale is still "append" here only because the
-        // token is folded in Locale.ROOT: a plain toLowerCase() would answer "append" for this word and would break
-        // on the first mode that carries an I. The property is asserted on the word we have.
-        Locale before = Locale.getDefault();
-        try {
-            Locale.setDefault(Locale.forLanguageTag("tr"));
-            assertThat(LoreMode.fromToken("APPEND")).isEqualTo(LoreMode.APPEND);
-            assertThat(LoreMode.fromToken("PREPEND")).isEqualTo(LoreMode.PREPEND);
-        } finally {
-            Locale.setDefault(before);
+    void noModeNameCarriesTheLetterThatWouldMakeTheLocaleFoldVisible() {
+        // The token is folded with Locale.ROOT, which is right and which no test can currently watch: a plain
+        // toLowerCase() answers the same for every name the grammar has, because not one of them holds an I. The
+        // property that is real today is the shape of the grammar, so that is what is asserted. This fails the day
+        // a mode name gains an I, which is the day the fold needs an assertion of its own.
+        for (LoreMode mode : LoreMode.values()) {
+            assertThat(mode.name()).doesNotContainIgnoringCase("i");
         }
     }
 

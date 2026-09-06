@@ -25,7 +25,10 @@ public final class MenuRefresh {
         if (!r.enabled()) {
             return;
         }
-        Duration period = Duration.ofMillis(Math.max(1, r.intervalTicks()) * 50L);
+        // RefreshSpec refuses an enabled spec whose interval is below one tick, in its own compact
+        // constructor, so the value read here is at least one however the spec was built. Clamping again
+        // was a second answer to a question that record already settles, and nothing could reach it.
+        Duration period = Duration.ofMillis(r.intervalTicks() * 50L);
         holder.setRefreshHandle(scheduler.globalTimer(period, period, handle -> reRender.run()));
     }
 }

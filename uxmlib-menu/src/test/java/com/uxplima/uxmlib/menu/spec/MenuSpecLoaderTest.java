@@ -507,6 +507,33 @@ class MenuSpecLoaderTest {
     }
 
     @Test
+    void anEnabledRefreshWithNoIntervalIsRefusedByNameAndNamesTheFile() {
+        // The engine reads this value straight, because the record refuses a nonsensical one. That refusal is what
+        // an operator meets when they write the block and forget the key, so it has to reach them as a named
+        // configuration error rather than as a raw argument exception out of a constructor they cannot see.
+        assertThatThrownBy(() -> new MenuSpecLoader().parse("rows = 1\nrefresh { enabled = true }\nitems {}"))
+                .isInstanceOf(MenuSpecException.class)
+                .hasMessageContaining("<string>")
+                .hasMessageContaining("intervalTicks must be >= 1 when refresh is enabled: 0");
+    }
+
+    @Test
+    void anEnabledRefreshWithAZeroIntervalIsRefusedTheSameWay() {
+        assertThatThrownBy(() -> new MenuSpecLoader().parse("rows = 1\nrefresh { enabled = true, interval-ticks = 0 }"))
+                .isInstanceOf(MenuSpecException.class)
+                .hasMessageContaining("intervalTicks must be >= 1 when refresh is enabled");
+    }
+
+    @Test
+    void aDisabledRefreshIgnoresItsIntervalRatherThanRefusingIt() {
+        assertThat(new MenuSpecLoader()
+                        .parse("rows = 1\nrefresh { enabled = false, interval-ticks = 0 }\nitems {}")
+                        .refresh())
+                .as("the interval only has to make sense when something is going to run at it")
+                .isEqualTo(new RefreshSpec(false, 0));
+    }
+
+    @Test
     void neitherUpdateIntervalNorARefreshBlockLeavesRefreshDisabled() {
         RefreshSpec refresh = new MenuSpecLoader().parse("rows = 1\nitems {}").refresh();
 
