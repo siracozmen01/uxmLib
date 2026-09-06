@@ -12,6 +12,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.damage.DamageSource;
 import org.bukkit.damage.DamageType;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
@@ -64,6 +65,28 @@ class MenuListenerLifecycleTest {
         }
     }
 
+    /**
+     * The listener's own scheduler. Its entity hop queues instead of running, because the whole point of the close
+     * path is that the restore is deferred to the viewer's next tick, and a fake that runs inline cannot tell a
+     * deferred restore from an immediate one. The engine keeps the inline scheduler, so an open still completes.
+     */
+    private static final class QueueingScheduler extends SameThreadScheduler {
+
+        private final List<Runnable> queued = new ArrayList<>();
+
+        @Override
+        public com.uxplima.uxmlib.scheduler.TaskHandle entity(Entity entity, Runnable task) {
+            queued.add(task);
+            return FINISHED;
+        }
+
+        private void drain() {
+            List<Runnable> due = List.copyOf(queued);
+            queued.clear();
+            due.forEach(Runnable::run);
+        }
+    }
+
     private final AtomicLong now = new AtomicLong(1_000_000L);
 
     private Menus menus;
@@ -71,6 +94,8 @@ class MenuListenerLifecycleTest {
     private MenuListener listener;
 
     private SameThreadScheduler scheduler;
+
+    private QueueingScheduler listenerScheduler;
 
     private Player viewer;
 
@@ -82,12 +107,13 @@ class MenuListenerLifecycleTest {
         plugin = MockBukkit.createMockPlugin();
         viewer = MockBukkit.getMock().addPlayer();
         scheduler = new SameThreadScheduler();
+        listenerScheduler = new QueueingScheduler();
         menus = new Menus(renderer(), scheduler, new ListSourceRegistry());
         listener = new MenuListener(
                 renderer(),
                 new ActionRegistry(),
                 new ConditionRegistry(),
-                scheduler,
+                listenerScheduler,
                 plugin,
                 null,
                 null,
@@ -269,6 +295,9 @@ class MenuListenerLifecycleTest {
         assertThat(viewer.getInventory().getItem(0))
                 .as("a deferred restore would run after the player is gone and their data saved")
                 .isEqualTo(new ItemStack(Material.DIAMOND, 5));
+        assertThat(listenerScheduler.queued)
+                .as("the quit path must not hand the restore to a later tick that will never come")
+                .isEmpty();
         assertThat(holder.bottomSnapshot())
                 .as("the snapshot has to be cleared so the paired close restore does not put the items back twice")
                 .isNull();
@@ -281,6 +310,7 @@ class MenuListenerLifecycleTest {
         quit();
         viewer.getInventory().setItem(0, new ItemStack(Material.STONE));
         close();
+        listenerScheduler.drain();
 
         assertThat(viewer.getInventory().getItem(0))
                 .as("the deferred close restore must see a cleared snapshot and do nothing")
@@ -289,10 +319,19 @@ class MenuListenerLifecycleTest {
     }
 
     @Test
-    void closingABottomMenuPutsTheRealItemsBack() {
+    void closingABottomMenuPutsTheRealItemsBackOnTheNextTickRatherThanInsideTheEvent() {
         MenuHolder holder = openBottomHoldingADiamond();
 
         close();
+
+        assertThat(viewer.getInventory().getItem(0))
+                .as("mutating a player inventory inside the close event is the Paper gotcha this defers around")
+                .isNotEqualTo(new ItemStack(Material.DIAMOND, 5));
+        assertThat(holder.bottomSnapshot())
+                .as("the snapshot is nulled in the task, not at schedule time")
+                .isNotNull();
+
+        listenerScheduler.drain();
 
         assertThat(viewer.getInventory().getItem(0)).isEqualTo(new ItemStack(Material.DIAMOND, 5));
         assertThat(holder.bottomSnapshot()).isNull();
@@ -339,6 +378,7 @@ class MenuListenerLifecycleTest {
 
         viewer.getInventory().clear();
         close();
+        listenerScheduler.drain();
 
         assertThat(viewer.getInventory().getItem(0))
                 .as("the respawn restore has to be a no-op, or the dropped items exist twice")
