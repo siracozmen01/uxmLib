@@ -7,7 +7,7 @@ allprojects {
     // library. Pass -PprojectGroup to publish locally under the same coordinates, so a plugin can
     // build against a version JitPack has not served yet without editing its own build file.
     group = project.findProperty("projectGroup")?.toString() ?: "com.uxplima.uxmlib"
-    version = project.findProperty("projectVersion")?.toString() ?: "0.43.0-SNAPSHOT"
+    version = project.findProperty("projectVersion")?.toString() ?: "0.46.0-SNAPSHOT"
 
     repositories {
         mavenCentral()
