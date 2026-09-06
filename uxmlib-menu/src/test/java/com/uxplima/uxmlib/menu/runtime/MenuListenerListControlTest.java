@@ -578,6 +578,7 @@ class MenuListenerListControlTest {
                 .as("the click is dispatched, the control's own hop is still in the air")
                 .isZero();
         viewer.disconnect();
+        assertThat(viewer.isOnline()).as("the premise of this test").isFalse();
         deferring.drain();
 
         assertThat(prompt.opened).isZero();
