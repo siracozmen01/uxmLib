@@ -18,14 +18,13 @@ import org.bukkit.inventory.ItemStack;
 
 import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.util.Pair;
-import com.uxplima.uxmlib.npc.PacketSender;
 import com.uxplima.uxmlib.packet.Bundles;
 import com.uxplima.uxmlib.packet.Codecs;
 import com.uxplima.uxmlib.packet.Components;
 import com.uxplima.uxmlib.packet.EntityIds;
 import com.uxplima.uxmlib.packet.GameProfiles;
 import com.uxplima.uxmlib.packet.Reflect;
-import com.uxplima.uxmlib.packet.ServerCompats;
+import com.uxplima.uxmlib.packet.ServerInternals;
 import com.uxplima.uxmlib.packet.VanillaEntityTypes;
 import com.uxplima.uxmlib.packet.npc.ArmorStandPart;
 import com.uxplima.uxmlib.packet.npc.ByteAngle;
@@ -35,6 +34,7 @@ import com.uxplima.uxmlib.packet.npc.NamedColor;
 import com.uxplima.uxmlib.packet.npc.NpcPackets;
 import com.uxplima.uxmlib.packet.npc.NpcPose;
 import com.uxplima.uxmlib.packet.tablist.TabSkin;
+import com.uxplima.uxmlib.pipeline.PacketSender;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
@@ -120,7 +120,7 @@ import org.jspecify.annotations.Nullable;
 /**
  * The sole NMS-bearing class of the packet NPC layer: it builds the real Mojang-mapped packets that spawn and
  * steer a fake-player NPC per viewer and writes them through the connection. Quarantining {@code net.minecraft}
- * to one class follows the same precedent as {@code uxmlib-npc}'s {@code ChannelResolver}, the nametag
+ * to one class follows the same precedent as {@code uxmlib-pipeline}'s {@code ChannelResolver}, the nametag
  * renderer's {@code NmsNametagPackets}, and the tablist renderer's {@code NmsTabListPackets}.
  *
  * <p>Built against the Mojang-mapped 1.21.11 dev bundle; Paper's runtime remapper maps these back to the
@@ -1101,7 +1101,7 @@ public final class NmsNpcPackets implements NpcPackets {
         // PlayerTeam needs a Scoreboard only to construct.
         PlayerTeam team = new PlayerTeam(new Scoreboard(), teamName);
         if (color != null) {
-            ServerCompats.current().applyTeamColor(team, color.name());
+            ServerInternals.applyTeamColor(team, color.name());
         }
         team.getPlayers().add(memberName);
         return ClientboundSetPlayerTeamPacket.createAddOrModifyPacket(team, true);
@@ -1130,7 +1130,7 @@ public final class NmsNpcPackets implements NpcPackets {
         team.setCollisionRule(collidable ? Team.CollisionRule.ALWAYS : Team.CollisionRule.NEVER);
         team.setNameTagVisibility(hideNametag ? Team.Visibility.NEVER : Team.Visibility.ALWAYS);
         if (color != null) {
-            ServerCompats.current().applyTeamColor(team, color.name());
+            ServerInternals.applyTeamColor(team, color.name());
         }
         team.getPlayers().add(memberName);
         return ClientboundSetPlayerTeamPacket.createAddOrModifyPacket(team, true);

@@ -4,7 +4,7 @@
  *
  * <p>Each helper is a {@code final} class of static methods that quarantines a single piece of unavoidable
  * {@code net.minecraft} reach so that the rest of every consuming module stays pure and unit-testable against a
- * fake. This follows the same precedent as {@code uxmlib-npc}'s {@code ChannelResolver}.
+ * fake. This follows the same precedent as {@code uxmlib-pipeline}'s {@code ChannelResolver}.
  *
  * <ul>
  *   <li>{@link com.uxplima.uxmlib.packet.Components}: Adventure {@code Component} to the vanilla component.

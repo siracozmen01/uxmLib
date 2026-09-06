@@ -12,31 +12,8 @@ concurrency:
 
 jobs:
   build:
-    name: ${{ matrix.name }}
+    name: Paper 26.x
     runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # The line the library is developed against: everything, NMS modules included.
-          - name: Paper 26.x
-            line: modern
-            tasks: build
-
-          # The oldest line the published jar must keep running on. One jar serves both, so this run is
-          # what keeps that a checked fact: anything reaching for a 26.x-only symbol fails here. The NMS
-          # modules compile against a single line's Mojang mappings and cannot take part, so the covered
-          # modules are listed rather than excluded (uxmlib-all pulls them in transitively).
-          - name: Paper 1.21.x
-            line: legacy
-            tasks: >-
-              -PmcTarget=1.21
-              :uxmlib-common:build :uxmlib-item:build :uxmlib-gui:build :uxmlib-hud:build
-              :uxmlib-bedrock:build
-              :uxmlib-command:build :uxmlib-condition:build :uxmlib-update:build
-              :uxmlib-storage:build :uxmlib-integration:build :uxmlib-redis:build
-              :uxmlib-npc:build
 
     steps:
       - uses: actions/checkout@v7
@@ -45,13 +22,12 @@ jobs:
       # enforce it live in the plugin repositories, where this text only ever arrives inside a jar. The
       # check runs beside the build rather than inside it, so a publish never fails on wording.
       - name: Check the writing style
-        if: matrix.line == 'modern'
         run: bash scripts/check-style.sh
 
-      # Two JDKs, on purpose. The compiler has to be 25: paper-api 26.x ships Java 25 class files that an
-      # older one cannot read, while the emitted bytecode stays at 21 for the 1.21.x line. Gradle itself,
-      # though, runs on 21: Palantir's formatter reaches into javac internals that changed in 25. Listing 21
-      # last is what points JAVA_HOME, and with it the daemon, at 21.
+      # Two JDKs, on purpose. The compiler has to be 25: paper-api ships Java 25 class files that an older
+      # one cannot read, while the emitted bytecode stays at 21 so the server-free modules stay usable from
+      # a Java 21 project. Gradle itself, though, runs on 21: Palantir's formatter reaches into javac
+      # internals that changed in 25. Listing 21 last is what points JAVA_HOME, and with it the daemon, at 21.
       - name: Set up the JDKs
         uses: actions/setup-java@v5
         with:
@@ -66,20 +42,20 @@ jobs:
       # Building the NMS modules decompiles the whole server jar, which takes minutes and needs several
       # gigabytes. The result only changes when the Paper version does, so key the cache on the catalog.
       - name: Cache the decompiled server sources
-        if: matrix.line == 'modern'
         uses: actions/cache@v6
         with:
           path: ~/.gradle/caches/paperweight-userdev
           key: paperweight-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
 
       # The 25 toolchain lives outside JAVA_HOME here, so Gradle is told where to look for it.
+      # `build`, never a list of modules. A list is a list of names and not an exclusion, so every module
+      # added to the repository would carry a silent decision about whether it is covered.
       - name: Build
-        run: ./gradlew -Dorg.gradle.java.installations.fromEnv=JAVA_HOME_25_X64 ${{ matrix.tasks }}
+        run: ./gradlew -Dorg.gradle.java.installations.fromEnv=JAVA_HOME_25_X64 build
 
-      # The whole cross-version promise rests on the jars being Java 21 even though they are compiled
-      # against Paper 26.x, and that is one `options.release` away from silently regressing.
+      # The server-free modules are usable from a Java 21 project only while the jars stay Java 21, and
+      # that is one `options.release` away from silently regressing now that the server is Java 25.
       - name: Check the published bytecode still targets Java 21
-        if: matrix.line == 'modern'
         run: |
           status=0
           for jar in uxmlib-*/build/libs/*.jar; do
@@ -102,7 +78,6 @@ jobs:
       # the shaded one is exactly the regression that shipped in 0.5.0: consumers compiled against relocated
       # Configurate types they had no way to produce.
       - name: Check the aggregate jar carries no bundled libraries
-        if: matrix.line == 'modern'
         run: |
           plain=$(ls uxmlib-all/build/libs/*.jar | grep -v -e '-sources\.jar$' -e '-javadoc\.jar$' -e '-standalone\.jar$')
           shaded=$(ls uxmlib-all/build/libs/*-standalone.jar)
@@ -118,7 +93,6 @@ jobs:
 
       # And that the standalone jar is actually published beside the aggregate rather than only built.
       - name: Check both jars reach a repository
-        if: matrix.line == 'modern'
         run: |
           ./gradlew -Dorg.gradle.java.installations.fromEnv=JAVA_HOME_25_X64 :uxmlib-all:publishToMavenLocal
           dir=$(ls -d ~/.m2/repository/com/uxplima/uxmlib/uxmlib-all/*/)
@@ -132,6 +106,6 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: test-reports-${{ matrix.line }}
+          name: test-reports
           path: '**/build/reports/tests/test'
           retention-days: 7

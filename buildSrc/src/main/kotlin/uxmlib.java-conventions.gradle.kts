@@ -36,41 +36,11 @@ dependencies {
     "testRuntimeOnly"("org.junit.platform:junit-platform-launcher")
 }
 
-// The library is published as one jar for two server lines, so nothing may touch API that exists on only one
-// of them. `-PmcTarget=1.21` is how that stays a checked fact rather than an assumption: it rebuilds and
-// retests the platform-neutral modules against the oldest supported line, and anything reaching for a 26.x-only
-// symbol fails there. The modules that reach into the server cannot take part in such a run, because a dev
-// bundle is pinned to one line by nature; `:uxmlib-nms-check-mc1_21` covers them instead by recompiling their
-// sources against the older bundle, and the compat seam covers what genuinely differs.
-if (providers.gradleProperty("mcTarget").orNull == "1.21") {
-    // Paper bundles Adventure, so the line under test decides that version too. The BOM is what pins it:
-    // it lists exactly the core artifacts and nothing from the separately versioned adventure-platform
-    // line, which MockBukkit drags in and which must keep its own versions.
-    dependencies {
-        "compileOnly"(enforcedPlatform(libs.adventure.bom.legacy))
-        "testImplementation"(enforcedPlatform(libs.adventure.bom.legacy))
-    }
-    configurations.configureEach {
-        resolutionStrategy.eachDependency {
-            if (requested.group == "io.papermc.paper" && requested.name == "paper-api") {
-                useVersion(libs.versions.legacy.paper.get())
-            }
-        }
-        // MockBukkit ships one artifact per server line rather than one artifact with many versions.
-        resolutionStrategy.dependencySubstitution {
-            substitute(module("org.mockbukkit.mockbukkit:mockbukkit-v26.2"))
-                .using(
-                    module("org.mockbukkit.mockbukkit:mockbukkit-v1.21:" + libs.versions.legacy.mockbukkit.get()),
-                )
-        }
-    }
-}
-
-// Gradle resolves dependencies by variant, and paper-api 26.x publishes metadata declaring it needs a
-// Java 25 runtime. Matched against `options.release = 21` that looks like an incompatibility and the
-// dependency is rejected outright. The declared level constrains the bytecode this project *emits*;
-// it says nothing about what the compiler can *read*, and a JDK 25 javac reads Java 25 class files
-// while still emitting Java 21. Widen what these classpaths accept, and leave the target alone.
+// Gradle resolves dependencies by variant, and paper-api publishes metadata declaring it needs a Java 25
+// runtime. Matched against `options.release = 21` that looks like an incompatibility and the dependency is
+// rejected outright. The declared level constrains the bytecode this project *emits*; it says nothing about
+// what the compiler can *read*, and a JDK 25 javac reads Java 25 class files while still emitting Java 21.
+// Widen what these classpaths accept, and leave the target alone.
 listOf(
     configurations.compileClasspath,
     configurations.runtimeClasspath,

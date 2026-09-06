@@ -13,13 +13,13 @@ import com.uxplima.uxmlib.nametag.Alignment;
 import com.uxplima.uxmlib.nametag.Appearance;
 import com.uxplima.uxmlib.nametag.Billboard;
 import com.uxplima.uxmlib.nametag.NametagPackets;
-import com.uxplima.uxmlib.npc.PacketSender;
 import com.uxplima.uxmlib.packet.Bundles;
 import com.uxplima.uxmlib.packet.Codecs;
 import com.uxplima.uxmlib.packet.Components;
 import com.uxplima.uxmlib.packet.EntityIds;
 import com.uxplima.uxmlib.packet.Reflect;
 import com.uxplima.uxmlib.packet.VanillaEntityTypes;
+import com.uxplima.uxmlib.pipeline.PacketSender;
 import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
@@ -34,7 +34,7 @@ import org.joml.Vector3f;
 /**
  * The sole NMS-bearing class of the nametag renderer: it builds the real Mojang-mapped packets that paint a
  * text {@code Display} per viewer and writes them through the connection. Quarantining {@code net.minecraft}
- * to one class follows the same precedent as {@code uxmlib-npc}'s {@code ChannelResolver}, which isolates the
+ * to one class follows the same precedent as {@code uxmlib-pipeline}'s {@code ChannelResolver}, which isolates the
  * unavoidable server-internal reach so the rest of the module stays pure and unit-testable against a fake.
  *
  * <p>Built against the Mojang-mapped 1.21.11 dev bundle; Paper's runtime remapper maps these back to the

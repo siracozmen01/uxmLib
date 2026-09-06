@@ -6,10 +6,10 @@ plugins {
 
 // A from-scratch, MIT-clean per-viewer nametag renderer. The packet objects are built against the
 // Mojang-mapped dev bundle and quarantined to a single NMS class; everything else stays pure. The Netty
-// plumbing (channel resolve, packet send) is reused from uxmlib-npc, so this module depends on it.
+// plumbing (channel resolve, packet send) is reused from uxmlib-pipeline, so this module depends on it.
 dependencies {
     api(project(":uxmlib-common"))
-    api(project(":uxmlib-npc"))
+    api(project(":uxmlib-pipeline"))
     api(project(":uxmlib-packet"))
 
     // The Mojang-mapped dev bundle supplies the Paper API *and* the server internals (net.minecraft,

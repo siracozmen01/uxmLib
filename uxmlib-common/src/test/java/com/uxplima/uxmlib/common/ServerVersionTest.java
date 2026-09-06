@@ -101,10 +101,9 @@ class ServerVersionTest {
         void readsTheRunningVersionFromBukkit() {
             ServerVersion current = ServerVersion.current();
             assertThat(current).isEqualTo(ServerVersion.parse(Bukkit.getMinecraftVersion()));
-            // True on both supported lines, and for opposite reasons: 1.21.x clears the gate on its patch,
-            // 26.x clears it because the year-based scheme starts far above the old major. Asserting a
-            // literal major here would pin the test to whichever line the build happens to target.
-            assertThat(current.isAtLeast(1, 21, 0)).isTrue();
+            // The floor the library supports, asserted as the literal it is. There is one server line, so
+            // there is nothing left for a loose bound to keep the test portable across.
+            assertThat(current.isAtLeast(26, 2, 0)).isTrue();
         }
 
         @Test

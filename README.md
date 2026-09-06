@@ -4,17 +4,17 @@
 [![JitPack](https://jitpack.io/v/UXPLIMA/uxm-lib.svg)](https://jitpack.io/#UXPLIMA/uxm-lib)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Java 21](https://img.shields.io/badge/Java-21-orange.svg)](https://adoptium.net/)
-[![Paper 1.21+](https://img.shields.io/badge/Paper-1.21%2B-brightgreen.svg)](https://papermc.io/)
+[![Paper 26.2+](https://img.shields.io/badge/Paper-26.2%2B-brightgreen.svg)](https://papermc.io/)
 [![Folia](https://img.shields.io/badge/Folia-ready-success.svg)](https://docs.papermc.io/folia)
 
-A modern, modular toolkit for writing **Paper 1.21+** plugins on **Java 21**. It bundles the parts every
+A modern, modular toolkit for writing **Paper 26.2+** plugins on **Java 21**. It bundles the parts every
 plugin ends up re-implementing: inventory GUIs, item building, Brigadier commands, typed config, pooled
 storage, soft-dependency integrations, HUD overlays, holograms, a notify-only update checker, and a
 config-driven condition/action engine, behind a clean, documented API, so you stop copy-pasting the same
 helpers from project to project.
 
-It is built **1.21+ only, on purpose**. No legacy cross-version reflection layers to carry around: just
-the current Paper API used the way it is meant to be used, **Folia-ready from line one**, and verified by
+It is built for **one server line, on purpose**. No cross-version reflection layers to carry around, and
+no compatibility seams: just the current Paper API used the way it is meant to be used, **Folia-ready from line one**, and verified by
 Error Prone, NullAway null-safety, Spotless formatting, ArchUnit architecture rules, and unit tests under
 `-Werror`.
 
@@ -63,8 +63,8 @@ and depend on it as a normal plugin. Both work.
 
 ## Why uxmLib
 
-- **One platform, done well.** Paper 1.21+ and Java 21 only. Every API targets the current server, with no
-  reflection machinery to support servers that no longer exist.
+- **One platform, done well.** Paper 26.2 and up. Every API targets the current server, with no reflection
+  machinery and no adapter layer to support servers that no longer exist.
 - **Modular.** Each `uxmlib-*` module is published independently: take the GUI framework without the
   storage stack, or just the command DSL. Modules never depend "upward", so the graph stays a clean tree.
 - **Folia-ready.** Nothing schedules through `BukkitScheduler`. The library's `Scheduler` abstraction maps
@@ -85,8 +85,8 @@ and depend on it as a normal plugin. Both work.
 
 | | |
 | --- | --- |
-| Server | Paper **1.21+**, including the year-based line (developed against `26.2`, built and tested against `1.21.11` too) |
-| Java | **21** |
+| Server | Paper **26.2+** (the year-based line) |
+| Java | **21** bytecode, built with a **25** toolchain. The server runs 25; the emitted class files stay at 21, so the modules that never touch a server can be used from an ordinary Java 21 project. |
 | Build (consumers) | Gradle or Maven; the modules are plain Maven artifacts |
 
 Adventure, MiniMessage, and Brigadier are provided by Paper at runtime: uxmLib references them at
@@ -101,7 +101,7 @@ what you use. Modules marked **experimental** are previews with unstable APIs (s
 | Module | What it gives you |
 | --- | --- |
 | `uxmlib-common` | The shared foundation: a Folia-ready `Scheduler`, MiniMessage `Text`, a config-driven style layer (`Theme`/`Styler`/`Typography`/`StyleTokens`), node-based `HoconConfig` and typed-record `RecordConfig` with hot reload and live `ConfigProperty`, a MiniMessage-native i18n message catalog, a ReDoS-guarded `TimedRegex`, a `BackupParticipants` seam that lets a plugin flush its state before something copies its files, type-safe particle spawning, and `Durations`/`Numbers`/`Sounds`/`SemanticVersion`/`ServerVersion` helpers. |
-| `uxmlib-item` | A fluent `ItemBuilder` (name, lore, enchantments, attributes, flags, durability, banners, components, with removers), sealed `SkullData` player heads with an async skin resolver, registry lookups for the 1.21 key-based enchantments/attributes, component-safe and gzip serialization, single-key `isSimilar`, and typed persistent-data helpers. |
+| `uxmlib-item` | A fluent `ItemBuilder` (name, lore, enchantments, attributes, flags, durability, banners, components, with removers), sealed `SkullData` player heads with an async skin resolver, registry lookups for the key-based enchantments and attributes, component-safe and gzip serialization, single-key `isSimilar`, and typed persistent-data helpers. |
 | `uxmlib-gui` | An inventory-menu framework: simple / paginated / scrolling / storage / typed (hopper, dispenser, …) menus; static, animated, dynamic, and per-viewer stateful items; border/row/column/rect fillers; interaction control; multi-screen navigation; menus defined in HOCON; unified anvil/chat/sign text input; the tile/lore/title/sound side of the style layer; and a facade over Paper's server-side Dialogs. |
 | `uxmlib-command` | A thin facade over Paper's Brigadier (`Cmd`/`Args`/`Sender`/`CommandRegistrar`) **and** an annotation DSL on top of it: `@Command`/`@Subcommand`/`@Arg`, permissions, `@Range`/`@Length`, `@Cooldown`, flags and switches, async execution, help pagination, and resolver/validator/condition SPIs. |
 | `uxmlib-storage` | Plain-JDBC persistence: a HikariCP-pooled `Database` (SQLite default; MySQL/MariaDB, PostgreSQL, H2 opt-in), an injection-safe `SelectBuilder`, parameterised `Sql`/`TxSql`, versioned migrations, a Caffeine-backed write-through / write-behind cache, a two-tier player-profile cache, and cross-server row sync. |
@@ -110,9 +110,8 @@ what you use. Modules marked **experimental** are previews with unstable APIs (s
 | `uxmlib-hud` | Adventure-native HUD overlays, all through the public player API: a flicker-free diffing sidebar, title/subtitle, a sticky action bar, boss bars with a mode enum (permanent/filling/countdown/dynamic), tablist header/footer, per-tick text animators, and a nametag registry that composes several plugins' prefixes, suffixes and colours onto the one team a player may belong to. |
 | `uxmlib-update` | A notify-only release update checker (GitHub / Modrinth providers) that compares a build-time version constant against the latest release and surfaces a permission-gated clickable join message. It never self-downloads. |
 | `uxmlib-condition` | A declarative condition engine (operand comparison + placeholder resolution + failure policy) and its natural pair, a config-driven action engine (`[message]`, `[console]`, `[title]`, … parsed once into closures). |
-| `uxmlib-npc` | **Experimental.** A from-scratch, MIT-clean Netty pipeline foundation: channel resolve, idempotent inject/eject, a self-healing reorder watchdog, and a fail-open listener seam. Groundwork for the packet layer; no NPC yet. |
+| `uxmlib-pipeline` | **Experimental.** A from-scratch, MIT-clean Netty pipeline: channel resolve, idempotent inject/eject, a self-healing reorder watchdog, and a fail-open listener seam. It builds no packet and knows no entity. Alone in the packet family it needs no Mojang-mapped server, so a plugin that wants a pipeline and no server internals can take it on its own. |
 | `uxmlib-packet` | **Experimental.** The shared Mojang-mapped packet helpers (Adventure→vanilla component conversion, bundling, the stream-codec buffer trick, guarded reflection, entity-id allocation) plus per-viewer tab-list, NPC, and text-display packet ports built on them. |
-| `uxmlib-packet-compat` | **Experimental.** The seam for the few server internals that are not spelled the same on every supported Minecraft line, with one adapter artifact per line (`-mc1_21`, `-mc26`). Pulled in transitively by `uxmlib-packet`; consumers never name it. Together with the build-only recompile check it lives under `platform/`, since those are the only sources tied to a specific server. |
 | `uxmlib-nametags` | **Experimental.** A from-scratch per-viewer nametag renderer (different prefixes/colours/visibility per viewer) over scoreboard-team and metadata packets, without touching the server-side scoreboard. |
 | `uxmlib-bom` | A bill of materials so a consumer can align every `uxmlib-*` artifact to one version with a single platform import. |
 | `uxmlib-all` | The aggregate of every module on the API surface. The same module also builds the standalone server-side plugin jar, published beside it under the `standalone` classifier. |
@@ -130,11 +129,10 @@ graph TD
     update[uxmlib-update] --> common
     condition[uxmlib-condition] --> common
     redis[uxmlib-redis]
-    npc[uxmlib-npc] --> common
-    packet[uxmlib-packet] --> npc
-    packet --> compat[uxmlib-packet-compat]
+    pipeline[uxmlib-pipeline] --> common
+    packet[uxmlib-packet] --> pipeline
     nametags[uxmlib-nametags] --> common
-    nametags --> npc
+    nametags --> pipeline
     nametags --> packet
 ```
 
@@ -419,7 +417,7 @@ scheduler.async(() -> fetchFromApi());                                // off the
 ItemStack sword = ItemBuilder.of(Material.DIAMOND_SWORD)
         .name(Text.mini("<gradient:#ff5555:#ffaa00>Flameblade</gradient>"))
         .lore(Text.mini("<gray>A legendary weapon"))
-        .enchant(Items.enchantment("sharpness"), 5)   // 1.21 made enchantments registry entries
+        .enchant(Items.enchantment("sharpness"), 5)   // enchantments are registry entries
         .flags(ItemFlag.HIDE_ENCHANTS)
         .unbreakable(true)
         .build();
@@ -677,7 +675,7 @@ needs a player who is here.
 
 ### Holograms
 
-Holograms are built on native 1.21+ `Display` entities (Text / Item / Block): no packets, no per-version
+Holograms are built on native `Display` entities (Text / Item / Block): no packets, no per-version
 NMS, and managed for you so visibility, per-viewer content, and cleanup are handled automatically.
 
 ```java
@@ -805,17 +803,16 @@ is the same type everywhere. Registrations are marked, and an unmarked `Runnable
 
 ### Experimental: packet layer
 
-`uxmlib-npc`, `uxmlib-packet`, and `uxmlib-nametags` are an in-progress, **clean-room** packet foundation
+`uxmlib-pipeline`, `uxmlib-packet`, and `uxmlib-nametags` are an in-progress, **clean-room** packet foundation
 for the things the public API cannot do per viewer: different nametag colours, tab-list rows, or holograms
 for different players. PacketEvents (the off-the-shelf choice) is GPL, so none of it is borrowed; the Netty
-plumbing is re-implemented for Paper 1.21+ and the unavoidable NMS is quarantined to single, named classes
+plumbing is re-implemented for Paper 26.2+ and the unavoidable NMS is quarantined to single, named classes
 behind pure ports built against the Mojang-mapped dev bundle.
 
-Those classes are compiled against the newest supported server and are expected to keep loading on the oldest
-one, which holds because almost nothing they touch has moved between the two. The exceptions live behind
-`uxmlib-packet-compat`, one small adapter per line, each compiled against that line's own server; the rest of
-the sources are recompiled against the oldest line on every build, so a server internal that stops existing
-there fails the build rather than someone's server.
+Those classes are compiled against the Mojang-mapped server they run on, so every internal they touch is a
+checked fact rather than a reflected guess. There is no adapter layer and no per-line seam: one server line
+means the compiler covers the whole surface, and a server internal that moves fails the build rather than
+someone's server.
 
 These modules have **unstable APIs** and parts are still landing. Treat them as a preview; the stable
 toolkit above does not depend on them.
@@ -831,7 +828,7 @@ toolkit above does not depend on them.
   empty catches, no `printStackTrace`.
 - **Static analysis as errors.** Error Prone + NullAway (`onlyNullMarked`, JSpecify), Spotless with
   Palantir Java Format, all under `-Werror`.
-- **Tests.** JUnit 5, AssertJ, Mockito, MockBukkit (Paper 1.21 line), jqwik property tests, and ArchUnit.
+- **Tests.** JUnit 5, AssertJ, Mockito, MockBukkit, jqwik property tests, and ArchUnit.
 
 ## Building from source
 
@@ -847,7 +844,7 @@ Requires a JDK 21 toolchain (Gradle provisions it via the Foojay resolver if nee
 ## Versioning & stability
 
 The library follows semantic versioning. Public API modules aim for stable names and documented seams; the
-**experimental** modules (`uxmlib-npc`, `uxmlib-packet`, `uxmlib-nametags`) may change without notice until
+**experimental** modules (`uxmlib-pipeline`, `uxmlib-packet`, `uxmlib-nametags`) may change without notice until
 they graduate. Pre-1.0 (`0.x`) releases may still adjust APIs between minor versions as the surface settles.
 
 ## Contributing
