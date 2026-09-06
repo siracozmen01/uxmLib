@@ -53,6 +53,12 @@ final class Lexer {
         return operator();
     }
 
+    /**
+     * Reads a run of digits with at most one dot. Every computed value passes {@link Values#finite}, but a literal
+     * reaches no operator on its way out, so a literal larger than a double can hold is the one route by which a
+     * non-finite value could leave the evaluator and reach a menu line as the text "Infinity". It is refused here.
+     * A literal too small to represent is a different case: it underflows to zero, as every double does.
+     */
     private Token number() throws ExpressionException {
         int start = pos;
         boolean dot = false;
@@ -69,11 +75,16 @@ final class Lexer {
             pos++;
         }
         String text = src.substring(start, pos);
+        double value;
         try {
-            return Token.number(Double.parseDouble(text));
+            value = Double.parseDouble(text);
         } catch (NumberFormatException notNumeric) {
             throw new ExpressionException("malformed number: " + text);
         }
+        if (!Double.isFinite(value)) {
+            throw new ExpressionException("number literal is larger than a number can hold: " + text);
+        }
+        return Token.number(value);
     }
 
     private Token string(char quote) throws ExpressionException {
