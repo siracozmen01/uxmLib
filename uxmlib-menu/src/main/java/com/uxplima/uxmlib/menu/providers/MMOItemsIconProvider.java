@@ -1,5 +1,7 @@
 package com.uxplima.uxmlib.menu.providers;
 
+import java.util.Optional;
+
 import org.bukkit.Server;
 import org.bukkit.inventory.ItemStack;
 
@@ -27,23 +29,40 @@ final class MMOItemsIconProvider extends ReflectiveItemProvider {
         super(PLUGIN_NAME, PREFIX, server, log);
     }
 
+    /** The two halves an {@code mmoitems:} value carries, both already trimmed. */
+    record TypeAndId(String type, String id) {}
+
+    /**
+     * Split an {@code mmoitems:} value into its type and its id. Both halves are judged after trimming rather than
+     * by where the colon sits, because an operator may write {@code SWORD : CUTLASS} and a half that is only spaces
+     * is as absent as a half that is not there. Empty when either half is missing, which the caller turns into no
+     * item at all.
+     *
+     * <p>Kept out of {@link #lookup} so the one piece of this class an operator can get wrong is readable without
+     * the plugin: everything else here is reflection that needs MMOItems on the server to run at all.
+     */
+    static Optional<TypeAndId> split(String value) {
+        int separator = value.indexOf(':');
+        if (separator < 0) {
+            return Optional.empty();
+        }
+        String type = value.substring(0, separator).trim();
+        String id = value.substring(separator + 1).trim();
+        if (type.isEmpty() || id.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(new TypeAndId(type, id));
+    }
+
     @Override
     protected @Nullable ItemStack lookup(String id) throws ReflectiveOperationException {
-        int separator = id.indexOf(':');
-        if (separator < 0) {
-            return null;
-        }
-        String type = id.substring(0, separator).trim();
-        String itemId = id.substring(separator + 1).trim();
-        // Both halves are judged after trimming rather than by where the colon sits, because an operator may write
-        // "SWORD : CUTLASS" and a half that is only spaces is as absent as a half that is not there. Asking the same
-        // question a second time by the colon's position answers nothing this does not.
-        if (type.isEmpty() || itemId.isEmpty()) {
+        TypeAndId parts = split(id).orElse(null);
+        if (parts == null) {
             return null;
         }
         Class<?> mmoItems = Class.forName(MMOITEMS_CLASS);
         Object plugin = mmoItems.getField("plugin").get(null);
         return (ItemStack)
-                mmoItems.getMethod("getItem", String.class, String.class).invoke(plugin, type, itemId);
+                mmoItems.getMethod("getItem", String.class, String.class).invoke(plugin, parts.type(), parts.id());
     }
 }
