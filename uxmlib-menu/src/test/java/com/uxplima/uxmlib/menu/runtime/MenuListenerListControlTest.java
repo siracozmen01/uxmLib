@@ -125,6 +125,7 @@ class MenuListenerListControlTest {
               reset { slot = 3, material = HOPPER, name = "reset", click { left = ["reset"] } }
               sortPrev { slot = 2, material = HOPPER, name = "back", click { left = ["sort-previous"] } }
               sortReset { slot = 7, material = HOPPER, name = "plain", click { left = ["sort-reset"] } }
+              capture { slot = 9, material = HOPPER, name = "capture", click { right = ["capture"] } }
               next { slot = 8, material = ARROW, name = "next", type = next }
             }
             """;
@@ -147,6 +148,8 @@ class MenuListenerListControlTest {
 
     private org.mockbukkit.mockbukkit.entity.PlayerMock viewer;
 
+    private @Nullable MenuControl captured;
+
     private Plugin plugin;
 
     @BeforeEach
@@ -166,6 +169,7 @@ class MenuListenerListControlTest {
         actions.register("reset", ctx -> ctx.control().resetPagination());
         actions.register("elsewhere", ctx -> ctx.control().sortList("kits", SortDirection.NEXT));
         actions.register("search-elsewhere", ctx -> ctx.control().searchList("kits", "owner"));
+        actions.register("capture", ctx -> captured = ctx.control());
         prompt = new RecordingPrompt();
         MenuRenderer renderer = new MenuRenderer(
                 new ItemRenderer(new PlainText(), Theme::defaults, new PlaceholderRegistry()), new ConditionRegistry());
@@ -235,6 +239,13 @@ class MenuListenerListControlTest {
 
     private void clickSort() {
         click(6);
+        scheduler.drain();
+    }
+
+    private void rightClick(int rawSlot) {
+        InventoryView view = viewer.getOpenInventory();
+        listener.onClick(new InventoryClickEvent(
+                view, InventoryType.SlotType.CONTAINER, rawSlot, ClickType.RIGHT, InventoryAction.PICKUP_ALL));
         scheduler.drain();
     }
 
@@ -602,6 +613,32 @@ class MenuListenerListControlTest {
                 paged,
                 prompt,
                 null);
+    }
+
+    /**
+     * The guard inside the control itself, reached the only way it can be. A click cannot get there once the viewer
+     * has gone, because the click's own dispatch gives up first when the window is no longer open, so the control has
+     * to be held from an earlier click and called after it. That is what a plugin's own scheduled work does too: it
+     * keeps the handle it was given and uses it a tick later, by which time the viewer may have left.
+     */
+    @Test
+    void aControlHeldFromAnEarlierClickOpensNoPromptOnceTheViewerHasGone() {
+        registerCorpusSource();
+        open();
+        DeferringEntity deferring = new DeferringEntity();
+        listener = deferringListener(deferring);
+        rightClick(9);
+        deferring.drain();
+        MenuControl control = Objects.requireNonNull(captured, "the click hands the engine's own control over");
+
+        control.searchList("warps", "owner");
+        viewer.disconnect();
+        assertThat(viewer.isOnline()).as("the premise of this test").isFalse();
+        deferring.drain();
+
+        assertThat(prompt.opened)
+                .as("a prompt for a viewer who is not there would wait for a line that never comes")
+                .isZero();
     }
 
     /** Queues the hop onto the viewer's thread instead of taking it, so a viewer can leave while it is in the air. */
