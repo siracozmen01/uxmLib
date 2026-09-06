@@ -339,12 +339,19 @@ class MenuListenerListControlTest {
         registerCorpusSource();
         open();
         clickSort();
-        clickSort();
-        assertThat(lastRequest().sort()).isEqualTo("owner");
+        assertThat(lastRequest().sort()).isEqualTo("date");
 
         clickSortReset();
 
-        assertThat(lastRequest().sort()).isEqualTo("name");
+        assertThat(lastRequest().sort()).as("a reset is not one more step").isEqualTo("name");
+
+        clickSort();
+        clickSort();
+        assertThat(lastRequest().sort()).isEqualTo("owner");
+        clickSortReset();
+        assertThat(lastRequest().sort())
+                .as("and it comes back from the last one too")
+                .isEqualTo("name");
     }
 
     // -- filtering ---------------------------------------------------------------------------------------------
