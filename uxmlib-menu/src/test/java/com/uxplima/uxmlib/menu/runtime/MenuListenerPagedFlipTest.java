@@ -197,7 +197,12 @@ class MenuListenerPagedFlipTest {
 
     /** The rows the holder currently holds for one list, copied out so an assertion sees a plain element type. */
     private List<Object> rowsOf(String listId) {
-        return List.copyOf(holder().resolvedLists().getOrDefault(listId, List.of()));
+        return rowsOf(holder(), listId);
+    }
+
+    /** The same, for a holder a test is keeping hold of rather than the one the viewer has open. */
+    private static List<Object> rowsOf(MenuHolder holder, String listId) {
+        return List.copyOf(holder.resolvedLists().getOrDefault(listId, List.of()));
     }
 
     // -- the flip itself ---------------------------------------------------------------------------------------
@@ -604,5 +609,61 @@ class MenuListenerPagedFlipTest {
         assertThat(logged.get(0).getThrown())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("warps");
+    }
+
+    /**
+     * The viewer may be looking at a different menu by the time the page lands. The commit is guarded on the window
+     * still belonging to this holder, not merely on a window being open: without that, the fetched page would be
+     * written onto the menu they left and its inventory repainted behind the one they are in.
+     */
+    @Test
+    void aPageThatLandsAfterTheViewerMovedToAnotherMenuIsDropped() {
+        registerCorpusSource();
+        open();
+        MenuHolder first = holder();
+        clickNext();
+
+        MenuHolder second =
+                new MenuHolder("other", new MenuSpecLoader().parse("rows = 1"), MenuContext.of(viewer, null, 0));
+        org.bukkit.inventory.Inventory other = MockBukkit.getMock().createInventory(second, 9);
+        second.attach(other);
+        viewer.openInventory(other);
+
+        scheduler.drain();
+
+        assertThat(first.ctx().page())
+                .as("the menu they left keeps the page it was on")
+                .isZero();
+        assertThat(rowsOf(first, "warps")).containsExactly("a", "b");
+        assertThat(first.pagedFlipInFlight()).isFalse();
+    }
+
+    /**
+     * The corpus can shrink between the open and the flip, and the source is the only thing that knows. The total it
+     * reports with the landed page is what the next clamp reads, so the arrows stop where the corpus now ends rather
+     * than querying pages that stopped existing while the viewer was reading.
+     */
+    @Test
+    void aCorpusThatShrankBetweenTheOpenAndTheFlipStopsWhereTheSourceSaysItDoes() {
+        long[] total = {6L};
+        paged.register("warps", (ctx, request) -> {
+            asked.add(request);
+            int from = Math.min(request.page() * request.size(), CORPUS.size());
+            int to = Math.min(from + request.size(), CORPUS.size());
+            return PagedResult.of(CORPUS.subList(from, to), total[0]);
+        });
+        open();
+
+        total[0] = 4L;
+        clickNext();
+        scheduler.drain();
+        asked.clear();
+
+        clickNext();
+        scheduler.drain();
+
+        assertThat(asked)
+                .as("four rows over pages of two leaves nothing past page one, whatever the open was told")
+                .isEmpty();
     }
 }
