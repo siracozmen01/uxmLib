@@ -16,6 +16,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 import com.uxplima.uxmlib.gui.GuiText;
+import com.uxplima.uxmlib.gui.style.MenuTitles;
 import com.uxplima.uxmlib.menu.EditorSpec;
 import com.uxplima.uxmlib.menu.EntityEditorLayout;
 import com.uxplima.uxmlib.menu.property.EditableProperty;
@@ -108,6 +109,10 @@ class EditorRefreshTest {
     @AfterEach
     void tearDown() {
         MockBukkit.unmock();
+    }
+
+    private static String plain(Component component) {
+        return PlainTextComponentSerializer.plainText().serialize(component);
     }
 
     private static EditorRenderer renderer() {
@@ -221,17 +226,49 @@ class EditorRefreshTest {
         assertThat(holder.getInventory().getHolder()).isSameAs(holder);
     }
 
-    /** The rebuilt window carries the spec's own title, read again against the live subject. */
+    /**
+     * The rebuilt window carries the spec's own title, read again against the live subject and centred the way the
+     * first open centred it. A rebuild that skipped either step would be visibly a different window from the one the
+     * viewer left, which is the opposite of what "back reopens the parent editor" promises.
+     */
     @Test
-    void theRebuiltWindowIsTitledByTheSpecAndNotLeftBlank() {
-        MenuHolder holder = openEditor(spec());
+    void theRebuiltWindowIsTitledTheWayTheFirstOpenTitledIt() {
+        EditorSpec spec = spec();
+        MenuHolder holder = openEditor(spec);
         viewer.closeInventory();
 
         EditorRefresh.reRender(holder, renderer(), new SameThreadScheduler());
 
-        assertThat(PlainTextComponentSerializer.plainText()
-                        .serialize(viewer.getOpenInventory().title()))
-                .contains("editing home");
+        assertThat(plain(viewer.getOpenInventory().title()))
+                .isEqualTo(plain(MenuTitles.centre(spec.title(viewer, "home"))));
+    }
+
+    /** The rebuilt window is the size the layout asks for, so every slot the layout names has somewhere to go. */
+    @Test
+    void theRebuiltWindowIsTheSizeTheLayoutAsksFor() {
+        EditorSpec spec = spec();
+        MenuHolder holder = openEditor(spec);
+        viewer.closeInventory();
+
+        EditorRefresh.reRender(holder, renderer(), new SameThreadScheduler());
+
+        assertThat(holder.getInventory().getSize()).isEqualTo(spec.layout().rows() * 9);
+    }
+
+    /**
+     * The routing is cleared for a rebuild too. The state survives the window, so a slot recorded against the window
+     * the viewer left would otherwise still answer for a click in the window that replaced it.
+     */
+    @Test
+    void theSlotRoutingIsClearedBeforeARebuildAsWell() {
+        MenuHolder holder = openEditor(spec());
+        holder.editor().orElseThrow().recordProperty(44, new Fixed("stale", "gone"));
+        viewer.closeInventory();
+
+        EditorRefresh.reRender(holder, renderer(), new SameThreadScheduler());
+
+        assertThat(holder.editor().orElseThrow().propertyAt(44)).isEmpty();
+        assertThat(holder.editor().orElseThrow().propertyAt(10)).isPresent();
     }
 
     /** A window opened over the editor belongs to somebody else, so the editor is rebuilt rather than painted into. */
