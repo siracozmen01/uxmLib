@@ -85,8 +85,9 @@ public final class LanguageResolver implements LocaleSource {
         if (!(viewer instanceof Player player)) {
             return settings.get().defaultLocale();
         }
-        return chosenBy(player.getUniqueId()).or(() -> fromClient(player)).orElseGet(() -> settings.get()
-                .defaultLocale());
+        return chosenBy(player.getUniqueId())
+                .or(() -> fromClient(player))
+                .orElseGet(() -> settings.get().defaultLocale());
     }
 
     /**

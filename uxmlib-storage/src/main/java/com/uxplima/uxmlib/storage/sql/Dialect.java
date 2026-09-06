@@ -75,10 +75,11 @@ public enum Dialect {
         return switch (this) {
             case SQLITE, POSTGRES -> insert + onConflict(keyList, updates);
             case MYSQL -> insert + onDuplicateKey(updates, keyColumns.get(0));
-            case H2 -> "MERGE INTO " + table + " (" + columnList + ") KEY(" + keyList + ") VALUES (" + placeholders
-                    + ")";
-            case GENERIC -> throw new UnsupportedOperationException(
-                    "no portable upsert for this JDBC backend; override Repository.save()");
+            case H2 ->
+                "MERGE INTO " + table + " (" + columnList + ") KEY(" + keyList + ") VALUES (" + placeholders + ")";
+            case GENERIC ->
+                throw new UnsupportedOperationException(
+                        "no portable upsert for this JDBC backend; override Repository.save()");
         };
     }
 
@@ -120,10 +121,11 @@ public enum Dialect {
             case POSTGRES -> prefix + "ALTER COLUMN " + column + " TYPE " + newType;
             case H2 -> prefix + "ALTER COLUMN " + column + " " + newType;
             case MYSQL -> prefix + "MODIFY COLUMN " + column + " " + newType;
-            case SQLITE -> throw new UnsupportedOperationException(
-                    "SQLite has no ALTER COLUMN type change; rebuild the table to retype a column");
-            case GENERIC -> throw new UnsupportedOperationException(
-                    "no portable ALTER COLUMN type change for this JDBC backend");
+            case SQLITE ->
+                throw new UnsupportedOperationException(
+                        "SQLite has no ALTER COLUMN type change; rebuild the table to retype a column");
+            case GENERIC ->
+                throw new UnsupportedOperationException("no portable ALTER COLUMN type change for this JDBC backend");
         };
     }
 }

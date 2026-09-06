@@ -17,7 +17,10 @@ import org.jspecify.annotations.Nullable;
  * @param forced a language the server imposes on every viewer, or {@code null} for none. It beats a player's
  *     own choice, so it is the setting a single-language server uses and nobody else touches.
  */
-public record LanguageSettings(Locale defaultLocale, boolean followClient, @Nullable Locale forced) {
+public record LanguageSettings(
+        Locale defaultLocale,
+        boolean followClient,
+        @Nullable Locale forced) {
 
     public LanguageSettings {
         Objects.requireNonNull(defaultLocale, "defaultLocale");

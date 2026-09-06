@@ -8,8 +8,7 @@ import org.junit.jupiter.api.Test;
 class ModrinthReleaseProviderTest {
 
     // A trimmed /project/{id}/version response: Modrinth returns an array, newest first.
-    private static final String SAMPLE =
-            """
+    private static final String SAMPLE = """
             [
               {
                 "name": "1.4.0",
@@ -38,8 +37,7 @@ class ModrinthReleaseProviderTest {
 
     // A response where the highest version is NOT the first element: Modrinth does not guarantee array order
     // (e.g. a hotfix re-published against an older game version can land first).
-    private static final String OUT_OF_ORDER =
-            """
+    private static final String OUT_OF_ORDER = """
             [
               {
                 "name": "1.3.9",
@@ -72,8 +70,7 @@ class ModrinthReleaseProviderTest {
 
     @Test
     void skipsUnparseableVersionNumbersWhenSelectingTheLatest() {
-        String body =
-                """
+        String body = """
                 [
                   {"version_number": "not-a-version", "id": "junk"},
                   {"version_number": "2.0.1", "id": "real"}

@@ -1279,25 +1279,28 @@ public final class Menus {
     private BedrockWidget resolveWidget(BedrockWidget widget, MenuContext ctx) {
         return switch (widget) {
             case BedrockWidget.Label label -> new BedrockWidget.Label(renderer.plainText(label.text(), ctx));
-            case BedrockWidget.Input input -> new BedrockWidget.Input(
-                    input.name(),
-                    renderer.plainText(input.label(), ctx),
-                    renderer.plainText(input.placeholder(), ctx),
-                    renderer.plainText(input.defaultText(), ctx));
-            case BedrockWidget.Dropdown dropdown -> new BedrockWidget.Dropdown(
-                    dropdown.name(),
-                    renderer.plainText(dropdown.label(), ctx),
-                    resolveOptions(dropdown.options(), ctx),
-                    dropdown.defaultIndex());
-            case BedrockWidget.Slider slider -> new BedrockWidget.Slider(
-                    slider.name(),
-                    renderer.plainText(slider.label(), ctx),
-                    slider.min(),
-                    slider.max(),
-                    slider.step(),
-                    slider.defaultValue());
-            case BedrockWidget.Toggle toggle -> new BedrockWidget.Toggle(
-                    toggle.name(), renderer.plainText(toggle.label(), ctx), toggle.defaultValue());
+            case BedrockWidget.Input input ->
+                new BedrockWidget.Input(
+                        input.name(),
+                        renderer.plainText(input.label(), ctx),
+                        renderer.plainText(input.placeholder(), ctx),
+                        renderer.plainText(input.defaultText(), ctx));
+            case BedrockWidget.Dropdown dropdown ->
+                new BedrockWidget.Dropdown(
+                        dropdown.name(),
+                        renderer.plainText(dropdown.label(), ctx),
+                        resolveOptions(dropdown.options(), ctx),
+                        dropdown.defaultIndex());
+            case BedrockWidget.Slider slider ->
+                new BedrockWidget.Slider(
+                        slider.name(),
+                        renderer.plainText(slider.label(), ctx),
+                        slider.min(),
+                        slider.max(),
+                        slider.step(),
+                        slider.defaultValue());
+            case BedrockWidget.Toggle toggle ->
+                new BedrockWidget.Toggle(toggle.name(), renderer.plainText(toggle.label(), ctx), toggle.defaultValue());
         };
     }
 

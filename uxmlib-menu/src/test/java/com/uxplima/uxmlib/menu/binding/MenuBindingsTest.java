@@ -56,16 +56,12 @@ class MenuBindingsTest {
         bindings.condition("warp:is-server-warp", (ctx, args) -> true);
         bindings.placeholder("warp_name", ctx -> "spawn");
 
-        assertThat(
-                        bindings.validate(
-                                one(
-                                        """
+        assertThat(bindings.validate(one("""
                         title = "%warp_name%"
                         rows = 1
                         items { go { slot = 0, material = STONE, name = "%warp_name%",
                                      view = ["warp:is-server-warp"], click { left = ["warp:teleport"] } } }
-                        """)))
-                .isEmpty();
+                        """))).isEmpty();
     }
 
     @Test
@@ -84,43 +80,31 @@ class MenuBindingsTest {
 
     @Test
     void theMenusOwnOpenAndCloseActionsAreValidatedToo() {
-        assertThat(
-                        bindings.validate(
-                                one(
-                                        """
+        assertThat(bindings.validate(one("""
                         rows = 1
                         open-requirement = [ "may-open" ]
                         open-actions = [ "announce" ]
                         close-actions = [ "forget" ]
                         items {}
-                        """)))
-                .containsExactlyInAnyOrder("may-open", "announce", "forget");
+                        """))).containsExactlyInAnyOrder("may-open", "announce", "forget");
     }
 
     @Test
     void anUnknownPlaceholderIsReportedFromTheTitleTheMaterialTheNameAndTheLore() {
-        assertThat(
-                        bindings.validate(
-                                one(
-                                        """
+        assertThat(bindings.validate(one("""
                         title = "%a%"
                         rows = 1
                         items { go { slot = 0, material = "%b%", name = "%c%", lore = ["%d%"] } }
-                        """)))
-                .containsExactlyInAnyOrder("a", "b", "c", "d");
+                        """))).containsExactlyInAnyOrder("a", "b", "c", "d");
     }
 
     @Test
     void aTokenTheMenuDeclaresInItsOwnPlaceholdersBlockCountsAsKnown() {
-        assertThat(
-                        bindings.validate(
-                                one(
-                                        """
+        assertThat(bindings.validate(one("""
                         rows = 1
                         placeholders { mine = "a literal" }
                         items { go { slot = 0, material = STONE, name = "%mine%" } }
-                        """)))
-                .isEmpty();
+                        """))).isEmpty();
     }
 
     @Test
@@ -147,10 +131,7 @@ class MenuBindingsTest {
 
     @Test
     void aListSourceRegisteredAsNeitherKindIsReported() {
-        assertThat(
-                        bindings.validate(
-                                one(
-                                        """
+        assertThat(bindings.validate(one("""
                         rows = 1
                         items { row { slots = ["0-8"], material = STONE,
                                       list { source = "pw:browse", template { material = PAPER } } } }
@@ -163,42 +144,30 @@ class MenuBindingsTest {
     @Test
     void aPlainSourceThatSetsPagedOnlyKnobsIsReportedRatherThanSilentlyIgnored() {
         bindings.list("pw:browse", ctx -> List.of());
-        assertThat(
-                        bindings.validate(
-                                one(
-                                        """
+        assertThat(bindings.validate(one("""
                         rows = 1
                         items { row { slots = ["0-8"], material = STONE,
                                       list { source = "pw:browse", page-size = 7, sorts = ["name"],
                                              template { material = PAPER } } } }
-                        """)))
-                .singleElement(STRING)
-                .contains("page-size and sorts do nothing");
+                        """))).singleElement(STRING).contains("page-size and sorts do nothing");
     }
 
     @Test
     void aPagedSourceMaySetPageSizeAndSorts() {
         bindings.pagedList("pw:browse", (ctx, page) -> emptyPage());
-        assertThat(
-                        bindings.validate(
-                                one(
-                                        """
+        assertThat(bindings.validate(one("""
                         rows = 1
                         items { row { slots = ["0-8"], material = STONE,
                                       list { source = "pw:browse", page-size = 7, sorts = ["name"],
                                              template { material = PAPER } } } }
-                        """)))
-                .isEmpty();
+                        """))).isEmpty();
     }
 
     @Test
     void aSortButtonNamingAListThisMenuDoesNotContainIsReported() {
         bindings.action("list-sort", ctx -> {});
         bindings.pagedList("pw:browse", (ctx, page) -> emptyPage());
-        assertThat(
-                        bindings.validate(
-                                one(
-                                        """
+        assertThat(bindings.validate(one("""
                         rows = 6
                         items { row { slots = ["0-8"], material = STONE,
                                       list { source = "pw:browse", sorts = ["name"], template { material = PAPER } } }
@@ -212,17 +181,12 @@ class MenuBindingsTest {
     void aSortButtonOnASourceThatDeclaresNoSortsCannotSortSoItIsReported() {
         bindings.action("list-sort", ctx -> {});
         bindings.pagedList("pw:browse", (ctx, page) -> emptyPage());
-        assertThat(
-                        bindings.validate(
-                                one(
-                                        """
+        assertThat(bindings.validate(one("""
                         rows = 6
                         items { row { slots = ["0-8"], material = STONE,
                                       list { source = "pw:browse", template { material = PAPER } } }
                                 sort { slot = 45, material = HOPPER, click { left = ["list-sort:pw:browse"] } } }
-                        """)))
-                .singleElement(STRING)
-                .contains("declares no sorts");
+                        """))).singleElement(STRING).contains("declares no sorts");
     }
 
     @Test

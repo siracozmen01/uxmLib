@@ -181,8 +181,7 @@ class MenuListenerRequirementTest {
      */
     @Test
     void anOptionalRequirementFailingLeavesTheBlockPassingButStillRunsItsOwnDeny() {
-        openWithLeft(
-                """
+        openWithLeft("""
                 {
                   click = ["main"]
                   requirements = ["yes", { require = "no", optional = true, deny = ["reqNo"] }]
@@ -196,8 +195,7 @@ class MenuListenerRequirementTest {
     /** With a minimum the count is over every requirement, so an optional pass can carry a mandatory failure. */
     @Test
     void aMinimumCountsTheOptionalRequirementsToo() {
-        openWithLeft(
-                """
+        openWithLeft("""
                 {
                   click = ["main"]
                   minimum = 1
@@ -243,8 +241,7 @@ class MenuListenerRequirementTest {
      */
     @Test
     void stopAtSuccessLeavesTheRequirementsPastTheMinimumUnasked() {
-        openWithLeft(
-                """
+        openWithLeft("""
                 {
                   click = ["main"]
                   minimum = 1
@@ -259,8 +256,7 @@ class MenuListenerRequirementTest {
 
     @Test
     void withoutStopAtSuccessEveryRequirementIsAskedAndEveryArmRuns() {
-        openWithLeft(
-                """
+        openWithLeft("""
                 {
                   click = ["main"]
                   minimum = 1
@@ -278,8 +274,7 @@ class MenuListenerRequirementTest {
      */
     @Test
     void stopAtSuccessWithNoMinimumStillAsksEveryRequirement() {
-        openWithLeft(
-                """
+        openWithLeft("""
                 {
                   click = ["main"]
                   stop_at_success = true
@@ -296,8 +291,7 @@ class MenuListenerRequirementTest {
 
     @Test
     void aPassingRequirementRunsItsOwnSuccessArmAndNotItsDeny() {
-        openWithLeft(
-                """
+        openWithLeft("""
                 {
                   click = ["main"]
                   requirements = [{ require = "yes", success = ["reqOk"], deny = ["reqNo"] }]
@@ -310,8 +304,7 @@ class MenuListenerRequirementTest {
     /** A per-requirement arm runs as the block is walked, so it lands before the block's own deny, not after it. */
     @Test
     void aPerRequirementDenyRunsBeforeTheBlockDenyItLedTo() {
-        openWithLeft(
-                """
+        openWithLeft("""
                 {
                   click = ["main"]
                   requirements = [{ require = "no", deny = ["reqNo"] }]
@@ -326,8 +319,7 @@ class MenuListenerRequirementTest {
 
     @Test
     void aFailedBlockWithAnElseLadderTriesTheLadderInsteadOfItsOwnDeny() {
-        openWithLeft(
-                """
+        openWithLeft("""
                 {
                   click = ["main"]
                   requirements = ["no"]
@@ -343,8 +335,7 @@ class MenuListenerRequirementTest {
 
     @Test
     void theFirstSatisfiedBranchWinsAndTheRestOfTheLadderIsNotWalked() {
-        openWithLeft(
-                """
+        openWithLeft("""
                 {
                   click = ["main"]
                   requirements = ["no"]
@@ -361,8 +352,7 @@ class MenuListenerRequirementTest {
 
     @Test
     void aBranchThatFailsHandsOnToTheNextOne() {
-        openWithLeft(
-                """
+        openWithLeft("""
                 {
                   click = ["main"]
                   requirements = ["no"]
@@ -380,8 +370,7 @@ class MenuListenerRequirementTest {
     /** A terminal else has no requirements, so it always passes: the "otherwise" arm of the ladder. */
     @Test
     void aTerminalElseRunsWhateverTheBranchesAboveItDecided() {
-        openWithLeft(
-                """
+        openWithLeft("""
                 {
                   click = ["main"]
                   requirements = ["no"]
@@ -399,8 +388,7 @@ class MenuListenerRequirementTest {
     /** A ladder that runs out with every branch failing falls back on the last branch's own deny, not the block's. */
     @Test
     void aLadderWhereEveryBranchFailsRunsTheLastBranchesDeny() {
-        openWithLeft(
-                """
+        openWithLeft("""
                 {
                   click = ["main"]
                   requirements = ["no"]
@@ -419,8 +407,7 @@ class MenuListenerRequirementTest {
     /** A branch is a block: its per-requirement arms fire exactly as a top-level block's do. */
     @Test
     void aBranchesOwnPerRequirementArmsFireWhileTheLadderIsWalked() {
-        openWithLeft(
-                """
+        openWithLeft("""
                 {
                   click = ["main"]
                   requirements = ["no"]

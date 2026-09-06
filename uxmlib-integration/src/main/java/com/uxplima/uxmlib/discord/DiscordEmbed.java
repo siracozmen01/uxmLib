@@ -32,7 +32,8 @@ public record DiscordEmbed(
     }
 
     /** An author line: a name, an optional link, and an optional icon. */
-    public record Author(String name, @Nullable String url, @Nullable String iconUrl) {
+    public record Author(
+            String name, @Nullable String url, @Nullable String iconUrl) {
         public Author {
             Objects.requireNonNull(name, "name");
         }

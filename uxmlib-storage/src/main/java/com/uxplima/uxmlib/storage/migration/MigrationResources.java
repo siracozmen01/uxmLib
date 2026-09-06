@@ -119,8 +119,9 @@ public final class MigrationResources {
         return switch (url.getProtocol()) {
             case "file" -> listFileNames(url, directory);
             case "jar" -> listJarNames(url, directory);
-            default -> throw new IllegalStateException(
-                    "unsupported resource protocol '" + url.getProtocol() + "' for migrations in " + directory);
+            default ->
+                throw new IllegalStateException(
+                        "unsupported resource protocol '" + url.getProtocol() + "' for migrations in " + directory);
         };
     }
 

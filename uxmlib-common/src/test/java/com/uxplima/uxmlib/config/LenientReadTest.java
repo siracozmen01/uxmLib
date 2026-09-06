@@ -29,9 +29,7 @@ class LenientReadTest {
     @Test
     void skipsOneBadSectionEntryAndKeepsTheGoodOnes(@TempDir Path dir) throws Exception {
         // The "broken" kit has a non-numeric cooldown, so mapping it throws; the other two must survive.
-        HoconConfig config = config(
-                dir,
-                """
+        HoconConfig config = config(dir, """
                 kits {
                   starter { cooldown = 60, icon = STONE }
                   broken { cooldown = "oops", icon = DIRT }
@@ -48,9 +46,7 @@ class LenientReadTest {
 
     @Test
     void skipsOneBadListElementAndKeepsTheGoodOnes(@TempDir Path dir) throws Exception {
-        HoconConfig config = config(
-                dir,
-                """
+        HoconConfig config = config(dir, """
                 kits = [
                   { cooldown = 5, icon = STONE },
                   { cooldown = "oops", icon = DIRT },

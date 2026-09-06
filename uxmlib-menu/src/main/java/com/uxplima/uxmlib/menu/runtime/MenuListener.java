@@ -986,9 +986,12 @@ public final class MenuListener implements Listener {
             return;
         }
         grid.contentAt(slot)
-                .ifPresent(cell -> runOnGrid(holder, live -> ((GridHandlers) grid.handlers())
-                        .onSlot()
-                        .onClick(new HolderGridView(holder, grid), live, cell.menuSlot(), cell.filled(), kind)));
+                .ifPresent(cell -> runOnGrid(
+                        holder,
+                        live -> ((GridHandlers) grid.handlers())
+                                .onSlot()
+                                .onClick(
+                                        new HolderGridView(holder, grid), live, cell.menuSlot(), cell.filled(), kind)));
     }
 
     /** Hop to the viewer's entity thread, re-resolve the live player, and run one grid handler there. */

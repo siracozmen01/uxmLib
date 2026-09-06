@@ -221,29 +221,33 @@ public final class MenuSpecLoader {
     private Optional<BedrockWidget> parseWidget(ConfigurationNode node) {
         String type = node.node("type").getString("").strip().toLowerCase(java.util.Locale.ROOT);
         return switch (type) {
-            case "label" -> Optional.of(
-                    new BedrockWidget.Label(node.node("text").getString("")));
-            case "input" -> Optional.of(new BedrockWidget.Input(
-                    node.node("name").getString(""),
-                    node.node("label").getString(""),
-                    node.node("placeholder").getString(""),
-                    node.node("default").getString("")));
-            case "dropdown" -> Optional.of(new BedrockWidget.Dropdown(
-                    node.node("name").getString(""),
-                    node.node("label").getString(""),
-                    strings(node.node("options")),
-                    node.node("default").getInt(0)));
-            case "slider" -> Optional.of(new BedrockWidget.Slider(
-                    node.node("name").getString(""),
-                    node.node("label").getString(""),
-                    node.node("min").getInt(0),
-                    node.node("max").getInt(100),
-                    node.node("step").getInt(1),
-                    node.node("default").getInt(0)));
-            case "toggle" -> Optional.of(new BedrockWidget.Toggle(
-                    node.node("name").getString(""),
-                    node.node("label").getString(""),
-                    node.node("default").getBoolean(false)));
+            case "label" ->
+                Optional.of(new BedrockWidget.Label(node.node("text").getString("")));
+            case "input" ->
+                Optional.of(new BedrockWidget.Input(
+                        node.node("name").getString(""),
+                        node.node("label").getString(""),
+                        node.node("placeholder").getString(""),
+                        node.node("default").getString("")));
+            case "dropdown" ->
+                Optional.of(new BedrockWidget.Dropdown(
+                        node.node("name").getString(""),
+                        node.node("label").getString(""),
+                        strings(node.node("options")),
+                        node.node("default").getInt(0)));
+            case "slider" ->
+                Optional.of(new BedrockWidget.Slider(
+                        node.node("name").getString(""),
+                        node.node("label").getString(""),
+                        node.node("min").getInt(0),
+                        node.node("max").getInt(100),
+                        node.node("step").getInt(1),
+                        node.node("default").getInt(0)));
+            case "toggle" ->
+                Optional.of(new BedrockWidget.Toggle(
+                        node.node("name").getString(""),
+                        node.node("label").getString(""),
+                        node.node("default").getBoolean(false)));
             default -> {
                 LOG.warning("skipping bedrock widget with missing or unknown type '" + type + "' at " + node.path());
                 yield Optional.empty();

@@ -165,10 +165,10 @@ final class CumulusBedrockScreen implements BedrockScreen {
         switch (widget) {
             case BedrockWidget.Label label -> builder.label(label.text());
             case BedrockWidget.Input input -> builder.input(input.label(), input.placeholder(), input.defaultText());
-            case BedrockWidget.Dropdown dropdown -> builder.dropdown(
-                    dropdown.label(), dropdown.options(), dropdown.defaultIndex());
-            case BedrockWidget.Slider slider -> builder.slider(
-                    slider.label(), slider.min(), slider.max(), slider.step(), slider.defaultValue());
+            case BedrockWidget.Dropdown dropdown ->
+                builder.dropdown(dropdown.label(), dropdown.options(), dropdown.defaultIndex());
+            case BedrockWidget.Slider slider ->
+                builder.slider(slider.label(), slider.min(), slider.max(), slider.step(), slider.defaultValue());
             case BedrockWidget.Toggle toggle -> builder.toggle(toggle.label(), toggle.defaultValue());
         }
     }
@@ -191,8 +191,8 @@ final class CumulusBedrockScreen implements BedrockScreen {
                     // A label is display-only: it consumes a response index but yields no value to bind.
                 }
                 case BedrockWidget.Input input -> values.put(input.name(), response.asInput(index));
-                case BedrockWidget.Dropdown dropdown -> values.put(
-                        dropdown.name(), optionAt(dropdown, response.asDropdown(index)));
+                case BedrockWidget.Dropdown dropdown ->
+                    values.put(dropdown.name(), optionAt(dropdown, response.asDropdown(index)));
                 case BedrockWidget.Slider slider -> values.put(slider.name(), formatSlider(response.asSlider(index)));
                 case BedrockWidget.Toggle toggle -> values.put(toggle.name(), String.valueOf(response.asToggle(index)));
             }

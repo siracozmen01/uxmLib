@@ -15,8 +15,7 @@ import org.spongepowered.configurate.hocon.HoconConfigurationLoader;
 
 class MenuSpecLoaderTest {
 
-    private static final String HOCON =
-            """
+    private static final String HOCON = """
             title = "@menu.test.title"
             rows = 3
             refresh { enabled = true, interval-ticks = 20 }
@@ -152,8 +151,7 @@ class MenuSpecLoaderTest {
                 .isEqualTo(RequirementSpec.allOf(List.of(Ref.parse("has-money:100"))));
     }
 
-    private static final String RICH =
-            """
+    private static final String RICH = """
             rows = 1
             items {
               thing {
@@ -229,8 +227,7 @@ class MenuSpecLoaderTest {
         assertThat(decor.amount()).isEqualTo(1);
     }
 
-    private static final String COMPONENTS =
-            """
+    private static final String COMPONENTS = """
             rows = 1
             items {
               thing {
@@ -274,17 +271,14 @@ class MenuSpecLoaderTest {
 
     @Test
     void parsesTheTooltipKeysAndLeavesThemUnsetWhenAbsent() {
-        DataComponents declared = java.util.Objects.requireNonNull(new MenuSpecLoader()
-                        .parse(
-                                """
+        DataComponents declared = java.util.Objects.requireNonNull(
+                        new MenuSpecLoader().parse("""
                         rows = 1
                         items { t { slot = 0, decor {
                           hide-vanilla-tooltip = false
                           hidden-components = ["dyed_color", "equippable"]
                         } } }
-                        """)
-                        .items()
-                        .get("t"))
+                        """).items().get("t"))
                 .decor()
                 .meta()
                 .components();
@@ -305,8 +299,7 @@ class MenuSpecLoaderTest {
         assertThat(silent.hiddenComponents()).isEmpty();
     }
 
-    private static final String MODIFIERS =
-            """
+    private static final String MODIFIERS = """
             rows = 1
             items {
               b {
@@ -629,8 +622,7 @@ class MenuSpecLoaderTest {
                 .isInstanceOf(MenuSpecException.class);
     }
 
-    private static final String PATTERNS =
-            """
+    private static final String PATTERNS = """
             rows = 1
             patterns {
               shop-button {
@@ -669,8 +661,7 @@ class MenuSpecLoaderTest {
 
     @Test
     void anOmittedVarFallsBackToThePatternDefault() {
-        String hocon =
-                """
+        String hocon = """
                 rows = 1
                 patterns { p { name = "Price: %price%", defaults { price = "0" } } }
                 items { x { slot = 0, pattern = "p", vars { } } }
@@ -685,8 +676,7 @@ class MenuSpecLoaderTest {
 
     @Test
     void anUnknownTokenIsLeftVerbatimForRenderTime() {
-        String hocon =
-                """
+        String hocon = """
                 rows = 1
                 patterns { p { material = STONE, lore = ["<gray>%player_name%", "<gray>%label%"] } }
                 items { x { slot = 0, pattern = "p", vars { label = "Hi" } } }
@@ -701,8 +691,7 @@ class MenuSpecLoaderTest {
 
     @Test
     void substitutionRecursesIntoNestedMapsAndLists() {
-        String hocon =
-                """
+        String hocon = """
                 rows = 1
                 patterns {
                   p {
@@ -723,8 +712,7 @@ class MenuSpecLoaderTest {
 
     @Test
     void anItemClickOverrideReplacesTheTemplateClickWholesale() {
-        String hocon =
-                """
+        String hocon = """
                 rows = 1
                 patterns { p { material = STONE, click { left = ["close"], right = ["open:a"] } } }
                 items { x { slot = 0, pattern = "p", click { right = ["open:b"] } } }
@@ -755,8 +743,7 @@ class MenuSpecLoaderTest {
 
     @Test
     void aPatternBlockDoesNotAffectAnItemThatDoesNotReferenceIt() {
-        String hocon =
-                """
+        String hocon = """
                 rows = 1
                 patterns { p { material = DIAMOND } }
                 items { plain { slot = 0, material = STONE, name = "Plain" } }
@@ -771,8 +758,7 @@ class MenuSpecLoaderTest {
 
     @Test
     void aNestedPatternKeyOnATemplateIsIgnoredResolvingOnlyOneLevel() {
-        String hocon =
-                """
+        String hocon = """
                 rows = 1
                 patterns {
                   base { material = STONE }
@@ -791,12 +777,10 @@ class MenuSpecLoaderTest {
 
     @Test
     void aGlobalPatternResolvesForAMenuWithNoLocalPatterns() throws Exception {
-        ConfigurationNode global = patternsNode(
-                """
+        ConfigurationNode global = patternsNode("""
                 patterns { hub-button { material = "%mat%", name = "<gold>%label%" } }
                 """);
-        String hocon =
-                """
+        String hocon = """
                 rows = 1
                 items { hub { slots = [0], pattern = "hub-button", vars { mat = "DIAMOND", label = "Hub" } } }
                 """;
@@ -811,12 +795,10 @@ class MenuSpecLoaderTest {
 
     @Test
     void aMenuLocalPatternOverridesAGlobalOfTheSameName() throws Exception {
-        ConfigurationNode global = patternsNode(
-                """
+        ConfigurationNode global = patternsNode("""
                 patterns { button { material = STONE, name = "Global" } }
                 """);
-        String hocon =
-                """
+        String hocon = """
                 rows = 1
                 patterns { button { material = DIAMOND, name = "Local" } }
                 items { x { slot = 0, pattern = "button" } }
@@ -853,12 +835,10 @@ class MenuSpecLoaderTest {
 
     @Test
     void aListTemplateResolvesAGlobalPattern() throws Exception {
-        ConfigurationNode global = patternsNode(
-                """
+        ConfigurationNode global = patternsNode("""
                 patterns { row { material = "%mat%", name = "<gray>%label%" } }
                 """);
-        String hocon =
-                """
+        String hocon = """
                 rows = 1
                 items {
                   grid {
@@ -885,8 +865,7 @@ class MenuSpecLoaderTest {
     void aListTemplateResolvesAMenuLocalPattern() {
         // Confirms slice-A already covers list-expansion: parseList feeds its template through parseItem with the
         // pattern map, so a list whose template names a (here menu-local) pattern is stamped from it per entry.
-        String hocon =
-                """
+        String hocon = """
                 rows = 1
                 patterns { entry { material = "%mat%", name = "%label%" } }
                 items {
@@ -917,8 +896,7 @@ class MenuSpecLoaderTest {
                 .node("patterns");
     }
 
-    private static final String BORDER_LAYOUT =
-            """
+    private static final String BORDER_LAYOUT = """
             layout = [
               "GGGGGGGGG"
               "G.......G"
@@ -943,9 +921,7 @@ class MenuSpecLoaderTest {
     @Test
     void aLayoutCharWithNoMatchingItemLeavesThoseSlotsEmptyWithoutError() {
         // 'X' is drawn but no item declares it, so nothing occupies those cells and the parse still succeeds.
-        MenuSpec spec = new MenuSpecLoader()
-                .parse(
-                        """
+        MenuSpec spec = new MenuSpecLoader().parse("""
                         layout = [ "XXXXX" ]
                         items { }
                         """);
@@ -955,9 +931,7 @@ class MenuSpecLoaderTest {
 
     @Test
     void aLayoutPositionWinsOverAnItemsOwnDeclaredSlots() {
-        MenuSpec spec = new MenuSpecLoader()
-                .parse(
-                        """
+        MenuSpec spec = new MenuSpecLoader().parse("""
                         layout = [ "G........" ]
                         items { G { material = STONE, slots = [40] } }
                         """);
@@ -971,9 +945,7 @@ class MenuSpecLoaderTest {
 
     @Test
     void spaceAndDotAreBothEmptyCellsAndAMultiRowGridMapsRowMajor() {
-        MenuSpec spec = new MenuSpecLoader()
-                .parse(
-                        """
+        MenuSpec spec = new MenuSpecLoader().parse("""
                         layout = [
                           "A A"
                           ".B."
@@ -998,9 +970,7 @@ class MenuSpecLoaderTest {
 
     @Test
     void aFillItemOccupiesEveryEmptySlotAtALowPriorityUnderAReservedId() {
-        MenuSpec spec = new MenuSpecLoader()
-                .parse(
-                        """
+        MenuSpec spec = new MenuSpecLoader().parse("""
                         rows = 3
                         items { real { slot = 13, material = DIAMOND } }
                         fill-item { material = BLACK_STAINED_GLASS_PANE, name = " " }
@@ -1028,9 +998,7 @@ class MenuSpecLoaderTest {
 
     @Test
     void aLayoutAndAFillItemTogetherCoverEverySlot() {
-        MenuSpec spec = new MenuSpecLoader()
-                .parse(
-                        """
+        MenuSpec spec = new MenuSpecLoader().parse("""
                         layout = [
                           "GGGGGGGGG"
                           "G.......G"
@@ -1073,8 +1041,7 @@ class MenuSpecLoaderTest {
 
     @Test
     void bindsTheDropAndDoubleClickGestures() {
-        String hocon =
-                """
+        String hocon = """
                 rows = 1
                 items { x { slot = 0, material = DIAMOND, name = "x", click {
                   drop = ["close"]
@@ -1097,8 +1064,7 @@ class MenuSpecLoaderTest {
 
     @Test
     void acceptsBothKebabAndSnakeSpellingsOfTheNewGestures() {
-        String hocon =
-                """
+        String hocon = """
                 rows = 1
                 items { x { slot = 0, material = DIAMOND, name = "x", click {
                   control-drop = ["open:a"]
@@ -1135,8 +1101,7 @@ class MenuSpecLoaderTest {
 
     @Test
     void parsesAnItemDragBlock() {
-        String hocon =
-                """
+        String hocon = """
                 rows = 1
                 items { drop-slot {
                   slot = 0, material = CHEST, name = "Deposit",
@@ -1162,8 +1127,7 @@ class MenuSpecLoaderTest {
 
     @Test
     void anItemDragBlockDefaultsMinAmountToOneAnyMaterialNoNameCheckAndNoConsume() {
-        String hocon =
-                """
+        String hocon = """
                 rows = 1
                 items { drop-slot {
                   slot = 0, material = CHEST, name = "Deposit",
@@ -1185,8 +1149,7 @@ class MenuSpecLoaderTest {
 
     @Test
     void anItemWithNoItemDragBlockHasNone() {
-        String hocon =
-                """
+        String hocon = """
                 rows = 1
                 items { plain { slot = 0, material = STONE, name = "x" } }
                 """;
@@ -1198,8 +1161,7 @@ class MenuSpecLoaderTest {
 
     @Test
     void parsesTheBottomInventoryFlagAndAcceptsABottomSlot() {
-        String hocon =
-                """
+        String hocon = """
                 bottom-inventory = true
                 rows = 6
                 items {
@@ -1240,9 +1202,7 @@ class MenuSpecLoaderTest {
         };
         logger.addHandler(handler);
         try {
-            MenuSpec spec = new MenuSpecLoader()
-                    .parse(
-                            """
+            MenuSpec spec = new MenuSpecLoader().parse("""
                             bottom-inventory = true
                             inventory-type = hopper
                             items { bot { slot = 60, material = EMERALD, name = "b" } }
@@ -1261,8 +1221,7 @@ class MenuSpecLoaderTest {
         }
     }
 
-    private static final String BEDROCK =
-            """
+    private static final String BEDROCK = """
             title = "Warps"
             rows = 1
             items { a { slot = 0, material = STONE, name = "A" } }
@@ -1310,8 +1269,7 @@ class MenuSpecLoaderTest {
 
     @Test
     void aBedrockWidgetWithAnUnknownTypeIsSkippedRatherThanAbortingTheMenu() {
-        String hocon =
-                """
+        String hocon = """
                 rows = 1
                 items { a { slot = 0, material = STONE } }
                 bedrock {

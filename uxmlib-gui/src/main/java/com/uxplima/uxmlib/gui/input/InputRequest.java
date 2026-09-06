@@ -23,7 +23,11 @@ import org.jspecify.annotations.Nullable;
  * @param initialText the anvil pre-fill, or {@code null} for an empty field
  */
 @NullMarked
-public record InputRequest(String key, String label, Map<String, String> placeholders, @Nullable String initialText) {
+public record InputRequest(
+        String key,
+        String label,
+        Map<String, String> placeholders,
+        @Nullable String initialText) {
 
     public InputRequest {
         Objects.requireNonNull(key, "key");

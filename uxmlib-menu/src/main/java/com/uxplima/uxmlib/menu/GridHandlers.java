@@ -15,7 +15,8 @@ import org.jspecify.annotations.Nullable;
  * menu, so the control-bar buttons and the prev/next pagination on the {@link GridSpec} are unaffected either way.
  */
 @NullMarked
-public record GridHandlers(GridClickHandler onSlot, @Nullable GridCaptureHandler onCapture) {
+public record GridHandlers(
+        GridClickHandler onSlot, @Nullable GridCaptureHandler onCapture) {
 
     public GridHandlers {
         Objects.requireNonNull(onSlot, "onSlot");

@@ -95,7 +95,10 @@ public final class ConditionList {
      * entry is built (see {@link Builder#runCommands}); a non-{@code RUN_COMMANDS} entry leaves them absent.
      */
     public record Entry(
-            Condition condition, FailurePolicy policy, @Nullable Component message, @Nullable ActionList commands) {
+            Condition condition,
+            FailurePolicy policy,
+            @Nullable Component message,
+            @Nullable ActionList commands) {
 
         /** Canonical constructor null-checks the condition and policy; the message and commands are optional. */
         public Entry {

@@ -32,9 +32,7 @@ final class ConfiguredCommandsTest {
     @Test
     @DisplayName("a renamed command takes the name and the aliases from the file")
     void renameIsRead(@TempDir Path folder) throws IOException {
-        Path file = write(
-                folder,
-                """
+        Path file = write(folder, """
                 commands {
                   example {
                     name    = "parla"
@@ -85,9 +83,7 @@ final class ConfiguredCommandsTest {
     @Test
     @DisplayName("the replacer rewrites @FromConfig into the @Command the DSL registers")
     void theReplacerCarriesTheFileIntoTheAnnotation(@TempDir Path folder) throws IOException {
-        Path file = write(
-                folder,
-                """
+        Path file = write(folder, """
                 commands {
                   example {
                     name    = "parla"
@@ -122,9 +118,7 @@ final class ConfiguredCommandsTest {
     @Test
     @DisplayName("a renamed subcommand takes the word and the aliases of the file")
     void abranchIsNamedByTheFile(@TempDir Path folder) throws IOException {
-        Path file = write(
-                folder,
-                """
+        Path file = write(folder, """
                 commands {
                   example {
                     subcommands {

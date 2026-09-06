@@ -7,8 +7,7 @@ import org.junit.jupiter.api.Test;
 /** How the loader reads the click map form: actions plus a requirement block, {@code !} inversion, minimum, deny. */
 class ClickRequirementLoaderTest {
 
-    private static final String MAP_FORM =
-            """
+    private static final String MAP_FORM = """
             rows = 1
             items {
               a {
@@ -27,8 +26,7 @@ class ClickRequirementLoaderTest {
             }
             """;
 
-    private static final String DEFAULT_MINIMUM =
-            """
+    private static final String DEFAULT_MINIMUM = """
             rows = 1
             items {
               a {
@@ -41,8 +39,7 @@ class ClickRequirementLoaderTest {
             }
             """;
 
-    private static final String MAP_ENTRY =
-            """
+    private static final String MAP_ENTRY = """
             rows = 1
             items {
               a {
@@ -64,8 +61,7 @@ class ClickRequirementLoaderTest {
             }
             """;
 
-    private static final String NO_REQUIRE =
-            """
+    private static final String NO_REQUIRE = """
             rows = 1
             items {
               a {

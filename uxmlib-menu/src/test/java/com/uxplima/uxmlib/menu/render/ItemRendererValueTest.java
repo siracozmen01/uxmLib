@@ -205,8 +205,9 @@ class ItemRendererValueTest {
         List<PotionEffect> effects =
                 effectsOf(render("material = POTION, name = \"n\", decor { potion { effects = [\"speed:-3:600\"] } }"));
 
-        assertThat(effects).singleElement().satisfies(effect -> assertThat(effect.getAmplifier())
-                .isZero());
+        assertThat(effects)
+                .singleElement()
+                .satisfies(effect -> assertThat(effect.getAmplifier()).isZero());
     }
 
     @Test
@@ -225,8 +226,9 @@ class ItemRendererValueTest {
         List<PotionEffect> effects =
                 effectsOf(render("material = POTION, name = \"n\", decor { potion { effects = [\"speed:1:soon\"] } }"));
 
-        assertThat(effects).singleElement().satisfies(effect -> assertThat(effect.getDuration())
-                .isEqualTo(600));
+        assertThat(effects)
+                .singleElement()
+                .satisfies(effect -> assertThat(effect.getDuration()).isEqualTo(600));
     }
 
     @Test
@@ -234,8 +236,9 @@ class ItemRendererValueTest {
         List<PotionEffect> effects = effectsOf(render(
                 "material = POTION, name = \"n\", decor { potion { effects = [\"levitation_2\", \"speed:1:600\"] } }"));
 
-        assertThat(effects).singleElement().satisfies(effect -> assertThat(effect.getDuration())
-                .isEqualTo(600));
+        assertThat(effects)
+                .singleElement()
+                .satisfies(effect -> assertThat(effect.getDuration()).isEqualTo(600));
     }
 
     // -- a flag name ------------------------------------------------------------------------------------------

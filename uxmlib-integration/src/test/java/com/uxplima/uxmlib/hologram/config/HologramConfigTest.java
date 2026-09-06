@@ -24,8 +24,7 @@ class HologramConfigTest {
 
     @Test
     void readsLinesAndAppearance() throws Exception {
-        String hocon =
-                """
+        String hocon = """
                 lines = [ "<gold>Spawn", "<gray>Welcome" ]
                 appearance {
                   billboard = FIXED
@@ -72,8 +71,7 @@ class HologramConfigTest {
 
     @Test
     void roundTripsAFullSpecLosslessly() throws Exception {
-        String hocon =
-                """
+        String hocon = """
                 lines = [ "<gold>Spawn", "<gray>Welcome" ]
                 appearance {
                   billboard = FIXED

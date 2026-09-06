@@ -59,7 +59,7 @@ jqwik    = "1.9.3"
 errorprone   = "2.37.0"
 nullaway     = "0.12.3"
 spotless     = "7.0.2"
-palantir-fmt = "2.52.0"
+palantir-fmt = "2.93.0"
 shadow       = "9.4.1"
 
 # Netty: the channel/pipeline types for the experimental uxmlib-pipeline module. compileOnly: Paper bundles

@@ -185,11 +185,9 @@ class MenuListenerContinuationTest {
      */
     @Test
     void theRefsBeforeAnInputStepRunAndTheRefsAfterItWait() {
-        clickWithLeft(
-                """
+        clickWithLeft("""
                 [ "one", { do = "input:name", prompt = "type-a-name" }, "three" ]
-                """,
-                listener(prompt, false));
+                """, listener(prompt, false));
 
         assertThat(fired).containsExactly("one");
         assertThat(prompt.keys).containsExactly("name");
@@ -197,11 +195,9 @@ class MenuListenerContinuationTest {
 
     @Test
     void submittingTheLineRunsTheRestOfTheChain() {
-        clickWithLeft(
-                """
+        clickWithLeft("""
                 [ "one", { do = "input:name", prompt = "type-a-name" }, "three" ]
-                """,
-                listener(prompt, false));
+                """, listener(prompt, false));
 
         java.util.Objects.requireNonNull(prompt.onSubmit).accept("Steve");
 
@@ -211,11 +207,9 @@ class MenuListenerContinuationTest {
     /** The typed line reaches the tail as %input%, which is the whole point of splitting the chain rather than ending it. */
     @Test
     void theTypedLineIsExposedToTheRefsThatFollow() {
-        clickWithLeft(
-                """
+        clickWithLeft("""
                 [ { do = "input:name", prompt = "type-a-name" }, "reads-input" ]
-                """,
-                listener(prompt, false));
+                """, listener(prompt, false));
 
         java.util.Objects.requireNonNull(prompt.onSubmit).accept("Steve");
 
@@ -225,11 +219,9 @@ class MenuListenerContinuationTest {
     /** A cancel abandons the tail and runs the step's own deny list instead. Both halves matter. */
     @Test
     void cancellingRunsTheStepsDenyListAndAbandonsTheRest() {
-        clickWithLeft(
-                """
+        clickWithLeft("""
                 [ "one", { do = "input:name", prompt = "type-a-name", deny = ["cancelled"] }, "three" ]
-                """,
-                listener(prompt, false));
+                """, listener(prompt, false));
 
         java.util.Objects.requireNonNull(prompt.onCancel).run();
 
@@ -238,11 +230,9 @@ class MenuListenerContinuationTest {
 
     @Test
     void aStepWithNoDenyListCancelsQuietlyAndStillAbandonsTheRest() {
-        clickWithLeft(
-                """
+        clickWithLeft("""
                 [ "one", { do = "input:name", prompt = "type-a-name" }, "three" ]
-                """,
-                listener(prompt, false));
+                """, listener(prompt, false));
 
         java.util.Objects.requireNonNull(prompt.onCancel).run();
 
@@ -251,11 +241,9 @@ class MenuListenerContinuationTest {
 
     @Test
     void thePromptCarriesTheOperatorsLabelAndPreFillResolvedForTheViewer() {
-        clickWithLeft(
-                """
+        clickWithLeft("""
                 [ { do = "input:name", prompt = "type-a-name", default = "Steve" } ]
-                """,
-                listener(prompt, false));
+                """, listener(prompt, false));
 
         assertThat(prompt.prompts).containsExactly("type-a-name");
         assertThat(prompt.prefill).isEqualTo("Steve");
@@ -264,11 +252,9 @@ class MenuListenerContinuationTest {
     /** A blank pre-fill is no pre-fill: the field opens empty rather than holding a space. */
     @Test
     void aBlankDefaultLeavesTheFieldEmptyRatherThanPreFillingNothing() {
-        clickWithLeft(
-                """
+        clickWithLeft("""
                 [ { do = "input:name", prompt = "type-a-name" } ]
-                """,
-                listener(prompt, false));
+                """, listener(prompt, false));
 
         assertThat(prompt.prefill).isNull();
     }
@@ -279,11 +265,9 @@ class MenuListenerContinuationTest {
      */
     @Test
     void anEngineWithNoPromptRunsTheDenyListRatherThanStopping() {
-        clickWithLeft(
-                """
+        clickWithLeft("""
                 [ "one", { do = "input:name", prompt = "type-a-name", deny = ["cancelled"] }, "three" ]
-                """,
-                listener(null, false));
+                """, listener(null, false));
 
         assertThat(fired).containsExactly("one", "cancelled");
     }
@@ -292,11 +276,9 @@ class MenuListenerContinuationTest {
 
     @Test
     void aConfirmStepOpensTheWindowAndRunsNeitherBranchYet() {
-        clickWithLeft(
-                """
+        clickWithLeft("""
                 [ "one", { do = "confirm:drop", title = "sure", yes = ["yes"], no = ["no"] } ]
-                """,
-                listener(null, true));
+                """, listener(null, true));
 
         assertThat(fired).containsExactly("one");
         assertThat(confirm.titles).containsExactly("sure");
@@ -304,11 +286,9 @@ class MenuListenerContinuationTest {
 
     @Test
     void acceptingRunsTheYesBranchOnly() {
-        clickWithLeft(
-                """
+        clickWithLeft("""
                 [ { do = "confirm:drop", title = "sure", yes = ["yes"], no = ["no"] } ]
-                """,
-                listener(null, true));
+                """, listener(null, true));
 
         java.util.Objects.requireNonNull(confirm.onYes).run();
 
@@ -317,11 +297,9 @@ class MenuListenerContinuationTest {
 
     @Test
     void decliningRunsTheNoBranchOnly() {
-        clickWithLeft(
-                """
+        clickWithLeft("""
                 [ { do = "confirm:drop", title = "sure", yes = ["yes"], no = ["no"] } ]
-                """,
-                listener(null, true));
+                """, listener(null, true));
 
         java.util.Objects.requireNonNull(confirm.onNo).run();
 
@@ -334,11 +312,9 @@ class MenuListenerContinuationTest {
      */
     @Test
     void aRefWrittenAfterAConfirmStepNeverRunsOnEitherDecision() {
-        clickWithLeft(
-                """
+        clickWithLeft("""
                 [ { do = "confirm:drop", title = "sure", yes = ["yes"], no = ["no"] }, "three" ]
-                """,
-                listener(null, true));
+                """, listener(null, true));
 
         java.util.Objects.requireNonNull(confirm.onYes).run();
 
@@ -348,11 +324,9 @@ class MenuListenerContinuationTest {
     /** An engine wired without a confirm opener declines rather than accepting: a missing gate is not an open one. */
     @Test
     void anEngineWithNoConfirmOpenerTakesTheNoBranch() {
-        clickWithLeft(
-                """
+        clickWithLeft("""
                 [ { do = "confirm:drop", title = "sure", yes = ["yes"], no = ["no"] } ]
-                """,
-                listener(null, false));
+                """, listener(null, false));
 
         assertThat(fired).containsExactly("no");
     }
@@ -365,15 +339,13 @@ class MenuListenerContinuationTest {
      */
     @Test
     void anInputStepInsideADenyListIsSkippedRatherThanSplittingIt() {
-        clickWithLeft(
-                """
+        clickWithLeft("""
                 {
                   click = ["one"]
                   requirements = ["nobody-registered-this"]
                   deny = [ { do = "input:name", prompt = "type-a-name" }, "two" ]
                 }
-                """,
-                listener(prompt, false));
+                """, listener(prompt, false));
 
         assertThat(prompt.keys).as("the deny list opens no prompt").isEmpty();
         assertThat(fired).contains("two");

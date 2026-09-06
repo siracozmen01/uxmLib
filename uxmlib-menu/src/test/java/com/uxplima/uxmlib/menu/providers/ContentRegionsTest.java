@@ -23,8 +23,7 @@ import org.mockbukkit.mockbukkit.MockBukkit;
  */
 class ContentRegionsTest {
 
-    private static final String HOCON =
-            """
+    private static final String HOCON = """
             rows = 3
             content { trade { slots = ["10-12"], editable = true } }
             items {}

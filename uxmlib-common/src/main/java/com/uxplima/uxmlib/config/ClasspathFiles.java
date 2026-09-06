@@ -46,8 +46,9 @@ public final class ClasspathFiles {
                 switch (url.getProtocol()) {
                     case "file" -> inDirectory(url, directory);
                     case "jar" -> inJar(url, directory);
-                    default -> throw new ConfigException(
-                            "cannot list " + directory + ": unsupported resource protocol " + url.getProtocol());
+                    default ->
+                        throw new ConfigException(
+                                "cannot list " + directory + ": unsupported resource protocol " + url.getProtocol());
                 };
         return names.stream().sorted().toList();
     }

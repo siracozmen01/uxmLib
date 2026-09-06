@@ -104,8 +104,9 @@ public final class UpdateNotifier {
     }
 
     private void logToConsole(UpdateOutcome outcome) {
-        outcome.release().ifPresent(release -> plugin.getLogger()
-                .info(Text.plain(announcement.notification(
-                        pluginName, checker.currentVersion().toString(), release))));
+        outcome.release()
+                .ifPresent(release -> plugin.getLogger()
+                        .info(Text.plain(announcement.notification(
+                                pluginName, checker.currentVersion().toString(), release))));
     }
 }

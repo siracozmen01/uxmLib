@@ -176,5 +176,6 @@ public final class SidebarManager {
     }
 
     /** The title and lines of the board to re-show when a temporary sidebar lapses; both null means bare. */
-    private record Restore(@Nullable Component title, @Nullable List<Component> lines) {}
+    private record Restore(
+            @Nullable Component title, @Nullable List<Component> lines) {}
 }

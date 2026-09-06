@@ -111,8 +111,7 @@ class MenuListenerListControlTest {
 
     private static final List<String> CORPUS = List.of("a", "b", "c", "d", "e");
 
-    private static final String SPEC =
-            """
+    private static final String SPEC = """
             rows = 3
             items {
               row {
@@ -508,8 +507,9 @@ class MenuListenerListControlTest {
 
         List<java.util.logging.LogRecord> logged = logsOf(this::clickSort);
 
-        assertThat(logged).extracting(java.util.logging.LogRecord::getMessage).anySatisfy(message -> assertThat(message)
-                .contains("list_control_unknown_list", "kits"));
+        assertThat(logged)
+                .extracting(java.util.logging.LogRecord::getMessage)
+                .anySatisfy(message -> assertThat(message).contains("list_control_unknown_list", "kits"));
     }
 
     /** The same for a search: an unknown list opens no prompt, and says why in the log. */
@@ -523,8 +523,9 @@ class MenuListenerListControlTest {
         assertThat(prompt.opened)
                 .as("a prompt for a list that is not there would ask for a line nobody can use")
                 .isZero();
-        assertThat(logged).extracting(java.util.logging.LogRecord::getMessage).anySatisfy(message -> assertThat(message)
-                .contains("list_control_unknown_list"));
+        assertThat(logged)
+                .extracting(java.util.logging.LogRecord::getMessage)
+                .anySatisfy(message -> assertThat(message).contains("list_control_unknown_list"));
     }
 
     /**

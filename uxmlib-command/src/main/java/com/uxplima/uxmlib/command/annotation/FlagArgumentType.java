@@ -178,5 +178,6 @@ final class FlagArgumentType implements CustomArgumentType<Flags, String> {
     }
 
     /** A parsed flag token: its key (name or shorthand chars), an inline {@code =value}, and whether short. */
-    private record Token(String key, @org.jspecify.annotations.Nullable String inlineValue, boolean shortForm) {}
+    private record Token(
+            String key, @org.jspecify.annotations.Nullable String inlineValue, boolean shortForm) {}
 }

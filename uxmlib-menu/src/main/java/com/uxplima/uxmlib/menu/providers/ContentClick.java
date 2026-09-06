@@ -21,7 +21,12 @@ import org.jspecify.annotations.Nullable;
  * @param current the stack already in the slot, or null when the slot is empty
  */
 @NullMarked
-public record ContentClick(int slot, int index, Kind kind, @Nullable ItemStack cursor, @Nullable ItemStack current) {
+public record ContentClick(
+        int slot,
+        int index,
+        Kind kind,
+        @Nullable ItemStack cursor,
+        @Nullable ItemStack current) {
 
     /** What a viewer is doing to a content region. */
     public enum Kind {

@@ -86,8 +86,7 @@ class MenuListenerPagedFlipTest {
 
     private static final List<String> CORPUS = List.of("a", "b", "c", "d", "e");
 
-    private static final String SPEC =
-            """
+    private static final String SPEC = """
             rows = 3
             items {
               row { slots = [0, 1], list { source = warps, template { material = PAPER, name = "warp" } } }
@@ -423,11 +422,7 @@ class MenuListenerPagedFlipTest {
     void aPlainListSharingTheMenuKeepsItsRowsThroughTheFlip() {
         registerCorpusSource();
         plain.register("kits", ctx -> List.of("stone", "iron"));
-        menus.registerSpec(
-                "menu",
-                new MenuSpecLoader()
-                        .parse(
-                                """
+        menus.registerSpec("menu", new MenuSpecLoader().parse("""
                                 rows = 3
                                 items {
                                   row { slots = [0, 1], list { source = warps, template { material = PAPER, name = "warp" } } }
@@ -450,11 +445,7 @@ class MenuListenerPagedFlipTest {
     void aPlainListMenuAsksNoPagedSource() {
         registerCorpusSource();
         plain.register("kits", ctx -> List.of("stone", "iron", "gold"));
-        menus.registerSpec(
-                "menu",
-                new MenuSpecLoader()
-                        .parse(
-                                """
+        menus.registerSpec("menu", new MenuSpecLoader().parse("""
                                 rows = 3
                                 items {
                                   kits { slots = [0, 1], list { source = kits, template { material = CHEST, name = "kit" } } }
@@ -513,11 +504,7 @@ class MenuListenerPagedFlipTest {
             kitPages.add(request);
             return PagedResult.of(List.of("stone", "iron"), 4);
         });
-        menus.registerSpec(
-                "menu",
-                new MenuSpecLoader()
-                        .parse(
-                                """
+        menus.registerSpec("menu", new MenuSpecLoader().parse("""
                                 rows = 3
                                 items {
                                   kits { slots = [3, 4], list { source = kits, template { material = CHEST, name = "kit" } } }
@@ -549,10 +536,7 @@ class MenuListenerPagedFlipTest {
      */
     @Test
     void aMenuWhoseListsShareSlotsIsRefusedWhereItIsParsedRatherThanPagedAtRandom() {
-        assertThatThrownBy(
-                        () -> new MenuSpecLoader()
-                                .parse(
-                                        """
+        assertThatThrownBy(() -> new MenuSpecLoader().parse("""
                                 rows = 3
                                 items {
                                   warps { slots = [0, 1], list { source = warps, template { material = PAPER, name = "warp" } } }
@@ -573,11 +557,7 @@ class MenuListenerPagedFlipTest {
      */
     @Test
     void aMenuCarryingNoListStillMovesItsPageWhenTheArrowIsClicked() {
-        menus.registerSpec(
-                "menu",
-                new MenuSpecLoader()
-                        .parse(
-                                """
+        menus.registerSpec("menu", new MenuSpecLoader().parse("""
                                 rows = 3
                                 items {
                                   next { slot = 8, material = ARROW, name = "next", type = next }

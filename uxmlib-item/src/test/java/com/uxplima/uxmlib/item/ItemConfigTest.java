@@ -39,8 +39,7 @@ class ItemConfigTest {
 
     @Test
     void readsMaterialNameAndLore() throws Exception {
-        ConfigurationNode node = hocon(
-                """
+        ConfigurationNode node = hocon("""
                 material = DIAMOND_SWORD
                 name = "<red>Blade"
                 lore = ["<gray>line one", "line two"]
@@ -57,8 +56,7 @@ class ItemConfigTest {
     @Test
     @SuppressWarnings("deprecation") // getCustomModelData() is the int read-back; the value round-trips
     void readsAmountEnchantsFlagsAndModelData() throws Exception {
-        ConfigurationNode node = hocon(
-                """
+        ConfigurationNode node = hocon("""
                 material = DIAMOND_PICKAXE
                 amount = 1
                 enchants { efficiency = 5, unbreaking = 3 }
@@ -78,8 +76,7 @@ class ItemConfigTest {
 
     @Test
     void appliesGlowWithoutAnEnchant() throws Exception {
-        ConfigurationNode node =
-                hocon("""
+        ConfigurationNode node = hocon("""
                 material = STONE
                 glow = true
                 """);
@@ -92,8 +89,7 @@ class ItemConfigTest {
 
     @Test
     void readsASkullForAPlayerHead() throws Exception {
-        ConfigurationNode node =
-                hocon("""
+        ConfigurationNode node = hocon("""
                 material = PLAYER_HEAD
                 skull = "Notch"
                 """);
@@ -106,8 +102,7 @@ class ItemConfigTest {
 
     @Test
     void resolvesPlaceholdersInNameAndLore() throws Exception {
-        ConfigurationNode node = hocon(
-                """
+        ConfigurationNode node = hocon("""
                 material = PAPER
                 name = "Hello <player>"
                 lore = ["welcome <player>"]
@@ -122,8 +117,7 @@ class ItemConfigTest {
 
     @Test
     void wrapsLongLoreLinesWhenAWidthIsGiven() throws Exception {
-        ConfigurationNode node = hocon(
-                """
+        ConfigurationNode node = hocon("""
                 material = PAPER
                 lore = ["the quick brown fox jumps over"]
                 """);
@@ -136,8 +130,7 @@ class ItemConfigTest {
 
     @Test
     void splitsEmbeddedNewlinesInLore() throws Exception {
-        ConfigurationNode node = hocon(
-                """
+        ConfigurationNode node = hocon("""
                 material = PAPER
                 lore = ["first\\nsecond"]
                 """);
@@ -173,8 +166,7 @@ class ItemConfigTest {
 
     @Test
     void rejectsAnEnchantWithoutANumericLevelWithAConfigAwareMessage() throws Exception {
-        ConfigurationNode node = hocon(
-                """
+        ConfigurationNode node = hocon("""
                 material = DIAMOND_SWORD
                 enchants { sharpness = "five" }
                 """);
@@ -187,8 +179,7 @@ class ItemConfigTest {
 
     @Test
     void rejectsAnUnknownEnchantKeyByName() throws Exception {
-        ConfigurationNode node = hocon(
-                """
+        ConfigurationNode node = hocon("""
                 material = DIAMOND_SWORD
                 enchants { not_a_real_enchant = 3 }
                 """);
@@ -206,8 +197,7 @@ class ItemConfigTest {
      */
     @Test
     void readsTheHideVanillaTooltipKey() throws Exception {
-        ConfigurationNode node = hocon(
-                """
+        ConfigurationNode node = hocon("""
                 material = LEATHER_CHESTPLATE
                 name = "<white>Cosmetics"
                 hide-vanilla-tooltip = true

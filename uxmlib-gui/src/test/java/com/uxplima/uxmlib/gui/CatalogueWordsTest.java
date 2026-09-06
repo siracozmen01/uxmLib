@@ -26,8 +26,7 @@ import org.spongepowered.configurate.hocon.HoconConfigurationLoader;
 /** What a menu file writes, turned into what a player reads. */
 class CatalogueWordsTest {
 
-    private static final String CATALOGUE =
-            """
+    private static final String CATALOGUE = """
             menu {
               lore { description = "About", details = "Facts" }
               tile {

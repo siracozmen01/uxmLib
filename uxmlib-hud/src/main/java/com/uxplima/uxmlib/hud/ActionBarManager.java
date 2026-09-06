@@ -158,5 +158,6 @@ public final class ActionBarManager {
         }
     }
 
-    private record Entry(@Nullable Component message, @Nullable String template, long untilMillis) {}
+    private record Entry(
+            @Nullable Component message, @Nullable String template, long untilMillis) {}
 }

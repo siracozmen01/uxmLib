@@ -144,8 +144,7 @@ class MenuRendererTest {
         MenuPlaceholders.registerPaging(tokens);
         MenuRenderer counting =
                 new MenuRenderer(new ItemRenderer(new PlainText(), Theme::defaults, tokens), conditions, contents);
-        MenuSpec spec = spec(
-                """
+        MenuSpec spec = spec("""
                 rows = 2
                 items {
                   kits { slots = [4, 5], list { source = kits, template { material = CHEST, name = "kit" } } }
@@ -172,8 +171,7 @@ class MenuRendererTest {
         MenuPlaceholders.registerPaging(tokens);
         MenuRenderer counting =
                 new MenuRenderer(new ItemRenderer(new PlainText(), Theme::defaults, tokens), conditions, contents);
-        MenuSpec spec = spec(
-                """
+        MenuSpec spec = spec("""
                 rows = 1
                 items {
                   label { slot = 0, material = PAPER, name = "%page%/%max_page%" }
@@ -197,8 +195,7 @@ class MenuRendererTest {
 
     @Test
     void theFormButtonsComeOutInSlotOrderRatherThanDeclarationOrder() {
-        MenuSpec spec = spec(
-                """
+        MenuSpec spec = spec("""
                 rows = 1
                 items {
                   last { slot = 8, material = STONE, name = "eight", click { left = ["close"] } }
@@ -214,8 +211,7 @@ class MenuRendererTest {
     /** A tap that does nothing is not a button, so the decorative half of a menu does not reach the form. */
     @Test
     void anItemWithNoClickActionIsNotAFormButton() {
-        MenuSpec spec = spec(
-                """
+        MenuSpec spec = spec("""
                 rows = 1
                 items {
                   filler { slot = 0, material = GRAY_STAINED_GLASS_PANE, name = "pane" }
@@ -231,8 +227,7 @@ class MenuRendererTest {
 
     @Test
     void aListBackedItemIsNotAStaticButton() {
-        MenuSpec spec = spec(
-                """
+        MenuSpec spec = spec("""
                 rows = 1
                 items {
                   go { slot = 0, material = STONE, name = "go", click { left = ["close"] } }
@@ -249,8 +244,7 @@ class MenuRendererTest {
     @Test
     void anItemWhoseViewFailsIsNotOfferedToABedrockViewer() {
         conditions.register("never", (ctx, args) -> false);
-        MenuSpec spec = spec(
-                """
+        MenuSpec spec = spec("""
                 rows = 1
                 items {
                   hidden { slot = 0, material = STONE, name = "hidden", view = ["never"], click { left = ["close"] } }
@@ -266,8 +260,7 @@ class MenuRendererTest {
     /** A wiring gap must hide the item rather than show it, because the wrong answer here is the one that leaks. */
     @Test
     void anUnregisteredConditionHidesTheItemRatherThanShowingIt() {
-        MenuSpec spec = spec(
-                """
+        MenuSpec spec = spec("""
                 rows = 1
                 items { gated { slot = 0, material = STONE, name = "gated", view = ["nobody-wired-this"], click { left = ["close"] } } }
                 """);
@@ -278,8 +271,7 @@ class MenuRendererTest {
     @Test
     void anInvertedRequirementPassesWhenItsConditionDoesNot() {
         conditions.register("banned", (ctx, args) -> false);
-        MenuSpec spec = spec(
-                """
+        MenuSpec spec = spec("""
                 rows = 1
                 items { go { slot = 0, material = STONE, name = "go", view = ["!banned"], click { left = ["close"] } } }
                 """);
@@ -312,8 +304,7 @@ class MenuRendererTest {
     @Test
     void aSlotPastTheEndOfASmallerWindowIsSkippedRatherThanThrown() {
         Inventory inv = inv(9);
-        MenuSpec spec = spec(
-                """
+        MenuSpec spec = spec("""
                 rows = 3
                 items {
                   inside { slot = 0, material = DIAMOND, name = "in" }
@@ -334,8 +325,7 @@ class MenuRendererTest {
     @Test
     void aListStampsItsTemplateOncePerEntryAndRoutesEachWithThatEntry() {
         Inventory inv = inv(27);
-        MenuSpec spec = spec(
-                """
+        MenuSpec spec = spec("""
                 rows = 3
                 items { grid { slots = [0, 1, 2], list { source = "warps:all", template { material = PAPER } } } }
                 """);
@@ -353,8 +343,7 @@ class MenuRendererTest {
     void aContentSlotTheListDoesNotFillIsClearedRatherThanLeftStale() {
         Inventory inv = inv(27);
         inv.setItem(2, new ItemStack(Material.BEDROCK));
-        MenuSpec spec = spec(
-                """
+        MenuSpec spec = spec("""
                 rows = 3
                 items { grid { slots = [0, 1, 2], list { source = "warps:all", template { material = PAPER } } } }
                 """);
@@ -372,8 +361,7 @@ class MenuRendererTest {
     @Test
     void aLayeredDecorationShowsThroughAShortListAndTheBaseBackdropDoesNot() {
         Inventory inv = inv(27);
-        MenuSpec spec = spec(
-                """
+        MenuSpec spec = spec("""
                 rows = 3
                 items {
                   backdrop { slot = 1, material = GRAY_STAINED_GLASS_PANE, name = "back" }
@@ -399,8 +387,7 @@ class MenuRendererTest {
     void aRegionWinsItsSlotsOverTheChromeUnderneath() {
         Inventory inv = inv(27);
         contents.register("deposit", new FixedProvider(List.of(new ItemStack(Material.EMERALD)), true));
-        MenuSpec spec = spec(
-                """
+        MenuSpec spec = spec("""
                 rows = 3
                 items { filler { slots = [0, 1], material = GRAY_STAINED_GLASS_PANE, name = "pane" } }
                 content { deposit { slots = [1] } }
@@ -418,8 +405,7 @@ class MenuRendererTest {
     @Test
     void aRegionWithNoProviderClearsItsSlotsRatherThanLeavingTheChrome() {
         Inventory inv = inv(27);
-        MenuSpec spec = spec(
-                """
+        MenuSpec spec = spec("""
                 rows = 3
                 items { filler { slots = [0, 1], material = GRAY_STAINED_GLASS_PANE, name = "pane" } }
                 content { nobody-wired-this { slots = [1] } }
@@ -453,8 +439,7 @@ class MenuRendererTest {
     void aRedrawKeepsWhatTheViewerPutInARegionThatDoesNotRepaint() {
         Inventory inv = inv(27);
         contents.register("deposit", new FixedProvider(List.of(), false));
-        MenuSpec spec = spec(
-                """
+        MenuSpec spec = spec("""
                 rows = 3
                 items { filler { slots = [0, 1], material = GRAY_STAINED_GLASS_PANE, name = "pane" } }
                 content { deposit { slots = [1] } }
@@ -471,8 +456,7 @@ class MenuRendererTest {
     void aRedrawKeepsASlotTheViewerEmptiedEmpty() {
         Inventory inv = inv(27);
         contents.register("deposit", new FixedProvider(List.of(), false));
-        MenuSpec spec = spec(
-                """
+        MenuSpec spec = spec("""
                 rows = 3
                 items { filler { slots = [0, 1], material = GRAY_STAINED_GLASS_PANE, name = "pane" } }
                 content { deposit { slots = [1] } }
@@ -516,8 +500,7 @@ class MenuRendererTest {
 
     @Test
     void aBottomItemIsPaintedIntoThePlayerInventoryAndRoutedUnderItsRawSlot() {
-        MenuSpec spec = spec(
-                """
+        MenuSpec spec = spec("""
                 bottom-inventory = true
                 items {
                   top { slot = 0, material = DIAMOND, name = "top" }

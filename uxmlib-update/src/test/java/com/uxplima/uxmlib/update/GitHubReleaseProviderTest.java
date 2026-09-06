@@ -8,8 +8,7 @@ import org.junit.jupiter.api.Test;
 class GitHubReleaseProviderTest {
 
     // A trimmed but real-shaped GitHub /releases/latest response.
-    private static final String SAMPLE =
-            """
+    private static final String SAMPLE = """
             {
               "url": "https://api.github.com/repos/o/r/releases/123",
               "html_url": "https://github.com/o/r/releases/tag/v1.4.0",

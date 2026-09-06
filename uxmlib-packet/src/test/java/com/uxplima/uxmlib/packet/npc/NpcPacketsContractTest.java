@@ -942,7 +942,10 @@ class NpcPacketsContractTest {
 
         record FrozenTicks(int entityId, int ticks) {}
 
-        record GlowColor(String teamName, String memberName, @Nullable NamedColor color) {}
+        record GlowColor(
+                String teamName,
+                String memberName,
+                @Nullable NamedColor color) {}
 
         record GlowColorRemove(String teamName) {}
 

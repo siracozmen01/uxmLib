@@ -112,9 +112,10 @@ class ReflectiveProviderPrefixesTest {
     /** A bare material name belongs to the renderer's fallback, and none of these may take it. */
     @Test
     void noProviderClaimsABareMaterialName() {
-        byPrefix().forEach((prefix, provider) -> assertThat(provider.icon("DIAMOND_SWORD", ctx))
-                .as(prefix)
-                .isEmpty());
+        byPrefix()
+                .forEach((prefix, provider) -> assertThat(provider.icon("DIAMOND_SWORD", ctx))
+                        .as(prefix)
+                        .isEmpty());
     }
 
     // -- a server that has none of them ----------------------------------------------------------------------
@@ -126,9 +127,10 @@ class ReflectiveProviderPrefixesTest {
      */
     @Test
     void aServerWithNoneOfThePluginsDeclinesQuietly() {
-        byPrefix().forEach((prefix, provider) -> assertThat(provider.icon(prefix + "anything", ctx))
-                .as(prefix)
-                .isEmpty());
+        byPrefix()
+                .forEach((prefix, provider) -> assertThat(provider.icon(prefix + "anything", ctx))
+                        .as(prefix)
+                        .isEmpty());
 
         assertThat(log.lines).isEmpty();
     }

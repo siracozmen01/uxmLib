@@ -291,9 +291,7 @@ class MenusBedrockFormTest {
     /** A menu that declares its own form gets that one, not the button list the engine would have degraded to. */
     @Test
     void aMenuThatDeclaresItsOwnFormSendsThatRatherThanTheDegradedButtonList() {
-        open(
-                "warp",
-                """
+        open("warp", """
                 rows = 1
                 items { a { slot = 0, material = STONE, name = "A" } }
                 bedrock {
@@ -328,9 +326,7 @@ class MenusBedrockFormTest {
     /** The declared-form path shares that bookkeeping, and shares it through the same one place. */
     @Test
     void aDeclaredFormOpenJoinsTheBackHistoryAndFiresTheOpenActionsToo() {
-        open(
-                "warp",
-                """
+        open("warp", """
                 rows = 1
                 open-actions = [ "note" ]
                 items { a { slot = 0, material = STONE } }
@@ -346,9 +342,7 @@ class MenusBedrockFormTest {
     /** One button per visible actionable item, in slot order: the reading order the chest gives a Java viewer. */
     @Test
     void everyActionableItemBecomesOneButtonInSlotOrder() {
-        open(
-                "shop",
-                """
+        open("shop", """
                 rows = 1
                 items {
                   c { slot = 2, material = STONE, name = "C", click { left = ["note"] } }
@@ -363,9 +357,7 @@ class MenusBedrockFormTest {
     /** A tap runs that button's own item's left-click actions: the same handler the chest click would reach. */
     @Test
     void tappingAButtonRunsThatItemsLeftClickActions() {
-        open(
-                "shop",
-                """
+        open("shop", """
                 rows = 1
                 items {
                   a { slot = 0, material = STONE, name = "A", click { left = ["note:a"] } }
@@ -401,9 +393,7 @@ class MenusBedrockFormTest {
     @Test
     void aListBackedMenuPagesItsEntriesAsButtonsAndOffersTheNextPage() {
         lists.register("warps", ctx -> List.of("spawn", "shop", "mine"));
-        open(
-                "warps",
-                """
+        open("warps", """
                 rows = 1
                 items {
                   go { slot = 0, material = STONE, name = "go", click { left = ["note"] } }
@@ -418,9 +408,7 @@ class MenusBedrockFormTest {
     @Test
     void tappingNextResendsTheFormOnePageOver() {
         lists.register("warps", ctx -> List.of("spawn", "shop", "mine"));
-        open(
-                "warps",
-                """
+        open("warps", """
                 rows = 1
                 items {
                   grid { slots = [0, 1], list { source = warps, template { material = PAPER, name = "warp" } } }
@@ -438,9 +426,7 @@ class MenusBedrockFormTest {
     /** Each submitted value reaches the on-submit actions as a local placeholder, keyed by the widget's own name. */
     @Test
     void submittingBindsEachValueAsALocalPlaceholderForTheOnSubmitActions() {
-        open(
-                "warp",
-                """
+        open("warp", """
                 rows = 1
                 items { a { slot = 0, material = STONE } }
                 bedrock {
@@ -459,9 +445,7 @@ class MenusBedrockFormTest {
     /** A viewer who dismisses the form submitted nothing, so nothing runs: the close is not a submit with no values. */
     @Test
     void dismissingTheDeclaredFormRunsNothing() {
-        open(
-                "warp",
-                """
+        open("warp", """
                 rows = 1
                 items { a { slot = 0, material = STONE } }
                 bedrock {
@@ -544,11 +528,7 @@ class MenusBedrockFormTest {
     void aFormSubmitRunsItsActionsOnTheViewersThreadAndNotOnTheResponseThread() {
         Deferring deferring = new Deferring();
         Menus deferred = engine(deferring);
-        deferred.registerSpec(
-                "warp",
-                new MenuSpecLoader()
-                        .parse(
-                                """
+        deferred.registerSpec("warp", new MenuSpecLoader().parse("""
                                 rows = 1
                                 items { a { slot = 0, material = STONE } }
                                 bedrock {

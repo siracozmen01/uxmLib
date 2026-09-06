@@ -14,8 +14,7 @@ class JsonUrlReleaseProviderTest {
     private static final List<String> DEFAULT_FIELDS = List.of("tag_name", "version");
 
     // A GitHub-shaped body: tag_name plus an explicit html_url page.
-    private static final String WITH_TAG_AND_PAGE =
-            """
+    private static final String WITH_TAG_AND_PAGE = """
             {
               "tag_name": "v1.4.0",
               "html_url": "https://example.com/r/releases/tag/v1.4.0"

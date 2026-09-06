@@ -23,7 +23,12 @@ import org.jspecify.annotations.Nullable;
  * @param skin the custom skin texture, or {@code null} for no skin override
  * @param name the {@code GameProfile} name an add-entry needs; defaults to the id string when {@code null}
  */
-public record TabEntry(UUID id, Component displayName, int listOrder, @Nullable TabSkin skin, @Nullable String name) {
+public record TabEntry(
+        UUID id,
+        Component displayName,
+        int listOrder,
+        @Nullable TabSkin skin,
+        @Nullable String name) {
 
     /** Mojang caps a {@code GameProfile} name at 16 characters; a longer one makes the profile ctor throw. */
     private static final int MAX_PROFILE_NAME_LENGTH = 16;

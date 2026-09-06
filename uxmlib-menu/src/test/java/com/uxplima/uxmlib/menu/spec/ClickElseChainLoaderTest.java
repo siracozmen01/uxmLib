@@ -7,8 +7,7 @@ import org.junit.jupiter.api.Test;
 /** How the loader reads a gesture's {@code else} block into a nested {@link ClickBranch} chain. */
 class ClickElseChainLoaderTest {
 
-    private static final String NESTED =
-            """
+    private static final String NESTED = """
             rows = 1
             items {
               a {

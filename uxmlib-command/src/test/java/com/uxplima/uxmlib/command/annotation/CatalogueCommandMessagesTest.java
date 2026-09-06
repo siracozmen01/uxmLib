@@ -48,10 +48,12 @@ class CatalogueCommandMessagesTest {
      */
     @Test
     void noShippedDefaultNamesATagOnlyAStyleLayerResolves() {
-        assertThat(CommandLine.values()).allSatisfy(line -> assertThat(line.defaultTemplate())
-                .describedAs(line.path())
-                .doesNotContain("<tag:", "<etag:", "<h:", "<g:", "<plain>", "<caps>")
-                .doesNotContain("<body>", "<accent>", "<value>", "<subtext>", "<dim>", "<muted>", "<good>", "<bad>"));
+        assertThat(CommandLine.values())
+                .allSatisfy(line -> assertThat(line.defaultTemplate())
+                        .describedAs(line.path())
+                        .doesNotContain("<tag:", "<etag:", "<h:", "<g:", "<plain>", "<caps>")
+                        .doesNotContain(
+                                "<body>", "<accent>", "<value>", "<subtext>", "<dim>", "<muted>", "<good>", "<bad>"));
     }
 
     @Test
