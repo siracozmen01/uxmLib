@@ -24,6 +24,12 @@ jobs:
       - name: Check the writing style
         run: bash scripts/check-style.sh
 
+      # The README module table is this library's API inventory, and nothing in the build reads it. Two
+      # modules once shipped without ever reaching it. The guard runs here for the same reason the style
+      # one does: a wrong document must fail before a publish, and never inside it.
+      - name: Check the module inventory
+        run: bash scripts/check-readme-modules.sh
+
       # Two JDKs, on purpose. The compiler has to be 25: paper-api ships Java 25 class files that an older
       # one cannot read, while the emitted bytecode stays at 21 so the server-free modules stay usable from
       # a Java 21 project. Gradle itself, though, runs on 21: Palantir's formatter reaches into javac
