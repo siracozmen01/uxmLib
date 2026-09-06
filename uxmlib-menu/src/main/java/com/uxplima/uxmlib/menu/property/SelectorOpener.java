@@ -18,7 +18,7 @@ import org.jspecify.annotations.NullMarked;
  * <p>An opener receives everything the property already has: the viewer, a resolved title, the row count, the filler
  * material, and one {@link SelectorButton} per option, each an icon plus its choose action. It shows them as a child
  * window
- * the one menu listener routes and the one teardown owns. A button click runs its {@link SelectorButton#onChoose}
+ * the one menu listener routes and the one teardown owns. A button click runs its {@link SelectorButton#onClick()}
  * exactly once on the viewer's entity thread; closing the window without choosing runs nothing. The same capability
  * serves any property that opens a flat picker (the enum selector now, and the list and colour pickers as they migrate)
  * so each builds {@link SelectorButton}s and lets the engine paint and route them.
