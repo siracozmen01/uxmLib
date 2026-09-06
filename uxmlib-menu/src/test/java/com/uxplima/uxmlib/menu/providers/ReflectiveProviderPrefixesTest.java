@@ -184,4 +184,33 @@ class ReflectiveProviderPrefixesTest {
                 .as("it tried, which is what a well formed value does")
                 .containsExactly("warn");
     }
+
+    // -- and the contrast: with the plugin there, they do reach for it ---------------------------------------
+
+    /**
+     * The contrast that gives every quiet decline above its meaning. With the plugin reported as present, each
+     * provider does reach for its SDK, and on a machine that has none of them that reach fails and is reported
+     * once. A provider that had quietly resolved to nothing, whatever it was asked, would pass every other test in
+     * this class.
+     */
+    @Test
+    void everyProviderWithItsPluginPresentReachesForItsSdkAndSaysSoOnce() {
+        when(plugins.isPluginEnabled(org.mockito.ArgumentMatchers.anyString())).thenReturn(true);
+        Map<String, String> wellFormed = Map.of(
+                "itemsadder:", "namespace:sword",
+                "oraxen:", "sword",
+                "nexo:", "sword",
+                "craftengine:", "default:topaz",
+                "mmoitems:", "SWORD:CUTLASS",
+                "ei:", "sword");
+
+        byPrefix().forEach((prefix, provider) -> {
+            int saidBefore = log.lines.size();
+            String value = java.util.Objects.requireNonNull(wellFormed.get(prefix), prefix);
+
+            assertThat(provider.icon(prefix + value, ctx)).as(prefix).isEmpty();
+
+            assertThat(log.lines.size()).as(prefix + " reached for its SDK").isEqualTo(saidBefore + 1);
+        });
+    }
 }

@@ -65,8 +65,11 @@ final class CraftEngineIconProvider extends ReflectiveItemProvider {
      * The build overload that takes a viewer, which is what a menu icon wants: it is built for nobody in particular
      * (the argument is nullable), so the icon carries no player-specific state. Chosen by its parameter type rather
      * than by name, so the rename between CraftEngine releases does not matter.
+     *
+     * <p>Package-private rather than private: the choice is the one part of this class that a CraftEngine release
+     * can break, and it is provable on any object, so a test pins it without the plugin on the classpath.
      */
-    private static Method build(Object definition) throws NoSuchMethodException {
+    static Method build(Object definition) throws NoSuchMethodException {
         for (Method method : definition.getClass().getMethods()) {
             if (method.getParameterCount() == 1
                     && PLAYER_TYPE.equals(method.getParameterTypes()[0].getSimpleName())
@@ -77,8 +80,11 @@ final class CraftEngineIconProvider extends ReflectiveItemProvider {
         throw new NoSuchMethodException("no viewer-less build method on " + definition.getClass());
     }
 
-    /** The Bukkit stack inside CraftEngine's item wrapper, or the value itself when it already is one. */
-    private static @Nullable ItemStack unwrap(Object built) throws ReflectiveOperationException {
+    /**
+     * The Bukkit stack inside CraftEngine's item wrapper, or the value itself when it already is one.
+     * Package-private for the same reason {@link #build(Object)} is.
+     */
+    static @Nullable ItemStack unwrap(Object built) throws ReflectiveOperationException {
         if (built instanceof ItemStack stack) {
             return stack;
         }
