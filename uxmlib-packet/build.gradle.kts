@@ -37,3 +37,16 @@ dependencies {
 paperweight {
     addServerDependencyTo.set(listOf(configurations.compileOnly.get()))
 }
+
+// This module and uxmlib-nametags apply paperweight-userdev against the same dev bundle, so both derive
+// the same work directory and both want its lock. org.gradle.parallel is on, so in one build the two
+// setup tasks reach for that lock at the same moment and the second dies with "lock file is currently
+// held by this process": two tasks of one build, not two builds on one machine, which is why waiting
+// and running it again always worked and why it came back on every cold cache.
+//
+// Ordering them costs one setup's wait on a cold cache and nothing after that, because the second task
+// finds the work done. The pair is named rather than generalised: a third module applying paperweight
+// would have to join the chain here, and a comment that says so is worth more than a clever rule.
+tasks.named("paperweightUserdevSetup") {
+    mustRunAfter(":uxmlib-nametags:paperweightUserdevSetup")
+}
