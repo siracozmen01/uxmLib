@@ -326,8 +326,9 @@ ordered list of colours that decoration is taken from, so a screen of tiles can 
 any file naming a colour.
 
 ```java
-// One file for the whole server, with this plugin's own file on top of it, key by key.
-Theme theme = ThemeFiles.load(ThemeFiles.shared(dataFolder), dataFolder.resolve("theme.conf"));
+// One file for a suite of plugins, with this plugin's own file on top of it, key by key. The folder
+// the suite shares is your word, not the library's; a plugin that stands alone reads its own file.
+Theme theme = ThemeFiles.load(ThemeFiles.shared(dataFolder, "myTheme"), ThemeFiles.own(dataFolder));
 Styler styler = new Styler(theme);
 
 // A catalog line names a role, never a colour:
@@ -335,7 +336,7 @@ Styler styler = new Styler(theme);
 messages.reload(styler.style(catalog, MyKeys.values(), files, Locale.ENGLISH));
 
 // On a /reload, hand the same styler the new palette rather than building a second one:
-styler.reload(ThemeFiles.load(ThemeFiles.shared(dataFolder), dataFolder.resolve("theme.conf")));
+styler.reload(ThemeFiles.load(ThemeFiles.shared(dataFolder, "myTheme"), ThemeFiles.own(dataFolder)));
 
 // Text a plugin computes has no catalog entry to style at load, so style it per viewer, and ask
 // Messages which language that viewer is being served rather than reading the player's own locale,
@@ -374,12 +375,19 @@ own. A file that draws its own glyphs and its own margins goes through `Lore.ver
 the padding and the closing air and leaves the geometry alone, so a plugin can still let its buyer write a
 look that is nothing like this one.
 
-The library ships `uxmlib/theme.conf` as a starting file: the palette, the roles, the wheel, the glyphs,
-the category colours, named gradients and which languages take small capitals. A key it leaves out keeps the shipped answer, and naming
-one language never decides for the others. The shipped file turns nothing on that a look would notice: the
-small capitals block is an example, commented out. A `gradients { header = [...] }` block paints every `<h:'…'>`
-header across those stops; leave the block out and headers stay the flat accent colour, which is what the
-shipped file does.
+The library ships `uxmlib/theme.conf` as a starting file a consumer copies and then owns: a palette, the
+roles pointed at it, and every other block written out but commented, so what it turns on is visible and
+short. A key it leaves out keeps the shipped answer.
+
+What ships is the mechanism, and not a look. Every role answers, so `<value>` is a colour rather than seven
+characters a player reads, and each one falls back to one of the sixteen colours Minecraft has always had:
+the one palette that is neither ours nor invented. Nothing else is decided. No glyph is drawn, no category
+takes a colour of its own, no gradient and no wheel exist, and no language is written in small capitals,
+until your file names them. A `gradients { header = [...] }` block paints every `<h:'…'>` header across
+those stops; leave it out and headers stay the flat accent colour.
+
+A plugin that stands alone wants one file and nothing beneath it, which is `ThemeFiles.load(file)`. The
+two-file form is for a suite that agrees on a folder name.
 
 A name that is not a heading takes `<g:'UXM Network':wheel>`: the same lookup as a heading, painted across
 every colour of the wheel in order, with no bold and in the letters the file wrote. That is the one token a
@@ -578,6 +586,12 @@ reads every line from the catalog under the `CommandLine` keys (`command.player-
 the rest), so the command layer is translated and painted with everything else, and an operator can re-word any
 of it in their language file.
 
+The template each key ships is plain MiniMessage in the vanilla colours, and it is meant to be replaced. A
+default has to read correctly for a consumer who wires no style layer at all, and MiniMessage leaves a tag it
+does not know as literal text, so a default written in one plugin's own vocabulary would reach that consumer's
+players as the characters of a tag. Write your own template at these paths, in your own tokens, in your own
+language files: the catalog wins over the default for every key it holds.
+
 Each method receives the sender's locale and the *values*: the bad input, the allowed ones, the time left.
 Never a finished English sentence, since no other language puts those words in the same order. Every
 method has a default, so a plugin that ignores the seam keeps the English it always had.
@@ -773,14 +787,25 @@ bus.publish("party-updates", encode(update));                  // fail-degraded,
 
 ### Update checker
 
-Notify-only: it logs to the console and shows a permission-gated clickable message on join. It never
-self-downloads.
+Notify-only: it logs to the console and shows a permission-gated message on join. It never self-downloads.
+
+It decides when to speak and never what is said. The sentence is an `UpdateAnnouncement` you supply, and it
+is required rather than defaulted: a version notice is one of the few lines a plugin sends that has no entry
+in its own message file, so a shipped one would put English, in colours nobody chose, into a plugin that
+translates everything else.
 
 ```java
 UpdateChecker checker = new UpdateChecker(
         scheduler, new GitHubReleaseProvider("you", "your-plugin"), UxmLibVersion.VERSION);
 
-new UpdateNotifier(plugin, scheduler, checker, "yourplugin.update.notify")
+UpdateAnnouncement announcement = (name, current, release) -> messages.render(
+                MyKeys.UPDATE_AVAILABLE,
+                Text.placeholder("name", name),
+                Text.placeholder("current", current),
+                Text.placeholder("latest", release.version()))
+        .clickEvent(ClickEvent.openUrl(release.url()));
+
+new UpdateNotifier(plugin, scheduler, checker, "yourplugin.update.notify", announcement)
         .start(Duration.ofSeconds(40), Duration.ofHours(6));
 ```
 

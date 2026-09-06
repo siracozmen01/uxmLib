@@ -1,6 +1,7 @@
 package com.uxplima.uxmlib.text.style;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -17,15 +18,54 @@ class ThemeFilesTest {
     void theSharedFileSitsBesideThePluginsThatReadIt(@TempDir Path root) {
         Path dataFolder = root.resolve("plugins").resolve("uxmTags");
 
-        assertThat(ThemeFiles.shared(dataFolder))
-                .isEqualTo(root.resolve("plugins").resolve("uxmTheme").resolve("theme.conf"));
+        assertThat(ThemeFiles.shared(dataFolder, "aSuiteFolder"))
+                .isEqualTo(root.resolve("plugins").resolve("aSuiteFolder").resolve("theme.conf"));
+    }
+
+    /**
+     * The folder is the caller's word, not the library's. This is the whole of the change: a library that
+     * named one would send every consumer to read a file in a directory they never created.
+     */
+    @Test
+    void theSharedFolderIsWhateverTheCallerNames(@TempDir Path root) {
+        Path dataFolder = root.resolve("plugins").resolve("aPlugin");
+
+        assertThat(ThemeFiles.shared(dataFolder, "one")).isNotEqualTo(ThemeFiles.shared(dataFolder, "another"));
+        assertThat(ThemeFiles.shared(dataFolder, "one"))
+                .isEqualTo(root.resolve("plugins").resolve("one").resolve("theme.conf"));
+    }
+
+    /** A blank folder resolves to the plugins directory itself, which is a theme belonging to nobody. */
+    @Test
+    void aBlankFolderIsRefused(@TempDir Path root) {
+        Path dataFolder = root.resolve("plugins").resolve("aPlugin");
+
+        assertThatThrownBy(() -> ThemeFiles.shared(dataFolder, " ")).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /** A plugin that stands alone has one file, in its own folder, and no suite to share one with. */
+    @Test
+    void aPluginsOwnFileSitsInItsOwnFolder(@TempDir Path root) {
+        Path dataFolder = root.resolve("plugins").resolve("aPlugin");
+
+        assertThat(ThemeFiles.own(dataFolder)).isEqualTo(dataFolder.resolve("theme.conf"));
     }
 
     @Test
-    void neitherFileMeansTheShippedLook(@TempDir Path root) throws ConfigurateException {
-        Theme theme = ThemeFiles.load(root.resolve("uxmTheme/theme.conf"), root.resolve("uxmTags/theme.conf"));
+    void neitherFileMeansTheShippedDefaults(@TempDir Path root) throws ConfigurateException {
+        Theme theme = ThemeFiles.load(root.resolve("aSuite/theme.conf"), root.resolve("aPlugin/theme.conf"));
 
         assertThat(theme.hex("accent")).isEqualTo(Theme.defaults().hex("accent"));
+    }
+
+    /** One file and nothing beneath it, for the plugin that has no suite around it. */
+    @Test
+    void oneFileIsReadOnItsOwn(@TempDir Path root) throws IOException, ConfigurateException {
+        Path file = write(root, "own.conf", "roles { accent = \"#ff0000\" }\n");
+
+        assertThat(ThemeFiles.load(file).hex("accent")).isEqualTo("#ff0000");
+        assertThat(ThemeFiles.load(root.resolve("missing.conf")).hex("accent"))
+                .isEqualTo(Theme.defaults().hex("accent"));
     }
 
     @Test

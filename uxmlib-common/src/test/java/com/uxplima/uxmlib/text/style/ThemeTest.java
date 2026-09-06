@@ -9,6 +9,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
 
+import net.kyori.adventure.text.format.NamedTextColor;
+
 import org.junit.jupiter.api.Test;
 import org.spongepowered.configurate.CommentedConfigurationNode;
 import org.spongepowered.configurate.ConfigurateException;
@@ -21,14 +23,39 @@ import org.spongepowered.configurate.hocon.HoconConfigurationLoader;
  */
 class ThemeTest {
 
+    /**
+     * The role names are the mechanism: {@link Theme#hasColour} is what makes {@code <value>} a colour
+     * rather than seven characters a player reads, so a role that stopped answering would stop being a
+     * token in every message at once.
+     */
     @Test
-    void theShippedPaletteAnswersEveryRole() {
+    void everyRoleAnswersSoThatEveryTokenIsStillAToken() {
         Theme theme = Theme.defaults();
 
-        assertThat(theme.hex("accent")).isEqualTo("#38b6ff");
-        assertThat(theme.hex("value")).isEqualTo("#8fd9ff");
+        assertThat(List.of(
+                        "accent", "body", "subtext", "muted", "dim", "icon", "crumb", "value", "good", "bad", "warn",
+                        "money", "level", "cta", "info", "rank", "event"))
+                .allSatisfy(role ->
+                        assertThat(theme.hasColour(role)).describedAs(role).isTrue());
         assertThat(theme.hasColour("nonsense")).isFalse();
         assertThat(theme.colour("nonsense")).isEqualTo(theme.colour("body"));
+    }
+
+    /**
+     * The colours behind the names are taste, and a library holds none. Each falls back to one of the
+     * sixteen Minecraft has always had, which is what a server sees when nothing has painted anything, and
+     * never to a colour of ours.
+     */
+    @Test
+    void theShippedColoursAreVanillaAndNotABrand() {
+        Theme theme = Theme.defaults();
+
+        assertThat(theme.colour("accent")).isEqualTo(NamedTextColor.AQUA);
+        assertThat(theme.colour("body")).isEqualTo(NamedTextColor.WHITE);
+        assertThat(theme.colour("value")).isEqualTo(NamedTextColor.YELLOW);
+        assertThat(theme.colour("good")).isEqualTo(NamedTextColor.GREEN);
+        assertThat(theme.colour("bad")).isEqualTo(NamedTextColor.RED);
+        assertThat(NamedTextColor.NAMES.values()).contains((NamedTextColor) theme.colour("event"));
     }
 
     @Test
@@ -51,16 +78,41 @@ class ThemeTest {
         assertThat(Theme.from(node).categoryRole("tags")).isEqualTo("accent");
     }
 
+    /**
+     * A glyph is furniture, and furniture is taste, so nothing is drawn until the file names it: a file that
+     * names one glyph decorates that one line and leaves every other line as it was.
+     */
     @Test
-    void glyphsAreConfigurableAndDefaultToTheShippedOnes() throws ConfigurateException {
+    void aGlyphIsDrawnOnlyWhereTheFileNamesOne() throws ConfigurateException {
         ConfigurationNode node = CommentedConfigurationNode.root();
         node.node("glyphs", "row").set("-");
 
         Theme theme = Theme.from(node);
 
         assertThat(theme.glyph("row")).isEqualTo("-");
-        assertThat(theme.glyph("action")).isEqualTo("→");
+        assertThat(theme.glyph("action")).isEmpty();
         assertThat(theme.glyph("nothing-is-called-this")).isEmpty();
+    }
+
+    /** The glyph map is open, like the roles: a file may draw a part of an interface this library never saw. */
+    @Test
+    void aGlyphTheLibraryNeverHeardOfIsStillAGlyph() throws ConfigurateException {
+        ConfigurationNode node = CommentedConfigurationNode.root();
+        node.node("glyphs", "banner").set("=");
+
+        assertThat(Theme.from(node).glyph("banner")).isEqualTo("=");
+    }
+
+    /** The library decorates nothing and colours no category of its own: both are the file's decision. */
+    @Test
+    void theLibraryShipsNoGlyphAndNoCategoryColour() {
+        Theme theme = Theme.defaults();
+
+        assertThat(theme.separator()).isEmpty();
+        assertThat(theme.glyph("title")).isEmpty();
+        assertThat(theme.glyph("action")).isEmpty();
+        assertThat(theme.categoryRole("error")).isEqualTo("accent");
+        assertThat(theme.categoryRole("money")).isEqualTo("accent");
     }
 
     /** The separator lived under the prefix block before the glyphs were configurable. Both still work. */
@@ -144,9 +196,12 @@ class ThemeTest {
 
         assertThat(fromFile.hex("accent")).isEqualTo(defaults.hex("accent"));
         assertThat(fromFile.hex("event")).isEqualTo(defaults.hex("event"));
+        assertThat(fromFile.hex("value")).isEqualTo(defaults.hex("value"));
         assertThat(fromFile.glyph("title")).isEqualTo(defaults.glyph("title"));
         assertThat(fromFile.separator()).isEqualTo(defaults.separator());
-        assertThat(fromFile.categoryRole("error")).isEqualTo("bad");
+        assertThat(fromFile.categoryRole("error")).isEqualTo(defaults.categoryRole("error"));
+        assertThat(fromFile.gradient("header")).isEqualTo(defaults.gradient("header"));
+        assertThat(fromFile.wheel()).isEqualTo(defaults.wheel());
         assertThat(fromFile.smallCaps(Locale.ENGLISH)).isFalse();
         assertThat(fromFile.smallCaps(Locale.of("tr"))).isFalse();
     }

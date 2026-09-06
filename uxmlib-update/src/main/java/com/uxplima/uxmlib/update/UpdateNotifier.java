@@ -16,7 +16,10 @@ import org.jspecify.annotations.Nullable;
  * Wires a notify-only update check into a running plugin: it polls an {@link UpdateProvider} on a recurring
  * {@link Scheduler#asyncTimer} (off-thread, never a server thread), logs the result to the console via the
  * {@code checkAndAnnounce} dedupe (once per distinct newer release, not once per process), and registers a
- * permission-gated clickable on-join notice. It never self-downloads: v1 is notify only.
+ * permission-gated on-join notice. It never self-downloads: v1 is notify only.
+ *
+ * <p>It decides when to speak and never what is said: the sentence is the {@link UpdateAnnouncement} the
+ * consumer supplies, so the wording, the colours and the link belong to the plugin rather than to this jar.
  *
  * <p>This is the module's public entry point. Construct it with the running plugin, the library scheduler, and
  * a configured {@link UpdateChecker}, then call {@link #start(Duration, Duration)} once during enable and
@@ -29,6 +32,7 @@ public final class UpdateNotifier {
     private final UpdateChecker checker;
     private final String pluginName;
     private final String permission;
+    private final UpdateAnnouncement announcement;
     private final AtomicBoolean started = new AtomicBoolean(false);
     private @Nullable TaskHandle pollTask;
     private @Nullable UpdateJoinListener listener;
@@ -38,12 +42,19 @@ public final class UpdateNotifier {
      * @param scheduler the library scheduler the poll runs on
      * @param checker the configured checker (provider + current version)
      * @param permission the node a player must hold to see the on-join notice (not {@code isOp()})
+     * @param announcement what the notice says, in your own words and your own colours
      */
-    public UpdateNotifier(Plugin plugin, Scheduler scheduler, UpdateChecker checker, String permission) {
+    public UpdateNotifier(
+            Plugin plugin,
+            Scheduler scheduler,
+            UpdateChecker checker,
+            String permission,
+            UpdateAnnouncement announcement) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
         this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
         this.checker = Objects.requireNonNull(checker, "checker");
         this.permission = Objects.requireNonNull(permission, "permission");
+        this.announcement = Objects.requireNonNull(announcement, "announcement");
         this.pluginName = plugin.getName();
     }
 
@@ -62,7 +73,7 @@ public final class UpdateNotifier {
         if (!started.compareAndSet(false, true)) {
             return;
         }
-        UpdateJoinListener joinListener = new UpdateJoinListener(checker, pluginName, permission);
+        UpdateJoinListener joinListener = new UpdateJoinListener(checker, pluginName, permission, announcement);
         listener = joinListener;
         plugin.getServer().getPluginManager().registerEvents(joinListener, plugin);
         pollTask = scheduler.asyncTimer(initialDelay, period, handle -> poll());
@@ -94,7 +105,7 @@ public final class UpdateNotifier {
 
     private void logToConsole(UpdateOutcome outcome) {
         outcome.release().ifPresent(release -> plugin.getLogger()
-                .info(Text.plain(UpdateMessages.notification(
+                .info(Text.plain(announcement.notification(
                         pluginName, checker.currentVersion().toString(), release))));
     }
 }

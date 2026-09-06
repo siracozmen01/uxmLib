@@ -20,11 +20,13 @@ final class UpdateJoinListener implements Listener {
     private final UpdateChecker checker;
     private final String pluginName;
     private final String permission;
+    private final UpdateAnnouncement announcement;
 
-    UpdateJoinListener(UpdateChecker checker, String pluginName, String permission) {
+    UpdateJoinListener(UpdateChecker checker, String pluginName, String permission, UpdateAnnouncement announcement) {
         this.checker = Objects.requireNonNull(checker, "checker");
         this.pluginName = Objects.requireNonNull(pluginName, "pluginName");
         this.permission = Objects.requireNonNull(permission, "permission");
+        this.announcement = Objects.requireNonNull(announcement, "announcement");
     }
 
     @EventHandler
@@ -41,7 +43,7 @@ final class UpdateJoinListener implements Listener {
             return;
         }
         outcome.release()
-                .ifPresent(release -> player.sendMessage(UpdateMessages.notification(
+                .ifPresent(release -> player.sendMessage(announcement.notification(
                         pluginName, checker.currentVersion().toString(), release)));
     }
 

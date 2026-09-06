@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 
 import org.spongepowered.configurate.ConfigurationNode;
@@ -37,18 +38,45 @@ import org.spongepowered.configurate.ConfigurationNode;
  * <p>A key the file leaves out keeps the shipped default, so an operator may write three lines instead of
  * forty, a language nobody has answered for keeps its own letters, and a role added in a later version cannot
  * break a file written against an earlier one.
+ *
+ * <p>What ships is the mechanism and not a look. Every role answers, in one of the sixteen colours Minecraft
+ * has always had, so a plugin that wires nothing is readable; no glyph, no category colour and no gradient is
+ * decided for anybody. The file at {@code uxmlib/theme.conf} on the classpath is a starting point a consumer
+ * may copy and then own.
  */
 public final class Theme {
 
-    /** The roles and their shipped colours, in the order the shipped file lists them. */
-    private static final Map<String, String> DEFAULT_ROLES = defaultRoles();
+    /**
+     * The roles, and the colour each one takes until a file says otherwise.
+     *
+     * <p>The list of names is mechanism, not taste. {@link #hasColour(String)} is what makes {@code <value>}
+     * a token instead of four letters and two brackets a player reads, so a role this map forgets stops
+     * being a token in every message at once. The colour behind each name is taste, and a library has none:
+     * each falls back to one of the sixteen colours Minecraft has always had, which is what a server already
+     * sees when nothing has painted anything. A file replaces any of them, and the file this library ships
+     * shows how.
+     */
+    private static final Map<String, TextColor> DEFAULT_ROLES = defaultRoles();
 
-    /** The glyphs the structure of a message or a tile is drawn with. */
-    private static final Map<String, String> DEFAULT_GLYPHS = defaultGlyphs();
+    /**
+     * The glyphs the structure of a message or a tile is drawn with, unless the file names them: none.
+     *
+     * <p>A glyph is furniture, and furniture is taste. A library that drew an arrow between a category and
+     * a sentence would be decorating the messages of a plugin that only asked for the colours, and nothing
+     * in that plugin would say where the character came from. So the mechanism ships on and the look ships
+     * off: name a glyph in {@code glyphs} and everything drawn with it takes it, and the file this library
+     * ships shows the set our own interfaces use.
+     */
+    private static final Map<String, String> DEFAULT_GLYPHS = Map.of();
 
-    /** The categories whose prefix is not the accent colour, mapped to the role that colours them. */
-    private static final Map<String, String> DEFAULT_CATEGORIES =
-            Map.of("error", "bad", "money", "good", "shop", "good", "event", "event");
+    /**
+     * The categories whose prefix is not the accent colour: none, until the file names them.
+     *
+     * <p>Which word means trouble and which word means money is a decision about one product's vocabulary,
+     * so the file that holds the words holds the mapping too. A category the file does not name reads in
+     * the accent colour, which is a prefix that looks deliberate rather than one that looks broken.
+     */
+    private static final Map<String, String> DEFAULT_CATEGORIES = Map.of();
 
     /**
      * The languages written in small capitals unless the file says otherwise: none of them.
@@ -95,11 +123,12 @@ public final class Theme {
         this.smallCapsLanguages = Set.copyOf(smallCapsLanguages);
     }
 
-    /** The shipped look, used when there is no file yet or when it is empty. */
+    /**
+     * The shipped look, used when there is no file yet or when it is empty: every role answers, in a vanilla
+     * colour, and nothing else is decided. It is a theme a plugin can ship with and read, not a look.
+     */
     public static Theme defaults() {
-        Map<String, TextColor> roles = new LinkedHashMap<>();
-        DEFAULT_ROLES.forEach((role, hex) -> roles.put(role, parse(hex)));
-        return new Theme(roles, List.of(), Map.of(), DEFAULT_GLYPHS, DEFAULT_CATEGORIES, DEFAULT_SMALL_CAPS);
+        return new Theme(DEFAULT_ROLES, List.of(), Map.of(), DEFAULT_GLYPHS, DEFAULT_CATEGORIES, DEFAULT_SMALL_CAPS);
     }
 
     /**
@@ -230,8 +259,7 @@ public final class Theme {
      * that still writes the old {@code colours} block keeps working and a {@code roles} entry wins.
      */
     private static Map<String, TextColor> roles(ConfigurationNode node, Map<String, TextColor> palette) {
-        Map<String, TextColor> roles = new LinkedHashMap<>();
-        DEFAULT_ROLES.forEach((role, hex) -> roles.put(role, parse(hex)));
+        Map<String, TextColor> roles = new LinkedHashMap<>(DEFAULT_ROLES);
         readColours(node.node(LEGACY_ROLES), palette, roles);
         readColours(node.node("roles"), palette, roles);
         return roles;
@@ -261,18 +289,25 @@ public final class Theme {
     }
 
     /**
-     * The glyphs, reading {@code prefix.separator} as well as {@code glyphs.separator}. The separator lived
-     * under the prefix block before the rest of the glyphs were configurable, so a file that still keeps it
-     * there stands in for the shipped default instead of being quietly ignored; a {@code glyphs.separator}
-     * still wins over both.
+     * Every glyph the file names, reading {@code prefix.separator} as well as {@code glyphs.separator}. The
+     * separator lived under the prefix block before the rest of the glyphs were configurable, so a file that
+     * still keeps it there is still read; a {@code glyphs.separator} wins over it.
+     *
+     * <p>The map is open, like the roles. A name this library never heard of is still a glyph, so a file may
+     * draw a part of an interface this library does not know about.
      */
     private static Map<String, String> glyphs(ConfigurationNode node) {
-        String shippedSeparator = Objects.requireNonNull(DEFAULT_GLYPHS.get(SEPARATOR), SEPARATOR);
-        String separator = node.node("prefix", SEPARATOR).getString(shippedSeparator);
-        Map<String, String> glyphs = new LinkedHashMap<>();
-        for (Map.Entry<String, String> entry : DEFAULT_GLYPHS.entrySet()) {
-            String shipped = SEPARATOR.equals(entry.getKey()) ? separator : entry.getValue();
-            glyphs.put(entry.getKey(), node.node("glyphs", entry.getKey()).getString(shipped));
+        Map<String, String> glyphs = new LinkedHashMap<>(DEFAULT_GLYPHS);
+        String legacySeparator = node.node("prefix", SEPARATOR).getString();
+        if (legacySeparator != null) {
+            glyphs.put(SEPARATOR, legacySeparator);
+        }
+        for (Map.Entry<Object, ? extends ConfigurationNode> child :
+                node.node("glyphs").childrenMap().entrySet()) {
+            String value = child.getValue().getString();
+            if (value != null) {
+                glyphs.put(String.valueOf(child.getKey()), value);
+            }
         }
         return glyphs;
     }
@@ -347,37 +382,25 @@ public final class Theme {
         return parsed;
     }
 
-    private static Map<String, String> defaultRoles() {
-        Map<String, String> roles = new LinkedHashMap<>();
-        roles.put(ACCENT, "#38b6ff");
-        roles.put(BODY, "#ffffff");
-        roles.put("subtext", "#dde8f0");
-        roles.put("muted", "#93a4b3");
-        roles.put("dim", "#6b7886");
-        roles.put("icon", "#8a93a1");
-        roles.put("crumb", "#565f6b");
-        roles.put("value", "#8fd9ff");
-        roles.put("good", "#5be38c");
-        roles.put("bad", "#ff6b6b");
-        roles.put("warn", "#ffc93c");
-        roles.put("money", "#ffc93c");
-        roles.put("level", "#ffc93c");
-        roles.put("cta", "#ffc93c");
-        roles.put("info", "#4fd6e8");
-        roles.put("rank", "#b68cff");
-        roles.put("event", "#ff8fd0");
+    private static Map<String, TextColor> defaultRoles() {
+        Map<String, TextColor> roles = new LinkedHashMap<>();
+        roles.put(ACCENT, NamedTextColor.AQUA);
+        roles.put(BODY, NamedTextColor.WHITE);
+        roles.put("subtext", NamedTextColor.GRAY);
+        roles.put("muted", NamedTextColor.GRAY);
+        roles.put("dim", NamedTextColor.DARK_GRAY);
+        roles.put("icon", NamedTextColor.GRAY);
+        roles.put("crumb", NamedTextColor.DARK_GRAY);
+        roles.put("value", NamedTextColor.YELLOW);
+        roles.put("good", NamedTextColor.GREEN);
+        roles.put("bad", NamedTextColor.RED);
+        roles.put("warn", NamedTextColor.GOLD);
+        roles.put("money", NamedTextColor.GOLD);
+        roles.put("level", NamedTextColor.LIGHT_PURPLE);
+        roles.put("cta", NamedTextColor.YELLOW);
+        roles.put("info", NamedTextColor.AQUA);
+        roles.put("rank", NamedTextColor.LIGHT_PURPLE);
+        roles.put("event", NamedTextColor.BLUE);
         return Map.copyOf(roles);
-    }
-
-    private static Map<String, String> defaultGlyphs() {
-        Map<String, String> glyphs = new LinkedHashMap<>();
-        glyphs.put(SEPARATOR, "▶");
-        glyphs.put("title", "◆");
-        glyphs.put("description", "✎");
-        glyphs.put("details", "≡");
-        glyphs.put("row", "•");
-        glyphs.put("status", "•");
-        glyphs.put("action", "→");
-        return Map.copyOf(glyphs);
     }
 }

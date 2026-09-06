@@ -21,7 +21,7 @@ import org.spongepowered.configurate.ConfigurationNode;
 /** The tile shape: a blank name that is a space, a title that opens the lore, and a button left untouched. */
 class TilesTest {
 
-    private final Theme theme = Theme.defaults();
+    private final Theme theme = TestThemes.withGlyphs();
 
     /** An empty name makes the client draw the material's own name, which is the bug this guards. */
     @Test

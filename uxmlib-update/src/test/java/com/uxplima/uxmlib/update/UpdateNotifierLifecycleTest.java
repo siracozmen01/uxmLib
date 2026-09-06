@@ -36,6 +36,10 @@ class UpdateNotifierLifecycleTest {
     private static final String PERMISSION = "uxmlib.update.notify";
     private static final Release NEWER = new Release("1.5.0", "https://github.com/o/r/releases/latest");
 
+    /** A consumer's own line: this module ships no wording, so a caller always brings one. */
+    private static final UpdateAnnouncement ANNOUNCEMENT =
+            (name, current, release) -> Component.text(name + " " + current + " -> " + release.version());
+
     private ServerMock server;
     private Plugin plugin;
 
@@ -156,7 +160,8 @@ class UpdateNotifierLifecycleTest {
     @Test
     void startRegistersExactlyOneListenerAndTimerEvenWhenCalledTwice() {
         RecordingScheduler scheduler = new RecordingScheduler();
-        UpdateNotifier notifier = new UpdateNotifier(plugin, scheduler, warmCheckerReporting(NEWER), PERMISSION);
+        UpdateNotifier notifier =
+                new UpdateNotifier(plugin, scheduler, warmCheckerReporting(NEWER), PERMISSION, ANNOUNCEMENT);
 
         notifier.start(Duration.ofSeconds(1), Duration.ofMinutes(30));
         notifier.start(Duration.ofSeconds(1), Duration.ofMinutes(30));
@@ -168,7 +173,8 @@ class UpdateNotifierLifecycleTest {
     @Test
     void stopCancelsTheTimerAndUnregistersTheListener() {
         RecordingScheduler scheduler = new RecordingScheduler();
-        UpdateNotifier notifier = new UpdateNotifier(plugin, scheduler, warmCheckerReporting(NEWER), PERMISSION);
+        UpdateNotifier notifier =
+                new UpdateNotifier(plugin, scheduler, warmCheckerReporting(NEWER), PERMISSION, ANNOUNCEMENT);
 
         notifier.start(Duration.ofSeconds(1), Duration.ofMinutes(30));
         notifier.stop();
@@ -180,7 +186,8 @@ class UpdateNotifierLifecycleTest {
     @Test
     void stopThenStartCleanlyRebindsWithoutLeaking() {
         RecordingScheduler scheduler = new RecordingScheduler();
-        UpdateNotifier notifier = new UpdateNotifier(plugin, scheduler, warmCheckerReporting(NEWER), PERMISSION);
+        UpdateNotifier notifier =
+                new UpdateNotifier(plugin, scheduler, warmCheckerReporting(NEWER), PERMISSION, ANNOUNCEMENT);
 
         notifier.start(Duration.ofSeconds(1), Duration.ofMinutes(30));
         notifier.stop();
@@ -193,7 +200,8 @@ class UpdateNotifierLifecycleTest {
     @Test
     void stopIsANoOpWhenNeverStarted() {
         RecordingScheduler scheduler = new RecordingScheduler();
-        UpdateNotifier notifier = new UpdateNotifier(plugin, scheduler, warmCheckerReporting(NEWER), PERMISSION);
+        UpdateNotifier notifier =
+                new UpdateNotifier(plugin, scheduler, warmCheckerReporting(NEWER), PERMISSION, ANNOUNCEMENT);
 
         notifier.stop();
 
@@ -203,7 +211,8 @@ class UpdateNotifierLifecycleTest {
     @Test
     void afterStopAJoinNoLongerNotifies() {
         RecordingScheduler scheduler = new RecordingScheduler();
-        UpdateNotifier notifier = new UpdateNotifier(plugin, scheduler, warmCheckerReporting(NEWER), PERMISSION);
+        UpdateNotifier notifier =
+                new UpdateNotifier(plugin, scheduler, warmCheckerReporting(NEWER), PERMISSION, ANNOUNCEMENT);
 
         notifier.start(Duration.ofSeconds(1), Duration.ofMinutes(30));
         notifier.stop();
