@@ -90,7 +90,7 @@ public record MenuSounds(Sound open, Sound click, Sound page, Sound denied) {
      * <p>It is undecodable <em>from the string</em>, not undecodable. Against a registry it is exact: flatten every
      * registry key's dots to underscores and the constant matches one and only one of them, because
      * {@code block.note_block.pling} flattens to {@code block_note_block_pling} and nothing else does. So the mapping
-     * is recovered by asking the server, which is why {@link com.uxplima.uxmlib.gui.config.MenuAction} defers a
+     * is recovered by asking the server, which is why the menu engine's own sound action defers a
      * constant until the moment it plays. This record refuses it because <em>this type has nothing to ask</em>, not
      * because the form cannot be decoded: reading no registry is what lets a configuration file be tested with no
      * server under it, and that is worth more here than the spelling is. A reader who needs the decode should walk
@@ -119,7 +119,7 @@ public record MenuSounds(Sound open, Sound click, Sound page, Sound denied) {
     /**
      * Whether the name is the constant form: upper case letters, digits and underscores only.
      *
-     * <p>{@link com.uxplima.uxmlib.gui.config.MenuAction} spells the same character class, and the copy is deliberate.
+     * <p>The menu engine's sound action spells the same character class, and the copy is deliberate.
      * They are not one rule in two places. That one is an accept gate, asking whether a string may be stored as a
      * sound name at all; this one is a refuse gate, asking whether a name is one this record provably cannot resolve
      * without a registry. The two coincide today by arithmetic rather than by meaning, and a shared helper would weld

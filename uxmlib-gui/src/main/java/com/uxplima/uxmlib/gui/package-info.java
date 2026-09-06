@@ -6,7 +6,7 @@
  * {@link com.uxplima.uxmlib.gui.Guis}: {@link com.uxplima.uxmlib.gui.SimpleGui} for one page,
  * {@link com.uxplima.uxmlib.gui.PaginatedGui} for many. Slot contents: icons, click handlers, and
  * per-render rebuilds, live in {@link com.uxplima.uxmlib.gui.item}; building a whole menu from a config
- * file lives in {@link com.uxplima.uxmlib.gui.config}. Anvil text capture lives in
+ * file is the menu engine's work and lives in {@code uxmlib-menu}. Anvil text capture lives in
  * {@link com.uxplima.uxmlib.gui.anvil}.
  */
 @NullMarked

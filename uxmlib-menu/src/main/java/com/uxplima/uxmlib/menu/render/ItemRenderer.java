@@ -370,7 +370,9 @@ public final class ItemRenderer {
             // placeholders a %token% would use, so a per-entry list item shows that entry's value.
             return guiText.text(ctx.viewer(), key, placeholders.resolveAll(ctx));
         }
-        return guiText.render(applyMath(substituted));
+        // Not a key, so the words are in the line. The viewer goes with it anyway: a consumer whose files
+        // carry a per-viewer shorthand answers here, and one that does not is handed straight to render.
+        return guiText.renderFor(ctx.viewer(), applyMath(substituted), placeholders.resolveAll(ctx));
     }
 
     /**

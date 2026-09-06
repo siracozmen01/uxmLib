@@ -1,4 +1,4 @@
-package com.uxplima.uxmlib.gui.config;
+package com.uxplima.uxmlib.gui;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -61,7 +61,7 @@ class CatalogueWordsTest {
     @Test
     @DisplayName("a tile line draws the blocks the catalogue holds")
     void aTileDrawsItsBlocks() {
-        String drawn = plain(words.text(viewer, "tile:5 @menu.tile state", Map.of()));
+        String drawn = plain(words.renderFor(viewer, "tile:5 @menu.tile state", Map.of()));
 
         assertThat(drawn)
                 .contains("English")
@@ -74,7 +74,7 @@ class CatalogueWordsTest {
     @Test
     @DisplayName("a block the line takes out is not drawn")
     void aBlockCanBeLeftOut() {
-        assertThat(plain(words.text(viewer, "tile:5 @menu.tile -action", Map.of())))
+        assertThat(plain(words.renderFor(viewer, "tile:5 @menu.tile -action", Map.of())))
                 .doesNotContain("Click to read in it.")
                 .contains("English");
     }
@@ -82,20 +82,24 @@ class CatalogueWordsTest {
     @Test
     @DisplayName("a line that names a key reads the catalogue, and one that does not is written as it stands")
     void aKeyIsReadAndAWordIsWritten() {
-        assertThat(plain(words.text(viewer, "@menu.tile.title", Map.of()))).isEqualTo("English");
-        assertThat(plain(words.text(viewer, "Ready", Map.of()))).isEqualTo("Ready");
+        assertThat(plain(words.text(viewer, "menu.tile.title", Map.of()))).isEqualTo("English");
+        assertThat(plain(words.renderFor(viewer, "Ready", Map.of()))).isEqualTo("Ready");
     }
 
     @Test
     @DisplayName("a key nobody translated shows the key, so an operator sees what to write")
     void anUnknownKeyShowsItself() {
-        assertThat(plain(words.text(viewer, "@menu.nothing", Map.of()))).isEqualTo("menu.nothing");
+        assertThat(plain(words.text(viewer, "menu.nothing", Map.of()))).isEqualTo("menu.nothing");
     }
 
+    /**
+     * A line asked for with no viewer cannot be a tile, because which language it reads in is the viewer's own
+     * answer. It is the plain reading instead, which is what an inventory title and a flattened label want.
+     */
     @Test
-    @DisplayName("a value of a row is written into a line and never repaints it")
-    void aValueGoesInAsAPlaceholder() {
-        assertThat(words.line(viewer, "lang:choose <tag>", Map.of("tag", "tr"))).isEqualTo("lang:choose tr");
+    @DisplayName("a line rendered without a viewer is the plain reading of it")
+    void aViewerlessLineIsThePlainReading() {
+        assertThat(plain(words.render("Ready"))).isEqualTo("Ready");
     }
 
     private static String plain(Component text) {

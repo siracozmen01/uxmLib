@@ -55,6 +55,23 @@ public interface GuiText {
     Component render(String raw);
 
     /**
+     * A line an operator wrote, turned into a component for one viewer, with the {@code placeholders} already
+     * substituted into {@code raw} handed over as well.
+     *
+     * <p>{@link #render} answers with no viewer, which is right for a line that already holds its own words. A
+     * consumer whose files carry a shorthand that only means something per player cannot answer from the raw
+     * string alone: a tooltip whose blocks are catalog keys is written the same way for every viewer and reads
+     * in the language each of them chose. This is where such a consumer answers.
+     *
+     * <p>The default is {@link #render}, so a consumer with no such shorthand is unaffected and pays nothing
+     * for a parameter it does not use. A consumer that overrides this takes the per-viewer cost knowingly, on
+     * the same line the catalog lookup already pays it on.
+     */
+    default Component renderFor(Player viewer, String raw, Map<String, String> placeholders) {
+        return render(raw);
+    }
+
+    /**
      * The same words as {@link #text}, with whatever decoration a chat line carries and an inventory title
      * must not.
      *

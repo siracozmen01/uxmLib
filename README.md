@@ -496,55 +496,27 @@ GuiNavigator nav = new GuiNavigator();
 nav.open(player, mainMenu);
 subMenu.set(8, GuiItem.back(nav, backArrow));
 
-// Define a menu in HOCON (operators re-skin; code owns the actions):
-MenuActions actions = new MenuActions().register("buy", e -> openShop(e));
-SimpleGui fromFile = MenuConfig.load(configNode, actions);
 ```
 
-`MenuConfig` reads the mask shape. A second shape names its slots, so a suite of plugins can ship one
-kind of menu file: an operator who has laid out one has laid out all of them.
+A menu written in a file is the [menu engine](#menu-engine)'s work, not this module's. `uxmlib-gui`
+draws what code puts in a window; `uxmlib-menu` reads the file that says what goes in it.
 
-```hocon
-title = "@shop.title"
-rows = 6
-open-actions = ["sound:ITEM_BOOK_PAGE_TURN 0.7 1.2"]
+The two seams this module keeps for it are the words. `GuiText` is where a consumer answers what a key
+stands for and how a written line reads, and `CatalogueWords` is the answer for a consumer whose words
+are in a message catalogue: a key is looked up in the language of the viewer, a plain line is painted in
+the roles of the theme, and a line that starts with `tile:` is drawn as the whole tooltip through
+`MenuTiles`. The library parses no text of its own, so it decides no look and holds no language.
 
-items {
-  filler { slots = ["0-53"], material = GRAY_STAINED_GLASS_PANE, name = " ", priority = 0 }
-  buy {
-    slot = 49, material = EMERALD, name = "@shop.buy", priority = 10
-    view  = ["has-permission shop.buy"]
-    click { left = ["shop:buy", "close"], right = ["shop:look"] }
-  }
-  offers {
-    slots = ["10-16"], priority = 5
-    list { source = "shop:offers", template { material = "%icon%", name = "@shop.offer" } }
-  }
-  next { slot = 53, material = ARROW, type = next, priority = 10 }
-}
-```
-
-`MenuSpec.read` turns the file into values and refuses a layout that cannot be drawn, with no server
-running. `MenuDraw` draws it, centring the title through `MenuTitles.centre`: it wires the four sides of a click through `MenuActionRunner`, hides an item
-whose `view` conditions fail, and fills a `list` from the source the plugin registered. A menu with a list
-is drawn as a paged window over the slots the list names.
-
-```java
-MenuLists lists = new MenuLists().register("shop:offers", viewer -> offersFor(viewer).stream()
-        .map(offer -> MenuLists.Row.of(offer.icon(), Map.of("%price%", offer.price())))
-        .toList());
-
-MenuDraw draw = new MenuDraw(actions, conditions, lists, this::words, this::openMenu);
-draw.open(MenuSpec.read(configNode), player);
-```
-
-`MenuConfig` and `MenuSpec` are the smaller, older readers, kept for the plugins already written against
-them. A new plugin that wants a file-driven menu should take the [menu engine](#menu-engine) instead.
-
-A row carries the values and never the look: the file still writes the name and the lore over the icon the
-row gives. Every line a player reads goes through the `Words` the plugin passed, which looks a key such as
-`@shop.title` up in the catalogue, writes the values of the row in, and paints the result in the colours of
-the server. The library parses no text of its own, so it decides no look and holds no language.
+> **Removed in 0.46.0.** `com.uxplima.uxmlib.gui.config` is gone: `MenuConfig.load`, `MenuSpec.read`,
+> `MenuDraw`, `MenuActions`, `MenuConditions`, `MenuLists`, `MenuFiles`, `MenuAction`,
+> `MenuActionRunner`, `MenuSlots`, `IconOptions`, `ConfigEditorGui` and `ConfigValueEditor` were the
+> smaller, older menu readers, and `uxmlib-menu` replaces all of them. Two classes of that package
+> survive under new names: `gui.config.CatalogueWords` is `gui.CatalogueWords` and now implements
+> `GuiText`, and `gui.config.MenuTiles` is `gui.style.MenuTiles`. A consumer on `MenuConfig.load` has no
+> automatic upgrade: the mask shape and the engine's shape are different models, not different
+> spellings, and an action or a condition named in an old file points at a handler registered in Java
+> rather than at anything the engine can resolve. Move the file to the engine's shape and register the
+> vocabulary through `MenuBindings`.
 
 ### Menu engine
 

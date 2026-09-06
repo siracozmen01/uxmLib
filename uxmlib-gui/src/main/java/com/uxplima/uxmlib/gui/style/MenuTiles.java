@@ -1,4 +1,4 @@
-package com.uxplima.uxmlib.gui.config;
+package com.uxplima.uxmlib.gui.style;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -12,8 +12,6 @@ import org.bukkit.entity.Player;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 
-import com.uxplima.uxmlib.gui.style.Lore;
-import com.uxplima.uxmlib.gui.style.Tiles;
 import com.uxplima.uxmlib.text.message.MessageKey;
 import com.uxplima.uxmlib.text.message.Messages;
 import com.uxplima.uxmlib.text.style.Styler;

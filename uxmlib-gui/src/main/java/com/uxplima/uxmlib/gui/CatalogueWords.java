@@ -1,6 +1,7 @@
-package com.uxplima.uxmlib.gui.config;
+package com.uxplima.uxmlib.gui;
 
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -10,6 +11,7 @@ import org.bukkit.entity.Player;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 
+import com.uxplima.uxmlib.gui.style.MenuTiles;
 import com.uxplima.uxmlib.text.Text;
 import com.uxplima.uxmlib.text.message.MessageKey;
 import com.uxplima.uxmlib.text.message.Messages;
@@ -26,10 +28,14 @@ import com.uxplima.uxmlib.text.style.Styler;
  * <p>A line that starts with {@code tile:} is a whole tile rather than one line, and {@link MenuTiles} draws
  * it in the six blocks the canon fixes. Everything else is one line of words.
  *
+ * <p>This is a {@link GuiText}, which is the seam the menu engine asks its words through. The engine hands a
+ * key to {@link #text} once it has taken the {@code @} off, and a written line to {@link #renderFor} with the
+ * viewer who is looking at it, which is what a tile needs and a viewer-less render cannot give.
+ *
  * <p>A value of a row goes in as a placeholder and never as text. A player who named their item
  * {@code <red>} sees those characters on the tile: they do not repaint it.
  */
-public final class CatalogueWords implements MenuDraw.Words {
+public final class CatalogueWords implements GuiText {
 
     /**
      * What a window is about, for the viewer who opened it.
@@ -67,32 +73,45 @@ public final class CatalogueWords implements MenuDraw.Words {
         this.tiles = new MenuTiles(messages, styler);
     }
 
+    /**
+     * The words a key stands for, in the language of the viewer. The engine has already taken the {@code @}
+     * off, so what arrives is the path.
+     *
+     * <p>The path is its own last answer: a key an operator invented and never translated shows the key on the
+     * tile rather than an empty line, which is the cue that it needs a line.
+     */
     @Override
-    public Component text(Player viewer, String written, Map<String, String> values) {
+    public Component text(Player viewer, String key, Map<String, String> values) {
         Objects.requireNonNull(viewer, "viewer");
-        Objects.requireNonNull(written, "written");
-        TagResolver[] resolvers = resolvers(all(viewer, values));
-        if (MenuTiles.marks(written)) {
-            return tiles.lore(viewer, written, resolvers);
-        }
-        if (written.startsWith("@")) {
-            String path = written.substring(1);
-            // The path is its own last answer: a key an operator invented and never translated shows the key
-            // on the tile rather than an empty line, which is the cue that it needs a line.
-            return messages.render(viewer, MessageKey.of(path, path), resolvers);
-        }
-        return Text.mini(styler.apply(written, messages.localeOf(viewer)), resolvers);
+        Objects.requireNonNull(key, "key");
+        return messages.render(viewer, MessageKey.of(key, key), resolvers(all(viewer, values)));
     }
 
+    /**
+     * A written line with no viewer to write it for. A tile cannot be drawn here, because which language it
+     * reads in is the viewer's answer, so this is the plain reading: the roles of the theme over the words as
+     * the operator wrote them, in the catalogue's own language.
+     */
     @Override
-    public String line(Player viewer, String written, Map<String, String> values) {
+    public Component render(String raw) {
+        Objects.requireNonNull(raw, "raw");
+        return Text.mini(styler.apply(raw, defaultLocale()));
+    }
+
+    /** A written line for the viewer who is looking at it, which is the only place a tile can be drawn. */
+    @Override
+    public Component renderFor(Player viewer, String raw, Map<String, String> values) {
         Objects.requireNonNull(viewer, "viewer");
-        Objects.requireNonNull(written, "written");
-        String filled = written;
-        for (Map.Entry<String, String> value : all(viewer, values).entrySet()) {
-            filled = filled.replace("<" + value.getKey() + ">", value.getValue());
+        Objects.requireNonNull(raw, "raw");
+        TagResolver[] resolvers = resolvers(all(viewer, values));
+        if (MenuTiles.marks(raw)) {
+            return tiles.lore(viewer, raw, resolvers);
         }
-        return filled;
+        return Text.mini(styler.apply(raw, messages.localeOf(viewer)), resolvers);
+    }
+
+    private Locale defaultLocale() {
+        return messages.catalog().defaultLocale();
     }
 
     /**
