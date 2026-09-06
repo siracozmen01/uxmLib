@@ -17,6 +17,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 import com.uxplima.uxmlib.gui.GuiText;
 import com.uxplima.uxmlib.menu.binding.ConditionRegistry;
@@ -24,6 +25,7 @@ import com.uxplima.uxmlib.menu.binding.ContentProviderRegistry;
 import com.uxplima.uxmlib.menu.binding.PlaceholderRegistry;
 import com.uxplima.uxmlib.menu.providers.ContentProvider;
 import com.uxplima.uxmlib.menu.runtime.MenuContext;
+import com.uxplima.uxmlib.menu.runtime.PagedListView;
 import com.uxplima.uxmlib.menu.spec.ContentRegionSpec;
 import com.uxplima.uxmlib.menu.spec.MenuItemSpec;
 import com.uxplima.uxmlib.menu.spec.MenuSpec;
@@ -125,6 +127,71 @@ class MenuRendererTest {
 
     private void populate(Inventory inv, MenuSpec spec, Map<String, List<?>> lists) {
         renderer.populate(inv, spec, ctx(), routed::put, lists);
+    }
+
+    // -- the page indicator -----------------------------------------------------------------------------------
+
+    /**
+     * A static item's page tokens count the same list the arrows turn. The engine used to read "the first list-backed
+     * item" out of the spec's item map in three separate places, and that map's order is the config library's rather
+     * than the file's, so a menu carrying two lists could turn one of them and count the pages of the other inside
+     * one render.
+     */
+    @Test
+    void theStaticPageIndicatorCountsTheListDrawnNearestTheStartOfTheWindow() {
+        PlaceholderRegistry tokens = new PlaceholderRegistry();
+        tokens.register("page", ctx -> String.valueOf(ctx.page() + 1));
+        tokens.register("max_page", ctx -> String.valueOf(ctx.pageCount()));
+        MenuRenderer counting =
+                new MenuRenderer(new ItemRenderer(new PlainText(), Theme::defaults, tokens), conditions, contents);
+        MenuSpec spec = spec(
+                """
+                rows = 2
+                items {
+                  kits { slots = [4, 5], list { source = kits, template { material = CHEST, name = "kit" } } }
+                  warps { slots = [0, 1], list { source = warps, template { material = PAPER, name = "warp" } } }
+                  label { slot = 8, material = PAPER, name = "%page%/%max_page%" }
+                }
+                """);
+        MenuContext ctx = MenuContext.of(viewer, null, 1)
+                .withPagedViews(Map.of("warps", new PagedListView(1, 5, 2), "kits", new PagedListView(0, 100, 2)));
+        Inventory inv = inv(18);
+
+        counting.populate(
+                inv, spec, ctx, routed::put, Map.of("warps", List.of("c", "d"), "kits", List.of("stone", "iron")));
+
+        assertThat(nameAt(inv, 8))
+                .as("five warps over pages of two, and the hundred kits drawn later in the window are not counted")
+                .isEqualTo("2/3");
+    }
+
+    /** A menu that pages nothing still reports one page, so an indicator on it reads "1/1" rather than "1/0". */
+    @Test
+    void aMenuWithNoListReportsASinglePage() {
+        PlaceholderRegistry tokens = new PlaceholderRegistry();
+        tokens.register("page", ctx -> String.valueOf(ctx.page() + 1));
+        tokens.register("max_page", ctx -> String.valueOf(ctx.pageCount()));
+        MenuRenderer counting =
+                new MenuRenderer(new ItemRenderer(new PlainText(), Theme::defaults, tokens), conditions, contents);
+        MenuSpec spec = spec(
+                """
+                rows = 1
+                items {
+                  label { slot = 0, material = PAPER, name = "%page%/%max_page%" }
+                }
+                """);
+        Inventory inv = inv(9);
+
+        counting.populate(inv, spec, ctx(), routed::put, Map.of());
+
+        assertThat(nameAt(inv, 0)).isEqualTo("1/1");
+    }
+
+    /** The plain-text name of the stack at {@code slot}, so an expanded token is readable in an assertion. */
+    private static String nameAt(Inventory inv, int slot) {
+        ItemStack stack = Objects.requireNonNull(inv.getItem(slot), "no stack at slot " + slot);
+        return PlainTextComponentSerializer.plainText()
+                .serialize(Objects.requireNonNull(stack.getItemMeta().displayName(), "no display name"));
     }
 
     // -- the Bedrock button list ------------------------------------------------------------------------------
