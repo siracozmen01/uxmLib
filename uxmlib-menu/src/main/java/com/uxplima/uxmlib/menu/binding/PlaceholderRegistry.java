@@ -154,6 +154,13 @@ public final class PlaceholderRegistry {
      * resolver that throws because this context does not carry what it needs (a placeholder owned by a different menu)
      * is skipped rather than aborting the render: the token it would fill simply stays unresolved, the same fail-soft
      * stance the rest of the renderer takes.
+     *
+     * <p><strong>The renderer no longer calls this, and putting it back on that path would be a regression.</strong>
+     * It ran every registered handler for every line of every item of every render, whether or not anything named
+     * the tokens they answer, so a handler with a side effect fired because a menu drew. {@code ItemRenderer} now
+     * resolves a token when something asks for it by name. This stays because it is public API a consumer may have
+     * its own use for, and because it is the honest way to ask for the whole registry at once when that is genuinely
+     * what is wanted; it is not the way to fill one line's arguments.
      */
     public Map<String, String> resolveAll(MenuContext ctx) {
         Objects.requireNonNull(ctx, "ctx");

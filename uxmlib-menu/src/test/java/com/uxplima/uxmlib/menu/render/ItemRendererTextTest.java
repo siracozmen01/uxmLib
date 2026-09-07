@@ -359,21 +359,103 @@ class ItemRendererTextTest {
     }
 
     /**
-     * A {@code @key} line is the one exception, and it is a limit rather than an oversight. The words live in the
-     * consumer's catalogue, so nothing here can read which {@code {token}} arguments the entry under that key
-     * spells, and the renderer has to offer what it has. This is pinned so the difference between the two paths is
-     * a stated fact rather than a surprise.
+     * A {@code @key} line runs no handler either. Its words live in the consumer's catalogue, so the renderer cannot
+     * read which {@code {token}} arguments the entry under that key spells; what it can do is stop guessing. A
+     * catalogue that wants a token asks for it by name and gets it, and one that wants none costs nothing. This is
+     * the whole property, and it is stronger than any count: not "fewer handlers ran" but "none did".
      */
     @Test
-    void aCatalogueLineIsStillHandedEveryTokenBecauseItsWordsAreNotHereToRead() {
+    void openingAMenuWhoseLinesNameNoTokenRunsNoHandlerAtAll() {
+        AtomicInteger runs = new AtomicInteger();
+        placeholders.register("balance", ctx -> {
+            runs.incrementAndGet();
+            return "100";
+        });
+
+        renderer.render(
+                item("material = STONE, name = \"@menu.title\","
+                        + " lore = [\"@menu.line.one\", \"@menu.line.two\", \"a literal line\"]"),
+                MenuContext.of(viewer, null, 0));
+
+        assertThat(runs).hasValue(0);
+    }
+
+    @Test
+    void aKeyedLineIsHandedTheTokensItSpellsAndNoOthers() {
         RecordingText words = new RecordingText();
         ItemRenderer recording = new ItemRenderer(words, Theme::defaults, placeholders);
-        placeholders.register("who", ctx -> "Sirac");
+        placeholders.register("kind", ctx -> "warp");
         placeholders.register("balance", ctx -> "100");
 
-        recording.render(item("material = STONE, name = \"@menu.title\""), MenuContext.of(viewer, null, 0));
+        recording.render(item("material = STONE, name = \"@menu.%kind%.title\""), MenuContext.of(viewer, null, 0));
 
-        assertThat(words.handed).singleElement().isEqualTo(Map.of("who", "Sirac", "balance", "100"));
+        assertThat(words.handed).singleElement().isEqualTo(Map.of("kind", "warp"));
+    }
+
+    /**
+     * The catalogue argument feature is kept, and this is how. A {@code @key} entry that carries a {@code {coins}}
+     * argument asks for that token by name, and the map it was handed answers, so a per-entry list item still shows
+     * that entry's value. Nothing ran until the catalogue asked, which is the difference between this and resolving
+     * every handler in advance on the chance that one of them was wanted.
+     */
+    @Test
+    void aCatalogueAskingForATokenByNameStillGetsItAndOnlyThenIsTheHandlerRun() {
+        AtomicInteger runs = new AtomicInteger();
+        placeholders.register("coins", ctx -> {
+            runs.incrementAndGet();
+            return "50";
+        });
+        placeholders.register("balance", ctx -> {
+            runs.incrementAndGet();
+            return "100";
+        });
+        List<String> answered = new ArrayList<>();
+        GuiText askingCatalogue = new GuiText() {
+
+            @Override
+            public Component text(Player viewer, String key, Map<String, String> arguments) {
+                answered.add(arguments.get("coins"));
+                // Twice on purpose: a catalogue entry may name one token more than once, and the handler behind it
+                // must still run once.
+                answered.add(arguments.get("coins"));
+                return Component.text("catalogue(" + key + ")");
+            }
+
+            @Override
+            public Component render(String raw) {
+                return Component.text(raw);
+            }
+        };
+
+        new ItemRenderer(askingCatalogue, Theme::defaults, placeholders)
+                .render(item("material = STONE, name = \"@menu.title\""), MenuContext.of(viewer, null, 0));
+
+        assertThat(answered).containsExactly("50", "50");
+        assertThat(runs).hasValue(1);
+    }
+
+    /** A token nobody registered stays absent rather than becoming an empty string a catalogue would substitute. */
+    @Test
+    void aCatalogueAskingForATokenNobodyRegisteredIsAnsweredWithNothing() {
+        List<String> answered = new ArrayList<>();
+        GuiText askingCatalogue = new GuiText() {
+
+            @Override
+            public Component text(Player viewer, String key, Map<String, String> arguments) {
+                answered.add(String.valueOf(arguments.get("nobody")));
+                return Component.text("catalogue(" + key + ")");
+            }
+
+            @Override
+            public Component render(String raw) {
+                return Component.text(raw);
+            }
+        };
+
+        new ItemRenderer(askingCatalogue, Theme::defaults, placeholders)
+                .render(item("material = STONE, name = \"@menu.title\""), MenuContext.of(viewer, null, 0));
+
+        assertThat(answered).containsExactly("null");
     }
 
     /**

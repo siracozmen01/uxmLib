@@ -1,8 +1,10 @@
 package com.uxplima.uxmlib.menu.render;
 
+import java.util.AbstractMap;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -373,27 +375,28 @@ public final class ItemRenderer {
      * while any other line is rendered as an inline MiniMessage literal. An empty spec yields an empty component
      * so the item simply has no name/lore line rather than a stray blank.
      *
-     * <p>The two branches are handed different placeholder maps, and the difference is deliberate. A literal line
-     * carries its own words, so what it may ask to be resolved is exactly what it spells: see {@link
-     * #namedPlaceholders}. A {@code @key} line does not carry its words at all, so nothing here can read which
-     * {@code {token}} arguments the catalog entry under that key spells, and the whole registry is offered. That is
-     * a limit of the seam rather than a choice: a catalog is the consumer's file, and asking it which arguments a
-     * key takes is a question this interface does not have.
+     * <p>Both branches are handed the same {@link LinePlaceholders}, which resolves a token when somebody asks for
+     * it rather than resolving every registered handler first. A literal line carries its own words, so what it
+     * spells is the whole of what it wants. A {@code @key} line does not carry its words at all, and nothing here
+     * can read which {@code {token}} arguments the catalog entry under that key spells; the answer is not to guess
+     * them all in advance but to let the catalog ask for the ones it wants.
      */
     private Component resolveText(String s, MenuContext ctx) {
         if (s.isEmpty()) {
             return Component.empty();
         }
         String substituted = substitutePlaceholders(dropMathWithMissingOperand(s, ctx), ctx);
+        Map<String, String> arguments = namedPlaceholders(s, ctx);
         if (s.startsWith("@")) {
             String key = substituted.substring(1);
-            // The catalog entry may carry {token} arguments (e.g. {sound}, {warp}); fill them from the same
-            // placeholders a %token% would use, so a per-entry list item shows that entry's value.
-            return guiText.text(ctx.viewer(), key, placeholders.resolveAll(ctx));
+            // The catalog entry may carry {token} arguments (e.g. {sound}, {warp}); it fills them from the same
+            // placeholders a %token% would use, so a per-entry list item shows that entry's value. It asks for the
+            // ones it wants by name and they resolve then, rather than every handler running first in case.
+            return guiText.text(ctx.viewer(), key, arguments);
         }
         // Not a key, so the words are in the line. The viewer goes with it anyway: a consumer whose files
         // carry a per-viewer shorthand answers here, and one that does not is handed straight to render.
-        return guiText.renderFor(ctx.viewer(), applyMath(substituted), namedPlaceholders(s, ctx));
+        return guiText.renderFor(ctx.viewer(), applyMath(substituted), arguments);
     }
 
     /**
@@ -412,22 +415,98 @@ public final class ItemRenderer {
      * is named on the console rather than escaping into the render.
      */
     private Map<String, String> namedPlaceholders(String line, MenuContext ctx) {
+        return new LinePlaceholders(line, ctx);
+    }
+
+    /** The distinct {@code %token%} names one written line spells, in the order it spells them. */
+    private static Set<String> namesIn(String line) {
         if (line.indexOf('%') < 0) {
-            return Map.of();
+            return Set.of();
         }
-        Set<String> named = new LinkedHashSet<>();
+        Set<String> names = new LinkedHashSet<>();
         Matcher matcher = PLACEHOLDER.matcher(line);
         while (matcher.find()) {
-            named.add(matcher.group(1));
+            names.add(matcher.group(1));
         }
-        if (named.isEmpty()) {
-            return Map.of();
+        return names;
+    }
+
+    /**
+     * The placeholder arguments for one written line: the {@code %token%}s the line spells are what the map holds,
+     * and any other id is resolved the moment somebody asks for it by name.
+     *
+     * <p>The two halves answer the two shapes of caller, and both are needed. A literal line carries its own words,
+     * so what it spells is the whole of what it wants, and iterating this map yields exactly that. A {@code @key}
+     * line does not carry its words at all: the entry behind the key lives in the consumer's catalogue and may name
+     * a {@code {coins}} argument the line never mentions. Resolving every registered handler in advance on the
+     * chance the catalogue wanted one of them is what this replaces, and it is wrong twice over: a handler is a
+     * consumer's code that does something as well as answering, so a PlaceholderAPI parse, a permissions lookup, a
+     * player-data read and an economy call all fired because a menu drew rather than because anything asked; and on
+     * the commonest path the answer was thrown away unread by {@link GuiText#renderFor}'s default.
+     *
+     * <p>So nothing is resolved until it is wanted. A catalogue that asks for {@code coins} by name gets it, and one
+     * that asks for nothing costs nothing. Each id runs its handler at most once per line however often it is asked
+     * for, including an id that resolved to nothing, and a handler that throws costs its own token and is named on
+     * the console rather than escaping into the render.
+     *
+     * <p>Iteration deliberately yields only the spelled tokens rather than the whole registry. A caller that copies
+     * this map, or walks it to substitute, therefore sees what the line names and not what it might have wanted:
+     * that is the same rule the {@code get} half follows, and offering the registry to a walk would put the eager
+     * resolution straight back.
+     *
+     * <p>Valid for the duration of the call it is passed into, like the context it reads. It is not thread safe and
+     * does not need to be: a render is synchronous on the viewer's entity thread.
+     */
+    private final class LinePlaceholders extends AbstractMap<String, String> {
+
+        private final MenuContext ctx;
+
+        /** The token names the line spells, which are the ids this map holds when it is iterated. */
+        private final Set<String> spelled;
+
+        /**
+         * The ids already put to the registry on this line, so one handler runs at most once however often the
+         * line or the catalog entry names it. An id here but absent from {@link #values} resolved to nothing, which
+         * is what keeps a token nobody registered from being asked for twice.
+         */
+        private final Set<String> asked = new HashSet<>();
+
+        /** What each asked-for id resolved to. Absent means nothing answered, which is not the same as empty text. */
+        private final Map<String, String> values = new LinkedHashMap<>();
+
+        LinePlaceholders(String line, MenuContext ctx) {
+            this.ctx = ctx;
+            this.spelled = namesIn(line);
         }
-        Map<String, String> resolved = new HashMap<>();
-        for (String id : named) {
-            placeholders.resolveOrReport(id, ctx).ifPresent(value -> resolved.put(id, value));
+
+        @Override
+        public @Nullable String get(Object key) {
+            return key instanceof String id ? resolve(id) : null;
         }
-        return resolved;
+
+        @Override
+        public boolean containsKey(Object key) {
+            return key instanceof String id && resolve(id) != null;
+        }
+
+        @Override
+        public Set<Entry<String, String>> entrySet() {
+            Map<String, String> held = new LinkedHashMap<>();
+            for (String id : spelled) {
+                String value = resolve(id);
+                if (value != null) {
+                    held.put(id, value);
+                }
+            }
+            return Collections.unmodifiableMap(held).entrySet();
+        }
+
+        private @Nullable String resolve(String id) {
+            if (asked.add(id)) {
+                placeholders.resolveOrReport(id, ctx).ifPresent(value -> values.put(id, value));
+            }
+            return values.get(id);
+        }
     }
 
     /**
