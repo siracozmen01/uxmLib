@@ -32,6 +32,30 @@ import org.spongepowered.configurate.serialize.SerializationException;
  * skull = "Notch"                     # only for PLAYER_HEAD; routed through SkullData.parse
  * }</pre>
  *
+ * <p>Beyond that, the six blocks that belong to one kind of item. A shop that cannot price a potion is not a
+ * shop, and every one of these was written by hand in a plugin before it was written here:
+ *
+ * <pre>{@code
+ * potion {
+ *   type    = strength                # the base potion, a registry id
+ *   color   = "#00AAFF"               # the bottle tint
+ *   effects = ["speed:1:600"]         # effect:amplifier:durationTicks
+ * }
+ * leather-color = "#A1FF33"           # dyed leather armour: hex, an "r,g,b" triple, or a dye name
+ * firework {
+ *   power   = 2                       # flight duration, 0 to 127
+ *   effects = ["ball_large:#ff0000,#ffff00:#ffffff:flicker,trail"]
+ * }                                   # type:colours:fade-colours:flags; the last two are optional
+ * trim { material = diamond, pattern = sentry }
+ * banner { patterns = ["stripe_top:red", "border:white"] }   # laid on in the order written
+ * spawner = zombie                    # the mob inside a spawner
+ * }</pre>
+ *
+ * <p>Those keys and tokens are the ones a menu file's {@code decor} block already uses in
+ * {@code uxmlib-menu}, key for key, so a block that draws an item in a menu means the same thing here. A
+ * value that names nothing the server knows throws and says which value it was: this is read once at load,
+ * into an item an operator will sell, so a mistyped potion name must not quietly become a water bottle.
+ *
  * <p>Name and lore pass through MiniMessage with any supplied {@link TagResolver placeholders}; lore can be
  * auto-wrapped to a width. One-way for now (config to item); a writer can come later. Lives in the item
  * module on purpose: it has no GUI dependency.
@@ -71,6 +95,7 @@ public final class ItemConfig {
         applyFlags(node, builder);
         applyScalars(node, builder);
         applySkull(node, builder);
+        ItemConfigMeta.apply(node, builder);
         return builder;
     }
 
@@ -178,7 +203,7 @@ public final class ItemConfig {
         }
     }
 
-    private static List<String> stringList(ConfigurationNode node, String where) {
+    static List<String> stringList(ConfigurationNode node, String where) {
         try {
             List<String> value = node.getList(String.class);
             return value == null ? List.of() : value;

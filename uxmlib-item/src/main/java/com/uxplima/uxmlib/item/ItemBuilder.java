@@ -16,10 +16,13 @@ import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.block.banner.Pattern;
 import org.bukkit.block.banner.PatternType;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.EntityType;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemRarity;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ArmorMeta;
 import org.bukkit.inventory.meta.BannerMeta;
+import org.bukkit.inventory.meta.BlockStateMeta;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.inventory.meta.EnchantmentStorageMeta;
 import org.bukkit.inventory.meta.FireworkMeta;
@@ -29,9 +32,11 @@ import org.bukkit.inventory.meta.MapMeta;
 import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.inventory.meta.components.CustomModelDataComponent;
+import org.bukkit.inventory.meta.trim.ArmorTrim;
 import org.bukkit.map.MapView;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionType;
 
 import io.papermc.paper.datacomponent.DataComponentType;
 
@@ -390,6 +395,15 @@ public final class ItemBuilder {
         return editTypedMeta(PotionMeta.class, meta -> ItemMetaSupport.potionEffect(meta, effect));
     }
 
+    /**
+     * Set the potion's base type, which is what names it and what a brewing stand made; a no-op on items
+     * without potion meta. The custom effects of {@link #potionEffect} sit on top of it.
+     */
+    public ItemBuilder basePotionType(PotionType type) {
+        Objects.requireNonNull(type, "type");
+        return editTypedMeta(PotionMeta.class, meta -> ItemMetaSupport.basePotionType(meta, type));
+    }
+
     /** Set the potion's display colour; a no-op on items without potion meta. */
     public ItemBuilder potionColor(Color color) {
         Objects.requireNonNull(color, "color");
@@ -414,6 +428,18 @@ public final class ItemBuilder {
     public ItemBuilder leatherColor(Color color) {
         Objects.requireNonNull(color, "color");
         return editTypedMeta(LeatherArmorMeta.class, meta -> ItemMetaSupport.leatherColor(meta, color));
+    }
+
+    /** Set the armour trim; a no-op on items without armour meta. */
+    public ItemBuilder armorTrim(ArmorTrim trim) {
+        Objects.requireNonNull(trim, "trim");
+        return editTypedMeta(ArmorMeta.class, meta -> ItemMetaSupport.armorTrim(meta, trim));
+    }
+
+    /** Put a mob inside a spawner item; a no-op on items that hold no block state. */
+    public ItemBuilder spawnedType(EntityType type) {
+        Objects.requireNonNull(type, "type");
+        return editTypedMeta(BlockStateMeta.class, meta -> ItemMetaSupport.spawnedType(meta, type));
     }
 
     /** Set a written book's title; a no-op on items without book meta. */

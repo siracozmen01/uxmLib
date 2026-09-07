@@ -9,10 +9,14 @@ import org.bukkit.Color;
 import org.bukkit.DyeColor;
 import org.bukkit.FireworkEffect;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.block.CreatureSpawner;
 import org.bukkit.block.banner.Pattern;
 import org.bukkit.block.banner.PatternType;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.EntityType;
+import org.bukkit.inventory.meta.ArmorMeta;
 import org.bukkit.inventory.meta.BannerMeta;
+import org.bukkit.inventory.meta.BlockStateMeta;
 import org.bukkit.inventory.meta.BookMeta;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.EnchantmentStorageMeta;
@@ -23,8 +27,10 @@ import org.bukkit.inventory.meta.MapMeta;
 import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.inventory.meta.components.CustomModelDataComponent;
+import org.bukkit.inventory.meta.trim.ArmorTrim;
 import org.bukkit.map.MapView;
 import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionType;
 
 import net.kyori.adventure.text.Component;
 
@@ -71,6 +77,10 @@ final class ItemMetaSupport {
         meta.addCustomEffect(effect, true);
     }
 
+    static void basePotionType(PotionMeta meta, PotionType type) {
+        meta.setBasePotionType(type);
+    }
+
     static void potionColor(PotionMeta meta, Color color) {
         meta.setColor(color);
     }
@@ -81,6 +91,24 @@ final class ItemMetaSupport {
 
     static void fireworkPower(FireworkMeta meta, int power) {
         meta.setPower(power);
+    }
+
+    static void armorTrim(ArmorMeta meta, ArmorTrim trim) {
+        meta.setTrim(trim);
+    }
+
+    /**
+     * Put a mob inside a spawner item.
+     *
+     * <p>The block state is asked for rather than tested for: a spawner item that nobody has edited answers
+     * {@code false} to {@code hasBlockState()} and still hands back a usable {@code CreatureSpawner}, so a
+     * guard on that flag would silently drop the mob on every item straight off the material.
+     */
+    static void spawnedType(BlockStateMeta meta, EntityType type) {
+        if (meta.getBlockState() instanceof CreatureSpawner spawner) {
+            spawner.setSpawnedType(type);
+            meta.setBlockState(spawner);
+        }
     }
 
     static void leatherColor(LeatherArmorMeta meta, Color color) {

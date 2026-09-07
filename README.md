@@ -458,6 +458,30 @@ ItemStack button = ItemBuilder.of(Material.LEATHER_CHESTPLATE)
 a menu file reaches for that rather than for the deprecated `HIDE_ADDITIONAL_TOOLTIP` flag. Leave it off for
 an item a player owns: on a kit sword or a vault icon the damage and enchantment lines are the point.
 
+It also reads the six blocks that belong to one kind of item, in the same keys and the same tokens a menu
+file's `decor` block already uses:
+
+```hocon
+material = POTION
+potion {
+  type    = strength                # the base potion, a registry id
+  color   = "#00AAFF"               # the bottle tint
+  effects = ["speed:1:600"]         # effect:amplifier:durationTicks
+}
+leather-color = "#A1FF33"           # dyed leather: hex, an "r,g,b" triple, or a dye name
+firework {
+  power   = 2                       # flight duration, 0 to 127
+  effects = ["ball_large:#ff0000,#ffff00:#ffffff:flicker,trail"]
+}                                   # type:colours:fade-colours:flags; the last two are optional
+trim   { material = diamond, pattern = sentry }
+banner { patterns = ["stripe_top:red", "border:white"] }   # laid on in the order written
+spawner = zombie                    # the mob inside a spawner
+```
+
+A value that names nothing the server knows throws and says which value it was. That is on purpose and it is
+where this parts company with the menu renderer, which skips a token it cannot resolve: a menu with one wrong
+tile still opens, while an item read once at load and then sold must not quietly become a water bottle.
+
 ### GUIs
 
 Install the framework once in `onEnable`, then build menus fluently. Clicks are cancelled by default: an
