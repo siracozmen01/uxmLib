@@ -7,6 +7,7 @@ import java.util.function.Consumer;
 import org.bukkit.entity.Player;
 
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 import com.uxplima.uxmlib.gui.GuiText;
 import com.uxplima.uxmlib.gui.dialog.DialogInputScreen;
@@ -28,7 +29,9 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>The two button words are the only text this backend needs that the prompt does not carry. They are asked of the
  * caller's catalog, per viewer, under {@link TextInput#SUBMIT_KEY} and {@link TextInput#CANCEL_KEY}: the screen
- * demands them, and this library ships no words of its own.
+ * demands them, and this library ships no words of its own. Those two keys were renamed from the dialog-specific
+ * {@link TextInput#LEGACY_SUBMIT_KEY} pair, so a catalog with nothing under the current name is asked the older one
+ * rather than being left to print a raw key onto a button; see {@link #buttonWord}.
  */
 @NullMarked
 final class DialogTextBackend implements TextInputBackend {
@@ -78,11 +81,44 @@ final class DialogTextBackend implements TextInputBackend {
                 player,
                 promptText,
                 promptText,
-                guiText.text(player, TextInput.SUBMIT_KEY, Map.of()),
-                guiText.text(player, TextInput.CANCEL_KEY, Map.of()),
+                buttonWord(player, TextInput.SUBMIT_KEY, TextInput.LEGACY_SUBMIT_KEY),
+                buttonWord(player, TextInput.CANCEL_KEY, TextInput.LEGACY_CANCEL_KEY),
                 initialText,
                 line -> outcome.accept(new InputResult.Submitted(line)),
                 () -> outcome.accept(InputResult.Cancelled.INSTANCE));
+    }
+
+    /**
+     * One button word for {@code player}: the catalog entry under {@code key}, or the one under {@code legacyKey}
+     * when the catalog holds nothing under the current name.
+     *
+     * <p>The pair was renamed from the dialog-specific {@code gui.input.dialog-*} to the generic {@code gui.input.*}
+     * with no way back, so a catalog written against the older pair put the literal text {@code gui.input.submit} on
+     * the button. The current name is asked first, because it is the one this library uses and the one a new catalog
+     * is written against; a consumer that has already moved therefore pays one lookup and never sees the older name.
+     *
+     * <p>A catalog holding neither answers the current key, which is the convention {@link GuiText#plain} already
+     * states: a key on the screen puts the failure in front of somebody, in words, naming the entry to add. That is
+     * why the current word rather than the older one is what comes back when both are missing.
+     */
+    private Component buttonWord(Player player, String key, String legacyKey) {
+        Component current = guiText.text(player, key, Map.of());
+        if (!unwritten(current, key)) {
+            return current;
+        }
+        Component older = guiText.text(player, legacyKey, Map.of());
+        return unwritten(older, legacyKey) ? current : older;
+    }
+
+    /**
+     * Whether {@code words} is what a catalog answers for a key nobody wrote: the key itself, or nothing at all. A
+     * catalog is the consumer's file and this interface has no "do you hold this key" question, so the answer has to
+     * be read off the words. Both forms are what implementations actually do, and {@link GuiText#plain} documents the
+     * first as the library's own convention.
+     */
+    private static boolean unwritten(Component words, String key) {
+        String flattened = PlainTextComponentSerializer.plainText().serialize(words);
+        return flattened.isBlank() || flattened.equals(key);
     }
 
     private static void showNative(

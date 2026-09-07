@@ -67,6 +67,24 @@ public final class TextInput {
     /** The catalog key for the word on the button that abandons a dialog prompt. */
     public static final String CANCEL_KEY = "gui.input.cancel";
 
+    /**
+     * The name {@link #SUBMIT_KEY} carried before it was made generic, kept as a migration fallback.
+     *
+     * <p>These two words were asked for under {@code gui.input.dialog-submit} and {@code gui.input.dialog-cancel},
+     * and the pair was collapsed into the generic {@code gui.input.submit}/{@code gui.input.cancel} with nothing to
+     * carry a written catalog across. A catalog answers a key it does not hold with the key itself, so a player
+     * opening a dialog prompt read the literal text {@code gui.input.submit} on the button, in every language.
+     *
+     * <p>Using a key rather than a word is right and stays: this library ships no words, and a backend that invented
+     * two would give every consumer two English ones they never wrote. What was wrong is renaming a key with no way
+     * back. The current name is asked for first, and only a catalog with nothing under it is asked the older one, so
+     * a consumer that has already moved pays one lookup and a consumer that has not still shows words.
+     */
+    public static final String LEGACY_SUBMIT_KEY = "gui.input.dialog-submit";
+
+    /** The name {@link #CANCEL_KEY} carried before it was made generic; see {@link #LEGACY_SUBMIT_KEY}. */
+    public static final String LEGACY_CANCEL_KEY = "gui.input.dialog-cancel";
+
     private final InputSettings settings;
     private final GuiText guiText;
     private final Scheduler scheduler;
