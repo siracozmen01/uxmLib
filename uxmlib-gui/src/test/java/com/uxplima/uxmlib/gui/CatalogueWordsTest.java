@@ -4,8 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.BufferedReader;
 import java.io.StringReader;
+import java.util.AbstractMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
@@ -15,6 +17,7 @@ import com.uxplima.uxmlib.text.message.MessageCatalogLoader;
 import com.uxplima.uxmlib.text.message.Messages;
 import com.uxplima.uxmlib.text.style.Styler;
 import com.uxplima.uxmlib.text.style.Theme;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -29,6 +32,7 @@ class CatalogueWordsTest {
     private static final String CATALOGUE = """
             menu {
               lore { description = "About", details = "Facts" }
+              named = "<coins> coins"
               tile {
                 title = "English"
                 crumb = "Language"
@@ -92,13 +96,69 @@ class CatalogueWordsTest {
     }
 
     /**
-     * A line asked for with no viewer cannot be a tile, because which language it reads in is the viewer's own
-     * answer. It is the plain reading instead, which is what an inventory title and a flattened label want.
+     * A line asked for with no viewer is the plain reading of it, which is what an inventory title and a
+     * flattened label want.
      */
     @Test
     @DisplayName("a line rendered without a viewer is the plain reading of it")
     void aViewerlessLineIsThePlainReading() {
         assertThat(plain(words.render("Ready"))).isEqualTo("Ready");
+    }
+
+    /**
+     * A tile asked for with no viewer is still a tile. Which language it reads in is the viewer's own answer and
+     * there is nobody to ask, so it is drawn in the catalogue's own language. What it must never be is the line
+     * the operator wrote: that is the mark on the item, in front of a player, as prose.
+     */
+    @Test
+    @DisplayName("a tile rendered without a viewer is drawn and not written out")
+    void aViewerlessTileIsStillDrawn() {
+        String drawn = plain(words.render("tile:5 @menu.tile state"));
+
+        assertThat(drawn).doesNotContain("tile:").doesNotContain("@menu.tile");
+        assertThat(drawn).contains("English").contains("State").contains("On");
+    }
+
+    /**
+     * The other spelling. A menu file that writes {@code @tile:} hands the mark in as a key, because the leading
+     * {@code @} was for a while the only way a tile line could reach a viewer at all. It draws the same tile.
+     */
+    @Test
+    @DisplayName("a key that carries the tile mark draws the tile")
+    void aKeyedTileIsDrawn() {
+        String drawn = plain(words.text(viewer, "tile:5 @menu.tile state", Map.of()));
+
+        assertThat(drawn).doesNotContain("tile:");
+        assertThat(drawn).contains("English").contains("State");
+    }
+
+    /**
+     * A catalogue line names the values it wants and the map answers them one at a time. The map the menu engine
+     * hands over is exactly this shape: it holds the {@code %token%}s the written line spells, which for a tile
+     * and for a {@code @key} line is none of them, and it answers any other id when something asks by name. A
+     * walk of it therefore finds nothing to offer, and a walk is what this used to build its resolvers from.
+     */
+    @Test
+    @DisplayName("a catalogue line is given the value it asks for by name")
+    void aCatalogueLineIsAnsweredByName() {
+        assertThat(plain(words.text(viewer, "menu.named", asked(Map.of("coins", "12")))))
+                .isEqualTo("12 coins");
+    }
+
+    /** A map that holds nothing to walk and answers when it is asked, which is what the engine hands over. */
+    private static Map<String, String> asked(Map<String, String> values) {
+        return new AbstractMap<>() {
+
+            @Override
+            public @Nullable String get(Object key) {
+                return values.get(key);
+            }
+
+            @Override
+            public Set<Entry<String, String>> entrySet() {
+                return Set.of();
+            }
+        };
     }
 
     private static String plain(Component text) {

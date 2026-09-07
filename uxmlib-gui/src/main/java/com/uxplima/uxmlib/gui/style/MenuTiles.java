@@ -7,8 +7,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import org.bukkit.entity.Player;
-
+import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 
@@ -74,8 +73,13 @@ public final class MenuTiles {
     /**
      * The whole tooltip of one tile, as a single component with the line breaks in it. The item builder
      * splits them, so a tile is one entry of the {@code lore} list of the menu file and not six.
+     *
+     * <p>The viewer is an {@link Audience} rather than a player because what a tile takes from it is a language and
+     * nothing else. A player brings their own, and every other audience brings the catalogue's default, which is the
+     * honest answer for a draw that has nobody in front of it: a tile asked for with no viewer is still drawn as a
+     * tile, in the language the catalogue is written in, rather than handed back as the characters an operator typed.
      */
-    public Component lore(Player viewer, String written, TagResolver... resolvers) {
+    public Component lore(Audience viewer, String written, TagResolver... resolvers) {
         Objects.requireNonNull(viewer, "viewer");
         Objects.requireNonNull(written, "written");
         Spec spec = Spec.read(written);
@@ -101,7 +105,7 @@ public final class MenuTiles {
     }
 
     /** The line of the catalogue at {@code path}, in the language of the viewer, with the values written in. */
-    private Component words(Player viewer, String path, TagResolver... resolvers) {
+    private Component words(Audience viewer, String path, TagResolver... resolvers) {
         return messages.render(viewer, MessageKey.of(path, path), resolvers);
     }
 
@@ -111,7 +115,7 @@ public final class MenuTiles {
      * <p>A block that leaves one out draws a tile without it rather than a tile with the key printed on it.
      * That is what lets one shape serve a tile that answers no click and a tile that answers two.
      */
-    private boolean has(Player viewer, String path) {
+    private boolean has(Audience viewer, String path) {
         return messages.catalog()
                 .find(MessageKey.of(path, path), messages.localeOf(viewer))
                 .isPresent();

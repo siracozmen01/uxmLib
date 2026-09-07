@@ -52,6 +52,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 import com.uxplima.uxmlib.gui.GuiText;
+import com.uxplima.uxmlib.gui.style.MenuTiles;
 import com.uxplima.uxmlib.gui.style.Tiles;
 import com.uxplima.uxmlib.item.ItemBuilder;
 import com.uxplima.uxmlib.item.Tooltips;
@@ -305,7 +306,8 @@ public final class ItemRenderer {
 
     /**
      * Append the component(s) for one lore spec line to {@code out}. A blank spec stays one blank line, and a {@code
-     * @key} catalog line stays a single component (the catalog owns its own layout, so its output is never split here).
+     * @key} catalog line or a {@code tile:} tooltip stays a single component (the catalogue owns its own layout, so
+     * its output is never split here, and the item builder splits a tile into the lines a client draws).
      * Any other line is an inline/placeholder literal: any {@code {math:}} block whose operand is missing is dropped
      * off the written line first, then its {@code %token%}s are substituted, then the result is split on {@code \n} so
      * a multi-line placeholder value becomes one lore component per segment. The {@code -1} split limit keeps trailing
@@ -314,13 +316,20 @@ public final class ItemRenderer {
      * <p>The missing-operand guard runs here and not only in {@link #resolveText}, because this is the path a price is
      * written on. Without it a lore {@code {math: %missing% + 1}} left {@code " + 1"} after the token pass, plus parsed
      * as a unary prefix, and the player read the number 1 on the line that says what a thing costs.
+     *
+     * <p>A {@code tile:} line goes the same way as a {@code @key} one, and that is what the third branch is for. It
+     * is a whole tooltip rather than a line of words, it names the blocks it draws in a catalogue, and which language
+     * that catalogue reads in is the viewer's own answer. So it belongs on the viewer path with the keys, not on the
+     * viewer-less {@link GuiText#render} the split loop below ends at. It went there for the length of a release
+     * because the routing asked what a line starts with and a tile starts with {@code tile:} rather than {@code @},
+     * and the player read the mark and the key as prose on the item.
      */
     private void appendLore(String spec, MenuContext ctx, List<Component> out) {
         if (spec.isEmpty()) {
             out.add(Component.empty());
             return;
         }
-        if (spec.startsWith("@")) {
+        if (spec.startsWith("@") || MenuTiles.marks(spec)) {
             out.add(resolveText(spec, ctx));
             return;
         }
@@ -372,8 +381,10 @@ public final class ItemRenderer {
     /**
      * Resolve one text line. Every {@code %token%} is substituted with its placeholder value first; then a line
      * that originally began with {@code @} is looked up in the locale catalog (the rest is the message key),
-     * while any other line is rendered as an inline MiniMessage literal. An empty spec yields an empty component
-     * so the item simply has no name/lore line rather than a stray blank.
+     * while any other line is rendered as an inline MiniMessage literal. A {@code tile:} line takes the second
+     * branch and is a tile rather than a literal, because {@link GuiText#renderFor} is handed the viewer a tile
+     * needs and reads the mark itself. An empty spec yields an empty component so the item simply has no
+     * name/lore line rather than a stray blank.
      *
      * <p>Both branches are handed the same {@link LinePlaceholders}, which resolves a token when somebody asks for
      * it rather than resolving every registered handler first. A literal line carries its own words, so what it
