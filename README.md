@@ -1109,6 +1109,16 @@ Requires a JDK 21 toolchain (Gradle provisions it via the Foojay resolver if nee
 ./gradlew publishToMavenLocal     # install every module to ~/.m2 to try locally
 ```
 
+## Known gaps
+
+One thing this library is asked for and does not do, written here rather than found again:
+
+- **It reads a menu file and cannot write one.** `MenuSpecLoader` and the whole `menu/property`
+  package are here; `MenuSpecWriter` is not, so a plugin that wants an in-game menu editor can open
+  a menu and cannot save one. Closing it means lifting the writer and its round trip test together,
+  because every key a writer does not know is a key it deletes, and this loader's grammar grows with
+  the library.
+
 ## Versioning & stability
 
 The library follows semantic versioning. Public API modules aim for stable names and documented seams; the
