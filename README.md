@@ -728,6 +728,38 @@ The annotation layer also covers `@Range`/`@Length` bounds, `@Cooldown` rate lim
 and switches, async execution, and paginated help, with SPIs for custom argument resolvers, validators,
 and conditions.
 
+Every command and every branch of one is renameable, aliasable and disableable from `commands.conf`. Mark
+the handler `@FromConfig` with a key, hand `ConfiguredCommands.replacer()` to the resolvers, and the file
+decides the label:
+
+```hocon
+commands {
+  uxmbackup {
+    name    = "backup"
+    aliases = ["bak"]
+    subcommands {
+      restore { enabled = false }   # drops the branch out of the tree: the server says it is unknown
+      prune   = false               # keeps the branch and lets your handler say it is turned off
+    }
+  }
+}
+```
+
+The two shapes do different things on purpose. The block form is replaced by nothing at registration, so
+the branch never enters the command tree. The plain one-line form leaves it in, and the handler reads
+`commands.isBranchEnabled(KEY, "prune")` and answers in its own words:
+
+```java
+if (!commands.isBranchEnabled(BackupCommand.KEY, "prune")) {
+    messages.send(sender.bukkit(), Keys.COMMAND_TURNED_OFF, Text.placeholder("name", "prune"));
+    return;
+}
+```
+
+Which one an operator wants depends on whether they would rather the word be unknown or be refused. The
+server builds its command tree once, at enable, and offers no supported way to take one branch out of a
+live one, so answering is the only honest alternative to removing.
+
 Everything the command layer says on its own behalf: the refusals, the argument rejections, the whole
 generated help page down to the separator between a command and its description, goes through
 `CommandMessages`, so a translated plugin answers each player in that player's own language and paints the

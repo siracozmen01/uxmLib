@@ -168,6 +168,81 @@ final class ConfiguredCommandsTest {
     }
 
     @Test
+    @DisplayName("a subcommand the file switches off on one line is reported off")
+    void aplainSwitchIsRead(@TempDir Path folder) throws IOException {
+        Path file = write(folder, """
+                commands {
+                  example {
+                    subcommands {
+                      buy  = false
+                      sell = true
+                    }
+                  }
+                }
+                """);
+
+        ConfiguredCommands commands = ConfiguredCommands.load(file);
+
+        assertThat(commands.isBranchEnabled("example", "buy")).isFalse();
+        assertThat(commands.isBranchEnabled("example", "sell")).isTrue();
+    }
+
+    @Test
+    @DisplayName("a subcommand switched off on one line stays in the command tree")
+    void aplainSwitchLeavesTheBranchInTheTree(@TempDir Path folder) throws IOException {
+        // The whole point of the one-line form: the branch is reached and answers, rather than the server
+        // saying the word is unknown. One instance does both jobs here, which is how a plugin wires it: the
+        // replacer reads the branch's name and enabled flag at registration and the handler asks this same
+        // object afterwards. Two instances would hide a reader that damages the tree it reads from.
+        Path file = write(folder, "commands { example { subcommands { buy = false } } }\n");
+        ConfiguredCommands commands = ConfiguredCommands.load(file);
+        ParamResolvers resolvers = ParamResolvers.withDefaults().replacer(FromConfig.class, commands.replacer());
+
+        LiteralCommandNode<CommandSourceStack> node = AnnotatedCommands.buildNode(new ExampleCommand(), resolvers);
+
+        assertThat(node.getChild("buy")).isNotNull();
+        assertThat(commands.isBranchEnabled("example", "buy")).isFalse();
+    }
+
+    @Test
+    @DisplayName("a subcommand the file does not mention is on")
+    void anunmentionedBranchIsOn(@TempDir Path folder) throws IOException {
+        Path file = write(folder, "commands { example { subcommands { buy = false } } }\n");
+
+        assertThat(ConfiguredCommands.load(file).isBranchEnabled("example", "sell"))
+                .isTrue();
+    }
+
+    @Test
+    @DisplayName("a missing file leaves every subcommand on")
+    void amissingFileLeavesEveryBranchOn(@TempDir Path folder) {
+        ConfiguredCommands commands = ConfiguredCommands.load(folder.resolve("absent.conf"));
+
+        assertThat(commands.isBranchEnabled("example", "buy")).isTrue();
+    }
+
+    @Test
+    @DisplayName("the block form reports off too, because a branch nobody can reach is off")
+    void ablockFormBranchReportsOff(@TempDir Path folder) throws IOException {
+        Path file = write(folder, "commands { example { subcommands { buy { enabled = false } } } }\n");
+
+        ConfiguredCommands commands = ConfiguredCommands.load(file);
+
+        assertThat(commands.isBranchEnabled("example", "buy")).isFalse();
+        assertThat(build(file).getChild("buy")).isNull();
+    }
+
+    @Test
+    @DisplayName("a branch renamed in the block form is still on")
+    void arenamedBlockFormBranchIsOn(@TempDir Path folder) throws IOException {
+        Path file = write(folder, "commands { example { subcommands { buy { name = \"al\" } } } }\n");
+
+        assertThat(ConfiguredCommands.load(file).isBranchEnabled("example", "buy"))
+                .isTrue();
+        assertThat(build(file).getChild("al")).isNotNull();
+    }
+
+    @Test
     @DisplayName("the block of one command names no branch of another")
     void abranchKeySitsUnderItsOwnCommand() {
         assertThat(ConfiguredCommands.branchKey("example", "sell")).isEqualTo("example.subcommands.sell");

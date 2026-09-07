@@ -12,6 +12,7 @@ import com.uxplima.uxmlib.command.annotation.annotations.Command;
 import com.uxplima.uxmlib.command.annotation.annotations.FromConfig;
 import com.uxplima.uxmlib.command.annotation.annotations.Subcommand;
 import com.uxplima.uxmlib.config.HoconConfig;
+import org.spongepowered.configurate.ConfigurationNode;
 
 /**
  * Reads {@code commands.conf} and turns it into what the command DSL registers.
@@ -27,6 +28,13 @@ import com.uxplima.uxmlib.config.HoconConfig;
  * <p>The same annotation on a method names a branch. Its key sits under the {@code subcommands} block of the
  * command that declares the method, so a branch key is short and cannot collide with the {@code name},
  * {@code aliases} and {@code enabled} of the command itself.
+ *
+ * <p>A branch can be switched off in two shapes and they do different things. The block form,
+ * {@code subcommands { run { enabled = false } }}, drops the branch out of the command tree at registration.
+ * The plain form, {@code subcommands { run = false }}, leaves it in the tree, and
+ * {@link #isBranchEnabled(String, String)} is what a handler reads to answer that the word it was given is
+ * turned off. Both are honest; which one an operator wants depends on whether they would rather the word be
+ * unknown or be refused.
  */
 public final class ConfiguredCommands {
 
@@ -75,6 +83,43 @@ public final class ConfiguredCommands {
      */
     public boolean isEnabled(String key, String fallbackName) {
         return entryOf(key, fallbackName).enabled();
+    }
+
+    /**
+     * Whether the branch {@code branch} of the command {@code commandKey} is switched on.
+     *
+     * <p>This is the plain read, and it answers the other half of the question {@link #replacer()} answers.
+     * An operator writes one line:
+     *
+     * <pre>{@code
+     * commands { uxmbackup { subcommands { run = false } } }
+     * }</pre>
+     *
+     * <p>and the branch <em>stays in the command tree</em>. Nothing is taken out of the tree, so the handler
+     * is still reached and can say that the word it was given is turned off. That is the honest answer, and
+     * it is the only one available: the server builds its command tree once, at enable, and offers no
+     * supported way to remove one branch from a live one.
+     *
+     * <p>The block form is the other shape, and it means something else:
+     *
+     * <pre>{@code
+     * commands { uxmbackup { subcommands { run { enabled = false } } } }
+     * }</pre>
+     *
+     * <p>A branch turned off there is replaced by nothing at registration, so it never enters the tree and
+     * the server answers for it in its own words. Read here, that branch reports off too, because a branch
+     * nobody can reach is off by any reading.
+     *
+     * <p>A branch the file does not mention is on, so an operator writes only the ones they want off.
+     * {@code CONTRACT.md} section 12 is the reason the plain form has to exist: a plugin that could not read
+     * it had to ship a message key that could never print, or carry a reader of its own.
+     */
+    public boolean isBranchEnabled(String commandKey, String branch) {
+        Objects.requireNonNull(commandKey, "commandKey");
+        Objects.requireNonNull(branch, "branch");
+        ConfigurationNode node = config.nodeAt("commands", commandKey, "subcommands", branch);
+        // A map is the block form and carries its own `enabled`; anything else is the one-line switch.
+        return node.isMap() ? node.node("enabled").getBoolean(true) : node.getBoolean(true);
     }
 
     /** The key a branch is read under: the {@code subcommands} block of the command that declares it. */
