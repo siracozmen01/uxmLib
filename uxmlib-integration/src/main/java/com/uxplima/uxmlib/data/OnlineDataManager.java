@@ -125,6 +125,12 @@ public final class OnlineDataManager<V> {
      * Save {@code player}'s cached value off-thread, then evict it. Called by the listener on quit. A no-op if
      * the player was never loaded (e.g. their join load failed). A failing save is routed to the error sink;
      * the entry is still evicted so a departed UUID never lingers in the cache.
+     *
+     * <p>This is the one save in the library that a plugin must not leave to its own {@code onDisable}. The work
+     * is off-thread by design, and {@code PaperScheduler} will neither schedule it for a disabled plugin nor run
+     * it on a server thread instead: it drops it and says so. A shutdown calls {@link #stop} and then
+     * {@link #flush}, which saves every cached value on the calling thread. The quit path itself is unaffected,
+     * because the server has already emptied the roster by the time it disables anything.
      */
     public void handleQuit(UUID player) {
         Objects.requireNonNull(player, "player");

@@ -15,6 +15,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
 import com.uxplima.uxmlib.hud.FakeScheduler;
+import com.uxplima.uxmlib.scheduler.PaperScheduler;
 import com.uxplima.uxmlib.text.Text;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import org.mockbukkit.mockbukkit.MockBukkit;
 import org.mockbukkit.mockbukkit.ServerMock;
 import org.mockbukkit.mockbukkit.entity.PlayerMock;
+import org.mockbukkit.mockbukkit.plugin.PluginMock;
 
 /**
  * The registry itself, with the display faked out: two plugins' contributions end up on one name, a plugin
@@ -114,6 +116,31 @@ class NametagRegistryTest {
 
         assertThat(sink.clearAllCalls()).isEqualTo(1);
         assertThat(sink.shown(player.getUniqueId())).isNull();
+    }
+
+    /**
+     * The uxmGlow shutdown trace, at the level it was seen. A registry that writes to a scoreboard routes every
+     * write onto the global region, and {@code close} is called from {@code onDisable}, by which point the server
+     * refuses to schedule anything for the plugin. The teams were therefore never handed back and a reloaded
+     * server left players wearing names no plugin owned. The write has to land during the disable, not a tick
+     * later that never comes.
+     */
+    @Test
+    void closingAfterTheOwningPluginIsDisabledStillHandsTheNamesBack() {
+        PluginMock plugin = MockBukkit.createMockPlugin("NametagTeardown");
+        PlayerMock player = server.addPlayer();
+        NametagRegistry registry =
+                new NametagRegistry(sink, log.logger(), NametagRegistry.DEFAULT_SEPARATOR, new PaperScheduler(plugin));
+        registry.contribute(player, NametagContribution.prefix("glow", 100, Component.text("[VIP]")));
+        server.getScheduler().performOneTick();
+        assertThat(sink.shown(player.getUniqueId())).isNotNull();
+
+        server.getPluginManager().disablePlugin(plugin);
+        registry.close();
+
+        assertThat(sink.clearAllCalls())
+                .as("a name written by a plugin that is no longer running outlives the plugin")
+                .isEqualTo(1);
     }
 
     @Test

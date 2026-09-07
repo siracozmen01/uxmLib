@@ -26,12 +26,14 @@ import com.uxplima.uxmlib.menu.spec.ClickKind;
 import com.uxplima.uxmlib.menu.spec.MenuSpecLoader;
 import com.uxplima.uxmlib.menu.spec.Ref;
 import com.uxplima.uxmlib.menu.support.SameThreadScheduler;
+import com.uxplima.uxmlib.scheduler.PaperScheduler;
 import com.uxplima.uxmlib.text.style.Theme;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockbukkit.mockbukkit.MockBukkit;
+import org.mockbukkit.mockbukkit.plugin.PluginMock;
 
 /**
  * The three facade calls a plugin makes from outside a menu: run one action for a player, repaint the menu they are
@@ -283,6 +285,28 @@ class MenusFacadeTest {
         assertThat(viewer.getOpenInventory().getTopInventory())
                 .as("closing another plugin's window on our disable is not ours to do")
                 .isSameAs(other);
+    }
+
+    /**
+     * The uxmEssentials shutdown trace, at the level it was seen. The sweep is handed to the global region, and
+     * once the plugin is disabled the server refuses to take it: the disable threw and every window stayed open
+     * with no engine behind it. A second engine over a real {@link PaperScheduler} is what makes the point, since
+     * the sweep reads the online roster rather than one engine's own bookkeeping and the fixture engine is the
+     * one that can open a window without a live server thread.
+     */
+    @Test
+    void shutdownStillClosesTheWindowsOnceTheOwningPluginIsDisabled() {
+        open("shop", "rows = 3");
+        assertThat(holderOfOpenWindow()).isInstanceOf(MenuHolder.class);
+        PluginMock plugin = MockBukkit.createMockPlugin("MenuTeardown");
+        Menus disabling = new Menus(renderer(), new PaperScheduler(plugin), new ListSourceRegistry());
+        MockBukkit.getMock().getPluginManager().disablePlugin(plugin);
+
+        disabling.shutdown();
+
+        assertThat(holderOfOpenWindow() instanceof MenuHolder)
+                .as("a menu left open by a disable stays open with no engine behind it")
+                .isFalse();
     }
 
     @Test

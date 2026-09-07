@@ -20,6 +20,12 @@ import org.bukkit.entity.Entity;
  * <p>Every method returns a {@link TaskHandle} for cancellation. Timer variants hand the task its own
  * handle so a repeating task can stop itself. Delays and periods are {@link Duration}s, rounded to whole
  * ticks for the tick-based schedulers and to milliseconds for the async one.
+ *
+ * <p>Teardown is the implementation's to settle, and {@link PaperScheduler} documents how it does: a
+ * server refuses to schedule anything for a plugin that is already disabled, so a one-shot handed to a
+ * tick-based family during {@code onDisable} runs inline on the thread that owns it, while a timer and any
+ * off-thread work are dropped with a warning. Teardown that must happen off-thread has to happen before the
+ * plugin disables.
  */
 public interface Scheduler {
 
