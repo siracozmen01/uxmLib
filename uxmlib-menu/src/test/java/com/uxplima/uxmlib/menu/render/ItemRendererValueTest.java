@@ -2,21 +2,31 @@ package com.uxplima.uxmlib.menu.render;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.logging.Handler;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 
 import org.bukkit.Color;
 import org.bukkit.DyeColor;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.EquipmentSlotGroup;
 import org.bukkit.inventory.ItemFlag;
+import org.bukkit.inventory.ItemRarity;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.BannerMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.potion.PotionEffect;
 
 import net.kyori.adventure.text.Component;
 
+import com.google.common.collect.Multimap;
 import com.uxplima.uxmlib.gui.GuiText;
 import com.uxplima.uxmlib.menu.binding.PlaceholderRegistry;
 import com.uxplima.uxmlib.menu.runtime.MenuContext;
@@ -280,5 +290,130 @@ class ItemRendererValueTest {
 
         assertThat(Objects.requireNonNull(stack.getItemMeta()).hasItemFlag(ItemFlag.HIDE_ATTRIBUTES))
                 .isTrue();
+    }
+
+    // -- a hyphenated enum token ------------------------------------------------------------------------------
+
+    /**
+     * Every key in a menu file is hyphenated ({@code model-data}, {@code leather-color}, {@code hide-vanilla-tooltip},
+     * {@code attribute-modifiers}), so an operator writes a value the same way and reaches for {@code hide-attributes}.
+     * A constant name holds an underscore where a written word holds a hyphen, so the hyphen is read as the underscore
+     * it stands for. Nothing is lost by the fold: no flag constant means one thing with an underscore and another with
+     * a hyphen, because a hyphen cannot appear in one at all.
+     */
+    @Test
+    void aHyphenatedFlagNameIsTheFlagItNames() {
+        ItemStack stack = render("material = STONE, name = \"n\", decor { flags = [\"hide-attributes\"] }");
+
+        assertThat(Objects.requireNonNull(stack.getItemMeta()).hasItemFlag(ItemFlag.HIDE_ATTRIBUTES))
+                .isTrue();
+    }
+
+    @Test
+    void aHyphenatedDyeNameIsTheDyeItNames() {
+        assertThat(colorOf(leather("light-blue"))).isEqualTo(DyeColor.LIGHT_BLUE.getColor());
+    }
+
+    @Test
+    void aHyphenatedDyeNameInABannerPatternIsTheDyeItNames() {
+        ItemStack stack = render(
+                "material = WHITE_BANNER, name = \"n\", decor { banner { patterns = [\"stripe_top:light-blue\"] } }");
+
+        assertThat(((BannerMeta) Objects.requireNonNull(stack.getItemMeta())).getPatterns())
+                .singleElement()
+                .satisfies(pattern -> assertThat(pattern.getColor()).isEqualTo(DyeColor.LIGHT_BLUE));
+    }
+
+    @Test
+    void aHyphenatedAttributeOperationIsTheOperationItNames() {
+        assertThat(modifierOf("attack_damage:5:add-number:main_hand").getOperation())
+                .isEqualTo(AttributeModifier.Operation.ADD_NUMBER);
+    }
+
+    @Test
+    void aHyphenatedEquipmentSlotIsTheSlotItNames() {
+        assertThat(modifierOf("attack_damage:5:add_number:main-hand").getSlotGroup())
+                .isEqualTo(EquipmentSlotGroup.MAINHAND);
+    }
+
+    /** The rarity constants carry no underscore today, so the fold has to leave the names that do exist alone. */
+    @Test
+    void foldingAHyphenLeavesARarityNameAlone() {
+        ItemStack stack = render("material = STONE, name = \"n\", decor { rarity = \"epic\" }");
+
+        assertThat(Objects.requireNonNull(stack.getItemMeta()).getRarity()).isEqualTo(ItemRarity.EPIC);
+    }
+
+    // -- a token that is no enum at all -----------------------------------------------------------------------
+
+    /**
+     * Silence was the worst half of the hyphen defect: a dropped flag looks exactly like a server default, so an
+     * operator who mistyped one had nothing at all to look for. A token that is still not understood after the fold
+     * is named on the console, so the misspelling is findable.
+     */
+    @Test
+    void aTokenThatIsStillNoFlagAfterTheFoldIsNamedOnTheConsole() {
+        List<String> lines = captureRendererWarnings(
+                () -> render("material = STONE, name = \"n\", decor { flags = [\"hide-nothing\"] }"));
+
+        assertThat(lines).singleElement().satisfies(line -> assertThat(line).contains("hide-nothing"));
+    }
+
+    @Test
+    void aTokenThatIsNoDyeIsNamedOnTheConsoleToo() {
+        List<String> lines = captureRendererWarnings(() -> leather("burgundy"));
+
+        assertThat(lines).singleElement().satisfies(line -> assertThat(line).contains("burgundy"));
+    }
+
+    /**
+     * Once per token, not once per draw: an item with {@code update = true} redraws every tick, and a line a tick
+     * would bury the first one under the thousandth without saying anything new.
+     */
+    @Test
+    void anUnreadableTokenIsNamedOnceHoweverManyTimesTheItemIsDrawn() {
+        List<String> lines = captureRendererWarnings(() -> {
+            render("material = STONE, name = \"n\", decor { flags = [\"hide-nothing\"] }");
+            render("material = STONE, name = \"n\", decor { flags = [\"hide-nothing\"] }");
+            render("material = STONE, name = \"n\", decor { flags = [\"hide-nothing\"] }");
+        });
+
+        assertThat(lines).hasSize(1);
+    }
+
+    /** The one attribute modifier a {@code decor} block declared, read back off the rendered stack. */
+    private AttributeModifier modifierOf(String token) {
+        ItemStack stack =
+                render("material = DIAMOND_SWORD, name = \"n\", decor { attribute-modifiers = [\"" + token + "\"] }");
+        Multimap<Attribute, AttributeModifier> modifiers = Objects.requireNonNull(
+                Objects.requireNonNull(stack.getItemMeta()).getAttributeModifiers());
+        assertThat(modifiers.values()).hasSize(1);
+        return modifiers.values().iterator().next();
+    }
+
+    /** The renderer's own warnings raised while {@code work} runs, so "named once" can be asserted rather than told. */
+    private static List<String> captureRendererWarnings(Runnable work) {
+        List<String> lines = new ArrayList<>();
+        Logger log = Logger.getLogger(ItemRenderer.class.getName());
+        Handler capture = new Handler() {
+
+            @Override
+            public void publish(LogRecord record) {
+                lines.add(record.getMessage());
+            }
+
+            @Override
+            public void flush() {}
+
+            @Override
+            public void close() {}
+        };
+        log.addHandler(capture);
+        try {
+            work.run();
+        } finally {
+            log.removeHandler(capture);
+        }
+        return lines;
     }
 }

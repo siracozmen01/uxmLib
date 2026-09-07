@@ -84,6 +84,13 @@ public final class ItemRenderer {
      */
     private final Set<String> reportedBadHandlers = ConcurrentHashMap.newKeySet();
 
+    /**
+     * The operator tokens already named on the console because nothing could be read out of them, keyed by the kind
+     * they were being read as. Same reason and same bound as {@link #reportedBadHandlers}: an item with {@code update
+     * = true} redraws every tick, so a misspelling is named once per renderer rather than once per draw.
+     */
+    private final Set<String> reportedUnreadableTokens = ConcurrentHashMap.newKeySet();
+
     /** A single {@code %token%} placeholder. {@code group(1)} is the bare token name. */
     private static final Pattern PLACEHOLDER = Pattern.compile("%(\\w+)%");
 
@@ -600,9 +607,7 @@ public final class ItemRenderer {
         }
         meta.enchantments().forEach(token -> applyEnchant(builder, token, false));
         meta.storedEnchantments().forEach(token -> applyEnchant(builder, token, true));
-        meta.leatherColor()
-                .flatMap(ItemRenderer::parseColor)
-                .ifPresent(color -> safely(() -> builder.leatherColor(color)));
+        meta.leatherColor().flatMap(this::parseColor).ifPresent(color -> safely(() -> builder.leatherColor(color)));
         applyPotion(builder, meta.potion());
         meta.bannerPatterns().forEach(token -> applyBannerPattern(builder, token));
         meta.trim().ifPresent(trim -> applyTrim(builder, trim));
@@ -617,10 +622,7 @@ public final class ItemRenderer {
      * component a runtime cannot model is skipped rather than aborting the render, the same as an unknown flag.
      */
     private void applyDataComponents(ItemBuilder builder, DataComponents components) {
-        components
-                .rarity()
-                .flatMap(ItemRenderer::parseRarity)
-                .ifPresent(rarity -> safely(() -> builder.rarity(rarity)));
+        components.rarity().flatMap(this::parseRarity).ifPresent(rarity -> safely(() -> builder.rarity(rarity)));
         components.tooltipStyle().ifPresent(raw -> applyTooltipStyle(builder, raw));
         components
                 .enchantGlint()
@@ -772,21 +774,58 @@ public final class ItemRenderer {
 
     /**
      * Map the spec's raw flag tokens to Bukkit {@link ItemFlag}s, skipping any token that is not a flag name. The
-     * token is trimmed and upper-cased first, because every other enum-valued name in this block (a dye, a rarity,
-     * an attribute operation, a slot group) is read without regard to case, and a flag has no reason to be the one
-     * that is not. The fold is lossless: a flag constant holds only letters and underscores, and none of those
-     * underscores stands for another character.
+     * token goes through {@link #enumToken} first, because every other enum-valued name in this block (a dye, a
+     * rarity, an attribute operation, a slot group) is read the same way, and a flag has no reason to be the one
+     * that is not. A token that is still not a flag after the fold is named on the console rather than dropped in
+     * silence.
      */
     private ItemFlag[] resolveFlags(List<String> tokens) {
         List<ItemFlag> flags = new ArrayList<>(tokens.size());
         for (String token : tokens) {
             try {
-                flags.add(ItemFlag.valueOf(token.trim().toUpperCase(Locale.ROOT)));
+                flags.add(ItemFlag.valueOf(enumToken(token)));
             } catch (IllegalArgumentException unknownFlag) {
-                // A spec naming a flag that does not exist on this server should not abort the render.
+                // A spec naming a flag that does not exist on this server should not abort the render, but a
+                // dropped flag looks exactly like a server default, so it is said out loud instead of swallowed.
+                reportUnreadableToken("item-flag", token);
             }
         }
         return flags.toArray(ItemFlag[]::new);
+    }
+
+    /**
+     * An operator's token folded to the spelling an enum constant carries: trimmed, hyphens read as the underscores
+     * they stand for, then upper-cased.
+     *
+     * <p>Every key in a menu file is hyphenated ({@code model-data}, {@code leather-color}, {@code
+     * attribute-modifiers}), so an operator writes a value the same way and reaches for {@code hide-dye} or {@code
+     * light-blue}. Without the fold that flag was skipped, and a skipped flag looks exactly like a server default, so
+     * nothing on the screen said the line had been ignored.
+     *
+     * <p>The fold is lossless. A Java constant name holds only letters, digits, underscores and currency symbols, and
+     * a hyphen cannot appear in one at all, so no constant means one thing spelled with a hyphen and another spelled
+     * with an underscore. Reading the two as the same name can therefore never pick the wrong constant.
+     */
+    private static String enumToken(String raw) {
+        return raw.trim().replace('-', '_').toUpperCase(Locale.ROOT);
+    }
+
+    /**
+     * Name on the console one operator token nothing could be read out of, once per distinct token per renderer.
+     *
+     * <p>Silence is the expensive part of a fail-soft parser. A dropped flag looks like a server default and a
+     * dropped colour looks like the material's own, so an operator who mistyped one sees a menu that renders and has
+     * nothing at all to look for. The token and the kind it was being read as are what a search needs.
+     *
+     * <p>The file it was written in is not said, and that is a gap rather than a choice: {@link MenuItemSpec} is a
+     * plain value with no source path on it, and nothing on the render path is told which menu file a spec was parsed
+     * from. Carrying an origin down to here means a new component on the spec model and on every constructor of it,
+     * which is a change of its own rather than a line in this one.
+     */
+    private void reportUnreadableToken(String kind, String token) {
+        if (reportedUnreadableTokens.add(kind + '=' + token)) {
+            LOG.warning("event=menu_token_unreadable kind=" + kind + " token='" + token + "'");
+        }
     }
 
     /**
@@ -815,7 +854,7 @@ public final class ItemRenderer {
                 .flatMap(name -> fromRegistry(Registry.POTION, keyOf(name)))
                 .ifPresent(base ->
                         safely(() -> builder.editTypedMeta(PotionMeta.class, meta -> meta.setBasePotionType(base))));
-        potion.color().flatMap(ItemRenderer::parseColor).ifPresent(color -> safely(() -> builder.potionColor(color)));
+        potion.color().flatMap(this::parseColor).ifPresent(color -> safely(() -> builder.potionColor(color)));
         potion.effects()
                 .forEach(token -> parsePotionEffect(token).ifPresent(e -> safely(() -> builder.potionEffect(e))));
     }
@@ -871,9 +910,20 @@ public final class ItemRenderer {
         return Optional.of(new PotionEffect(type.get(), duration, amplifier));
     }
 
-    /** A colour as a {@code #RRGGBB} hex, an {@code r,g,b} triple, or a named dye colour; empty when unparseable. */
-    private static Optional<Color> parseColor(String raw) {
-        String value = raw.trim();
+    /**
+     * A colour as a {@code #RRGGBB} hex, an {@code r,g,b} triple, or a named dye colour; empty when unparseable, and
+     * named on the console when so, because a colour that did not apply looks like the material's own.
+     */
+    private Optional<Color> parseColor(String raw) {
+        Optional<Color> color = readColor(raw.trim());
+        if (color.isEmpty()) {
+            reportUnreadableToken("colour", raw);
+        }
+        return color;
+    }
+
+    /** The colour {@code value} names in whichever of the three forms it is written; empty when it names none. */
+    private static Optional<Color> readColor(String value) {
         if (value.isEmpty()) {
             return Optional.empty();
         }
@@ -884,7 +934,7 @@ public final class ItemRenderer {
             if (value.contains(",")) {
                 return rgbTriple(value);
             }
-            return Optional.of(DyeColor.valueOf(value.toUpperCase(Locale.ROOT)).getColor());
+            return Optional.of(DyeColor.valueOf(enumToken(value)).getColor());
         } catch (IllegalArgumentException malformed) {
             // A bad hex, an out-of-range channel, or an unknown colour name is skipped, like an unknown flag.
             return Optional.empty();
@@ -903,46 +953,52 @@ public final class ItemRenderer {
                 Integer.parseInt(parts[2].trim())));
     }
 
-    /** A {@link DyeColor} by case-insensitive name, present only when it matches a known dye. */
-    private static Optional<DyeColor> parseDye(String name) {
+    /** A {@link DyeColor} by folded name, present only when it matches a known dye; named on the console when not. */
+    private Optional<DyeColor> parseDye(String name) {
         try {
-            return Optional.of(DyeColor.valueOf(name.trim().toUpperCase(Locale.ROOT)));
+            return Optional.of(DyeColor.valueOf(enumToken(name)));
         } catch (IllegalArgumentException unknown) {
+            reportUnreadableToken("dye-colour", name);
             return Optional.empty();
         }
     }
 
-    /** An {@link ItemRarity} by case-insensitive name (COMMON/UNCOMMON/RARE/EPIC), empty when it is not a rarity. */
-    private static Optional<ItemRarity> parseRarity(String name) {
+    /** An {@link ItemRarity} by folded name (COMMON/UNCOMMON/RARE/EPIC), empty when it is not a rarity. */
+    private Optional<ItemRarity> parseRarity(String name) {
         try {
-            return Optional.of(ItemRarity.valueOf(name.trim().toUpperCase(Locale.ROOT)));
+            return Optional.of(ItemRarity.valueOf(enumToken(name)));
         } catch (IllegalArgumentException unknown) {
+            reportUnreadableToken("rarity", name);
             return Optional.empty();
         }
     }
 
     /** An {@link AttributeModifier.Operation} by name ({@code add_number}/{@code add_scalar}/{@code multiply_scalar_1}). */
-    private static Optional<AttributeModifier.Operation> parseOperation(String name) {
+    private Optional<AttributeModifier.Operation> parseOperation(String name) {
         try {
-            return Optional.of(AttributeModifier.Operation.valueOf(name.trim().toUpperCase(Locale.ROOT)));
+            return Optional.of(AttributeModifier.Operation.valueOf(enumToken(name)));
         } catch (IllegalArgumentException unknown) {
+            reportUnreadableToken("attribute-operation", name);
             return Optional.empty();
         }
     }
 
-    /** An {@link EquipmentSlotGroup} by name; a blank token is the whole-item {@code any}, an unknown one is skipped. */
-    private static Optional<EquipmentSlotGroup> parseSlotGroup(String name) {
-        return switch (name.trim().toLowerCase(Locale.ROOT)) {
-            case "", "any" -> Optional.of(EquipmentSlotGroup.ANY);
-            case "hand", "mainhand", "main_hand" -> Optional.of(EquipmentSlotGroup.MAINHAND);
-            case "off_hand", "offhand" -> Optional.of(EquipmentSlotGroup.OFFHAND);
-            case "feet" -> Optional.of(EquipmentSlotGroup.FEET);
-            case "legs" -> Optional.of(EquipmentSlotGroup.LEGS);
-            case "chest" -> Optional.of(EquipmentSlotGroup.CHEST);
-            case "head" -> Optional.of(EquipmentSlotGroup.HEAD);
-            case "armor" -> Optional.of(EquipmentSlotGroup.ARMOR);
-            case "body" -> Optional.of(EquipmentSlotGroup.BODY);
-            default -> Optional.empty();
+    /** An {@link EquipmentSlotGroup} by name; a blank token is the whole-item {@code any}, an unknown one is named. */
+    private Optional<EquipmentSlotGroup> parseSlotGroup(String name) {
+        return switch (enumToken(name)) {
+            case "", "ANY" -> Optional.of(EquipmentSlotGroup.ANY);
+            case "HAND", "MAINHAND", "MAIN_HAND" -> Optional.of(EquipmentSlotGroup.MAINHAND);
+            case "OFF_HAND", "OFFHAND" -> Optional.of(EquipmentSlotGroup.OFFHAND);
+            case "FEET" -> Optional.of(EquipmentSlotGroup.FEET);
+            case "LEGS" -> Optional.of(EquipmentSlotGroup.LEGS);
+            case "CHEST" -> Optional.of(EquipmentSlotGroup.CHEST);
+            case "HEAD" -> Optional.of(EquipmentSlotGroup.HEAD);
+            case "ARMOR" -> Optional.of(EquipmentSlotGroup.ARMOR);
+            case "BODY" -> Optional.of(EquipmentSlotGroup.BODY);
+            default -> {
+                reportUnreadableToken("equipment-slot", name);
+                yield Optional.empty();
+            }
         };
     }
 
