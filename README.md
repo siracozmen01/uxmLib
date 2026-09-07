@@ -113,7 +113,7 @@ what you use. Modules marked **experimental** are previews with unstable APIs (s
 | `uxmlib-integration` | Soft-dependency hooks reached only past a present-guard: PlaceholderAPI (read **and** expansion registration), Vault and VaultUnlocked economy, Vault permissions, LuckPerms, WorldGuard/Towny region queries, a transient advancement-toast API, an online-data lifecycle manager, a dependency-free Discord webhook, and native-`Display` [holograms](#holograms). |
 | `uxmlib-hud` | Adventure-native HUD overlays, all through the public player API: a flicker-free diffing sidebar, title/subtitle, a sticky action bar, boss bars with a mode enum (permanent/filling/countdown/dynamic), tablist header/footer, per-tick text animators, and a nametag registry that composes several plugins' prefixes, suffixes and colours onto the one team a player may belong to. |
 | `uxmlib-update` | A notify-only release update checker (GitHub / Modrinth providers) that compares a build-time version constant against the latest release and surfaces a permission-gated clickable join message. It never self-downloads. |
-| `uxmlib-condition` | A declarative condition engine (operand comparison + placeholder resolution + failure policy) and its natural pair, a config-driven action engine (`[message]`, `[console]`, `[title]`, … parsed once into closures). Its `Wallet` seam ships soft backends for Vault, VaultUnlocked, PlayerPoints, EcoBits, Treasury, and any economy reachable by a placeholder and a console line. |
+| `uxmlib-condition` | A declarative condition engine (operand comparison + placeholder resolution + failure policy) and its natural pair, a config-driven action engine (`[message]`, `[console]`, `[title]`, … parsed once into closures). Its `Wallet` seam ships soft backends for Vault, VaultUnlocked, PlayerPoints, EcoBits, Treasury, and any economy reachable by a placeholder and a console line, plus the player's own experience counted in points or in levels. |
 | `uxmlib-pipeline` | **Experimental.** A from-scratch, MIT-clean Netty pipeline: channel resolve, idempotent inject/eject, a self-healing reorder watchdog, and a fail-open listener seam. It builds no packet and knows no entity. Alone in the packet family it needs no Mojang-mapped server, so a plugin that wants a pipeline and no server internals can take it on its own. |
 | `uxmlib-packet` | **Experimental.** The shared Mojang-mapped packet helpers (Adventure→vanilla component conversion, bundling, the stream-codec buffer trick, guarded reflection, entity-id allocation) plus per-viewer tab-list, NPC, text-display, and inventory-item packet ports built on them. |
 | `uxmlib-nametags` | **Experimental.** A from-scratch per-viewer nametag renderer (different prefixes/colours/visibility per viewer) over scoreboard-team and metadata packets, without touching the server-side scoreboard. |
@@ -1053,7 +1053,17 @@ Wallet gems = TreasuryWallet.ofServer(Duration.ofSeconds(2), log);
 // The last resort: a balance behind a placeholder, taken by a console line.
 Wallet tokens = PlaceholderWallet.ofServer(
         PlaceholderWallet.Pool.of("%tokens_balance%", "tokens take {player} {amount}"));
+
+// The player's own experience, which needs no plugin at all. Points and levels are two currencies:
+// a level costs seven points near the start and over a hundred past level thirty one.
+Wallet xp = ExperienceWallet.ofPoints();
+Wallet levels = ExperienceWallet.ofLevels();
 ```
+
+`ExperienceWallet` is the one backend with no other plugin behind it, so it has no present-guard and
+nothing to log. It reads and writes the player's own experience bar, which means the caller must already
+be on the thread that owns the player (the region that owns them on Folia), exactly as `[take-item]`
+requires for the inventory. A player who is not online reads zero and pays nothing.
 
 A backend answers what the balance is and whether a whole amount can be taken, and nothing else. It fixes
 no price, no cost table and no currency name: those are the game a plugin plays. Which currency name maps

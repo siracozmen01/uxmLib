@@ -13,8 +13,10 @@
  * through its own injected seam ({@link com.uxplima.uxmlib.condition.Wallet}, {@link
  * com.uxplima.uxmlib.condition.ItemStore}) for the same reason the operand resolver is one: the engine names
  * no economy plugin and fixes no price. {@link com.uxplima.uxmlib.condition.wallet} then ships the backends
- * that fill the wallet seam, each one soft behind a plugin-present guard, so a consumer wires an economy
- * without writing the reflection for it and a server without that economy loads none of its code.
+ * that fill the wallet seam. The ones that talk to another plugin are soft behind a plugin-present guard, so
+ * a consumer wires an economy without writing the reflection for it and a server without that economy loads
+ * none of its code; the one that counts the player's own experience needs no plugin and so no guard, and
+ * says so.
  *
  * <p>The module depends only on {@code uxmlib-common} (its {@code Text} seam for rendering messages).
  * Treasury and PlaceholderAPI are {@code compileOnly}: they reach neither the published POM nor the jar,
