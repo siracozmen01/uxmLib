@@ -5,11 +5,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.logging.Logger;
 
 import com.uxplima.uxmlib.menu.runtime.MenuContext;
 
@@ -26,7 +28,16 @@ import com.uxplima.uxmlib.menu.runtime.MenuContext;
  */
 public final class PlaceholderRegistry {
 
+    private static final Logger LOG = Logger.getLogger(PlaceholderRegistry.class.getName());
+
     private final ConcurrentHashMap<String, Function<MenuContext, String>> handlers = new ConcurrentHashMap<>();
+
+    /**
+     * The ids whose handler {@link #resolveOrReport} has already named on the console. Per registry and never
+     * static: a registry is per plugin, so one plugin's broken handler must not silence another plugin's report of
+     * the same token name. Bounded by the number of distinct ids that fail, not by the number of renders.
+     */
+    private final Set<String> reportedFailures = ConcurrentHashMap.newKeySet();
 
     /**
      * The prefix/family resolvers consulted when no exact handler matches, in registration order. Written once each
@@ -69,7 +80,8 @@ public final class PlaceholderRegistry {
      * deliberate. There the registry runs every handler against a context most of them were not written for, so a
      * throw is expected and means the placeholder belongs to another menu. Here the token was asked for by name, so a
      * throw is a defect in whoever registered it, and the caller is the one that knows what it should cost. The
-     * renderer catches and reports; a caller that would rather fail keeps the exception.
+     * renderer catches and reports; a caller that would rather fail keeps the exception. A caller that wants the
+     * catch and the report without writing either asks {@link #resolveOrReport}.
      */
     public Optional<String> resolve(String id, MenuContext ctx) {
         Objects.requireNonNull(id, "id");
@@ -84,6 +96,34 @@ public final class PlaceholderRegistry {
             }
         }
         return Optional.empty();
+    }
+
+    /**
+     * Resolve {@code id} exactly as {@link #resolve} does, except that a handler which throws yields empty instead of
+     * escaping, and is named on the console.
+     *
+     * <p>{@link #resolve} lets a failure out because the caller is the one that knows what a failed token should
+     * cost, and this is the answer for the caller that has already decided. A condition asks for one token by name in
+     * the middle of an operator's requirement block, and a handler there belongs to whichever plugin registered it:
+     * without this, one third-party handler that throws takes the whole gate with it and the menu stops drawing. The
+     * token going unfilled costs one gate; the exception costs the window.
+     *
+     * <p>Named once per id per registry, and never statically. Once per id because a menu item with {@code update =
+     * true} redraws every tick and a line a tick buries the first one; per registry because a static memory would let
+     * one plugin's broken handler silence another plugin's report of a token with the same name, for as long as the
+     * two shared a classloader.
+     */
+    public Optional<String> resolveOrReport(String id, MenuContext ctx) {
+        Objects.requireNonNull(id, "id");
+        Objects.requireNonNull(ctx, "ctx");
+        try {
+            return resolve(id, ctx);
+        } catch (RuntimeException handlerFailed) {
+            if (reportedFailures.add(id)) {
+                LOG.warning("event=placeholder_handler_failed id=" + id + " cause=" + handlerFailed);
+            }
+            return Optional.empty();
+        }
     }
 
     /**
