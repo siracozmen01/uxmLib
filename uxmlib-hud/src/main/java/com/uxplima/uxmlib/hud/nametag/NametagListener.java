@@ -12,9 +12,9 @@ import org.bukkit.event.player.PlayerQuitEvent;
  */
 public final class NametagListener implements Listener {
 
-    private final NametagRegistry registry;
+    private final Nametags registry;
 
-    public NametagListener(NametagRegistry registry) {
+    public NametagListener(Nametags registry) {
         this.registry = Objects.requireNonNull(registry, "registry");
     }
 

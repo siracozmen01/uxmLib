@@ -32,8 +32,13 @@ import org.jspecify.annotations.Nullable;
  * <p>Give it a {@link Scheduler} when the display it writes to belongs to a particular thread: a scoreboard
  * does, and every write is routed onto the global region. Without one, writes happen on the calling thread,
  * which is right for a consumer that already calls from there.
+ *
+ * <p>One of these owns one server's names only if it is the only one on the server. Every plugin relocates its
+ * own copy of this class, so two plugins each constructing one is two registries and two teams, which is the
+ * collision the class was written to end. Construct it through {@link SharedNametags#claim} instead: whichever
+ * plugin loaded first builds the registry and the rest are handed a view onto it.
  */
-public final class NametagRegistry {
+public final class NametagRegistry implements Nametags {
 
     /** What separates two contributed parts of the same half; a plain space unless an operator says otherwise. */
     public static final String DEFAULT_SEPARATOR = " ";
@@ -80,6 +85,7 @@ public final class NametagRegistry {
     }
 
     /** Record {@code contribution} for {@code player}, replacing that plugin's previous one, and recompose. */
+    @Override
     public void contribute(Player player, NametagContribution contribution) {
         Objects.requireNonNull(player, "player");
         Objects.requireNonNull(contribution, "contribution");
@@ -91,6 +97,7 @@ public final class NametagRegistry {
     }
 
     /** Take back what {@code plugin} contributed to {@code player} alone, and recompose that name. */
+    @Override
     public void withdraw(Player player, String plugin) {
         Objects.requireNonNull(player, "player");
         Objects.requireNonNull(plugin, "plugin");
@@ -102,6 +109,7 @@ public final class NametagRegistry {
     }
 
     /** Take back everything {@code plugin} contributed, for a plugin disabling, and recompose every name. */
+    @Override
     public void withdraw(String plugin) {
         Objects.requireNonNull(plugin, "plugin");
         for (Map.Entry<UUID, PlayerTags> entry : byPlayer.entrySet()) {
@@ -112,12 +120,14 @@ public final class NametagRegistry {
     }
 
     /** Forget a player entirely and drop the name they wore; for a quit. */
+    @Override
     public void forget(Player player) {
         Objects.requireNonNull(player, "player");
         forget(player.getUniqueId());
     }
 
     /** Forget the player with {@code id}, as {@link #forget(Player)} does when the Player is already gone. */
+    @Override
     public void forget(UUID id) {
         Objects.requireNonNull(id, "id");
         PlayerTags tags = byPlayer.remove(id);
@@ -127,6 +137,7 @@ public final class NametagRegistry {
     }
 
     /** Give the server back what it had: every name this registry wrote is dropped. */
+    @Override
     public void close() {
         byPlayer.clear();
         reportedClashes.clear();
@@ -134,6 +145,7 @@ public final class NametagRegistry {
     }
 
     /** What {@code id} currently wears, for a consumer that wants to inspect the composition it caused. */
+    @Override
     public ComposedNametag composed(UUID id) {
         Objects.requireNonNull(id, "id");
         PlayerTags tags = byPlayer.get(id);

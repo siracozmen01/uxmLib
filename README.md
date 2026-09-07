@@ -940,6 +940,33 @@ together with the winner.
 Read your priority from your own config: which of two plugins comes first is an operator's decision. A team
 uxmLib did not create is never touched, so a third-party plugin managing its own teams is left alone.
 
+That settles the fight inside one jar. Every plugin relocates its own copy of uxmLib, so two plugins each
+constructing a `NametagRegistry` is two registries and two teams, and the second one still loses. Claim it
+through `SharedNametags` instead and one server has one registry, whichever plugin loaded first:
+
+```java
+Nametags nametags = SharedNametags.claim(this, () -> new NametagRegistry(
+        new ScoreboardNametagSink(board, getLogger()), getLogger(), " ", scheduler));
+
+nametags.contribute(player, NametagContribution.prefix(getName(), priority, prefix));
+
+// onDisable
+nametags.withdraw(getName());
+SharedNametags.release(this);
+```
+
+The first plugin to load builds the registry and offers it on the server's own service manager under
+`java.util.function.Function`, which comes from the boot class loader and is therefore the same class in
+every jar; the payload is JDK, Bukkit and Adventure types, none of which is ever shaded. The registration is
+marked, so a `Function` service registered for somebody else's purpose is left alone. This is the same
+technique `BackupParticipants` uses for a save request.
+
+Two consequences worth knowing. The plugin that builds the registry decides the separator and the colour rule
+for the whole server, so read both from your own config and expect an operator to set them on whichever
+plugin loads first. And when an owner is disabled the server unregisters its service, so the next plugin to
+call takes the registry over: names come back as plugins contribute again rather than staying gone until a
+restart.
+
 ### Conditions & actions
 
 A config-driven gate plus a config-driven action list: both parsed once and run many times.
