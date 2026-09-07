@@ -39,6 +39,12 @@ class ArchitectureTest {
      * {@code eval/} is the expression language over it, and both are documented as Bukkit-free so they can be
      * unit-tested without a server. The documentation said that boundary was enforced before anything enforced it;
      * this is the enforcement.
+     *
+     * <p>The platform is more than {@code org.bukkit}, and naming only that left a hole a probe walked straight
+     * through: a {@code io.papermc.paper.datacomponent} type in the spec model passed this rule while breaking
+     * exactly what the rule exists to protect. Paper's own namespaces are as much the server as Bukkit's are, so
+     * every one an API can arrive under is named. This package used to live in uxmEssentials, where its fence did
+     * name Paper; the package moved here and the protection has to move with it.
      */
     @ArchTest
     static final ArchRule theMenuModelTouchesNoPlatform = noClasses()
@@ -46,7 +52,8 @@ class ArchitectureTest {
             .resideInAnyPackage("com.uxplima.uxmlib.menu.spec..", "com.uxplima.uxmlib.menu.eval..")
             .should()
             .dependOnClassesThat()
-            .resideInAnyPackage("org.bukkit..", "net.minecraft..")
+            .resideInAnyPackage(
+                    "org.bukkit..", "io.papermc..", "com.destroystokyo.paper..", "org.spigotmc..", "net.minecraft..")
             .because("a menu's model and expression language are plain values, testable without a server");
 
     /** The common module is the root: it must not depend on any feature module. */
