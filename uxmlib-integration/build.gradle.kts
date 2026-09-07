@@ -25,6 +25,13 @@ dependencies {
     compileOnly(libs.placeholderapi)
     compileOnly(libs.worldguard.bukkit) { withoutServerProvidedLibraries() }
     compileOnly(libs.towny)
+    // The four typed claim-plugin APIs the claim-lookup seam compiles against. Transitive-free on purpose:
+    // each SDK only references org.bukkit.*, which paper-api already provides, and pulling each plugin's own
+    // spigot-api would collide with it. The other fifteen providers bind by reflection and need no coordinate.
+    compileOnly(libs.claim.lands) { isTransitive = false }
+    compileOnly(libs.claim.griefprevention) { isTransitive = false }
+    compileOnly(libs.claim.simpleclaimsystem) { isTransitive = false }
+    compileOnly(libs.claim.rclaim) { isTransitive = false }
 
     // Tests exercise the absent-plugin path (MockBukkit) and the pure JSON/spec logic (plain JUnit).
     // LuckPerms is on the test runtime so the hook class loads (and reports absent) without a real plugin.
@@ -40,4 +47,9 @@ dependencies {
     // (no plugin under MockBukkit -> empty) is asserted; production still treats both as compileOnly.
     testImplementation(libs.worldguard.bukkit) { withoutServerProvidedLibraries() }
     testImplementation(libs.towny)
+    // Lands and GriefPrevention on the test runtime so the ownership tests can stub a real Area and Claim and
+    // prove that an owner is distinct from a merely trusted member. The other two stay compileOnly: their
+    // absent-plugin path is what the provider tests assert, and an absent SDK is what that path needs.
+    testImplementation(libs.claim.lands) { isTransitive = false }
+    testImplementation(libs.claim.griefprevention) { isTransitive = false }
 }

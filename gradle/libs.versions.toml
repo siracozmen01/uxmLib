@@ -37,6 +37,14 @@ vaultunlocked  = "2.16"         # net.milkbowl.vault:VaultUnlockedAPI, codemc re
 placeholderapi = "2.11.6"       # me.clip:placeholderapi, extendedclip repo
 worldguard     = "7.0.13"       # com.sk89q.worldguard:worldguard-bukkit, enginehub repo
 towny          = "0.100.4.0"    # com.palmergames.bukkit.towny:towny, glaremasters repo
+# Claim-plugin APIs for the claim-lookup seam. All four resolve through JitPack, which serves an already-built
+# tag from its cache and only stalls (429) on a tag it has never built; these four are long-published, so a
+# cold build downloads them once like any other dependency. The other fifteen providers in that package name
+# no coordinate at all: they bind by reflection, so the seam adds exactly these four and no more.
+lands          = "6.26.18"      # com.github.angeschossen:LandsAPI
+griefprevention = "16.18"       # com.github.TechFortress:GriefPrevention
+simpleclaimsystem = "1.13.1"    # com.github.Xyness:SimpleClaimSystem
+rclaim         = "2.6.0"        # com.github.Weesli:RClaim
 # org.geysermc.floodgate:api, on repo.opencollab.dev and not on Maven Central. Cumulus, the Bedrock form
 # library, arrives with it in compile scope, so it needs no coordinate of its own.
 #
@@ -95,6 +103,10 @@ vaultunlocked-api = { module = "net.milkbowl.vault:VaultUnlockedAPI",   version.
 placeholderapi    = { module = "me.clip:placeholderapi",               version.ref = "placeholderapi" }
 worldguard-bukkit = { module = "com.sk89q.worldguard:worldguard-bukkit", version.ref = "worldguard" }
 towny             = { module = "com.palmergames.bukkit.towny:towny",     version.ref = "towny" }
+claim-lands       = { module = "com.github.angeschossen:LandsAPI",       version.ref = "lands" }
+claim-griefprevention = { module = "com.github.TechFortress:GriefPrevention", version.ref = "griefprevention" }
+claim-simpleclaimsystem = { module = "com.github.Xyness:SimpleClaimSystem", version.ref = "simpleclaimsystem" }
+claim-rclaim      = { module = "com.github.Weesli:RClaim",               version.ref = "rclaim" }
 floodgate-api     = { module = "org.geysermc.floodgate:api",             version.ref = "floodgate" }
 lettuce-core      = { module = "io.lettuce:lettuce-core",              version.ref = "lettuce" }
 
