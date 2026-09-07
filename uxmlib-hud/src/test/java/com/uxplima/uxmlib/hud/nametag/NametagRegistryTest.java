@@ -32,13 +32,13 @@ import org.mockbukkit.mockbukkit.plugin.PluginMock;
  */
 class NametagRegistryTest {
 
-    private ServerMock server;
+    private PlatformServerMock server;
     private FakeNametagSink sink;
     private CapturingLog log;
 
     @BeforeEach
     void setUp() {
-        server = MockBukkit.mock();
+        server = MockBukkit.mock(new PlatformServerMock());
         sink = new FakeNametagSink();
         log = new CapturingLog();
     }
@@ -141,6 +141,56 @@ class NametagRegistryTest {
         assertThat(sink.clearAllCalls())
                 .as("a name written by a plugin that is no longer running outlives the plugin")
                 .isEqualTo(1);
+    }
+
+    /**
+     * The same close on Folia, on the thread Folia actually disables plugins from. Folia halts every region tick
+     * and the global tick first, so {@code isGlobalTickThread} is false there: a fix that asked only that question
+     * would refuse the write and the scoreboard teams would stay on the players, with a quiet log to say so.
+     */
+    @Test
+    void closingOnFoliasShutdownThreadStillHandsTheNamesBack() {
+        PluginMock plugin = MockBukkit.createMockPlugin("FoliaNametagTeardown");
+        PlayerMock player = server.addPlayer();
+        NametagRegistry registry =
+                new NametagRegistry(sink, log.logger(), NametagRegistry.DEFAULT_SEPARATOR, new PaperScheduler(plugin));
+        registry.contribute(player, NametagContribution.prefix("glow", 100, Component.text("[VIP]")));
+        server.getScheduler().performOneTick();
+        server.getPluginManager().disablePlugin(plugin);
+        server.foliaShutdownThread();
+
+        registry.close();
+
+        assertThat(sink.clearAllCalls())
+                .as("Folia disables plugins from the one thread it has handed every region to")
+                .isEqualTo(1);
+    }
+
+    /**
+     * A server that answers the two thread questions the way Folia does on the thread it disables plugins from.
+     */
+    // ServerMock overrides Server#getBanList without its type parameter, so any subclass inherits an unchecked
+    // warning that -Werror turns into a build failure. It is MockBukkit's raw type, not ours.
+    @SuppressWarnings("unchecked")
+    private static final class PlatformServerMock extends ServerMock {
+
+        private boolean globalTickThread = true;
+        private boolean stopping;
+
+        void foliaShutdownThread() {
+            globalTickThread = false;
+            stopping = true;
+        }
+
+        @Override
+        public boolean isGlobalTickThread() {
+            return globalTickThread;
+        }
+
+        @Override
+        public boolean isStopping() {
+            return stopping;
+        }
     }
 
     @Test

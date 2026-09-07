@@ -74,6 +74,48 @@ class MenusFacadeTest {
         }
     }
 
+    /** A scheduler that only counts the global hop, for asserting that the sweep is handed over at all. */
+    private static final class CountingScheduler extends SameThreadScheduler {
+
+        private int globalHops;
+
+        @Override
+        public com.uxplima.uxmlib.scheduler.TaskHandle global(Runnable task) {
+            globalHops++;
+            task.run();
+            return FINISHED;
+        }
+    }
+
+    /**
+     * A server that can answer the two thread questions the way Folia does on the thread it disables plugins
+     * from: nothing is ticking, so it is not the global tick thread, but the server is stopping and this is one
+     * of its tick threads, which is where Folia hands over ownership of every region.
+     */
+    // ServerMock overrides Server#getBanList without its type parameter, so any subclass inherits an unchecked
+    // warning that -Werror turns into a build failure. It is MockBukkit's raw type, not ours.
+    @SuppressWarnings("unchecked")
+    private static final class PlatformServerMock extends org.mockbukkit.mockbukkit.ServerMock {
+
+        private boolean globalTickThread = true;
+        private boolean stopping;
+
+        void foliaShutdownThread() {
+            globalTickThread = false;
+            stopping = true;
+        }
+
+        @Override
+        public boolean isGlobalTickThread() {
+            return globalTickThread;
+        }
+
+        @Override
+        public boolean isStopping() {
+            return stopping;
+        }
+    }
+
     private final List<MenuActionContext> ran = new ArrayList<>();
 
     private GlobalScheduler scheduler;
@@ -82,11 +124,13 @@ class MenusFacadeTest {
 
     private Menus menus;
 
+    private PlatformServerMock server;
+
     private Player viewer;
 
     @BeforeEach
     void setUp() {
-        MockBukkit.mock();
+        server = MockBukkit.mock(new PlatformServerMock());
         MockBukkit.createMockPlugin();
         viewer = MockBukkit.getMock().addPlayer();
         scheduler = new GlobalScheduler();
@@ -285,6 +329,49 @@ class MenusFacadeTest {
         assertThat(viewer.getOpenInventory().getTopInventory())
                 .as("closing another plugin's window on our disable is not ours to do")
                 .isSameAs(other);
+    }
+
+    /**
+     * The same sweep on Folia, on the thread Folia actually disables plugins from.
+     *
+     * <p>This is the test that decides whether a quiet log means anything. Folia halts every region tick and the
+     * global tick before it disables a plugin, so {@code isGlobalTickThread} is false there and a fix that asked
+     * only that question would refuse the sweep and leave every window open, while the log went quiet because the
+     * exception was gone rather than because the work was done. It has to close the window, not merely not throw.
+     */
+    @Test
+    void shutdownClosesTheWindowsOnFoliasShutdownThreadToo() {
+        open("shop", "rows = 3");
+        assertThat(holderOfOpenWindow()).isInstanceOf(MenuHolder.class);
+        PluginMock plugin = MockBukkit.createMockPlugin("FoliaMenuTeardown");
+        Menus disabling = new Menus(renderer(), new PaperScheduler(plugin), new ListSourceRegistry());
+        MockBukkit.getMock().getPluginManager().disablePlugin(plugin);
+        server.foliaShutdownThread();
+
+        disabling.shutdown();
+
+        assertThat(holderOfOpenWindow() instanceof MenuHolder)
+                .as("Folia disables plugins from the one thread it has handed every region to")
+                .isFalse();
+    }
+
+    /**
+     * The sweep is handed to the scheduler whether or not there is anything to close, which is what makes a quiet
+     * shutdown log readable: a plugin cannot go silent by having no menu open. Without this the absence of a trace
+     * would prove nothing about whether the teardown ran.
+     */
+    @Test
+    void theSweepIsScheduledEvenWhenNoWindowIsOpen() {
+        PluginMock plugin = MockBukkit.createMockPlugin("EmptyRosterTeardown");
+        CountingScheduler counting = new CountingScheduler();
+        Menus empty = new Menus(renderer(), counting, new ListSourceRegistry());
+        MockBukkit.getMock().getPluginManager().disablePlugin(plugin);
+
+        empty.shutdown();
+
+        assertThat(counting.globalHops)
+                .as("a shutdown that schedules nothing is a shutdown nobody can tell apart from a skipped one")
+                .isEqualTo(1);
     }
 
     /**
