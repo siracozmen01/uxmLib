@@ -652,6 +652,20 @@ What the engine adds over a plain layout reader:
   there.
 - **A Bedrock viewer sees a form.** When the spec carries a `bedrock` block and the viewer is a Bedrock
   player, the engine sends the native form instead of the chest. See [Bedrock forms](#bedrock-forms).
+- **The file is written as well as read.** `MenuSpecWriter` turns a `MenuSpec` back into the HOCON the
+  loader parses, so a plugin can ship an in-game menu editor without carrying a writer of its own. It is
+  model faithful rather than byte faithful: see [Known gaps](#known-gaps).
+
+```java
+// The header is the consumer's text, never the library's: it names your commands and your folder.
+MenuSpecWriter writer = new MenuSpecWriter(readMyHeaderResource());
+
+String hocon = writer.write(edited);          // render, for a preview or a diff
+writer.write(edited, dataFolder.resolve("menus/shop.conf"));   // render and save, temp file then rename
+
+// File IO behind a menu click never runs on the main thread.
+scheduler.async(() -> writer.write(edited, file));
+```
 
 The model under all of this names no platform type at all: a spec parses, validates, and is asserted on
 with no server running, and `ArchitectureTest.theMenuModelTouchesNoPlatform` fails the build on the first
@@ -1111,13 +1125,14 @@ Requires a JDK 21 toolchain (Gradle provisions it via the Foojay resolver if nee
 
 ## Known gaps
 
-One thing this library is asked for and does not do, written here rather than found again:
+One thing this library does and does not do fully, written here rather than found again:
 
-- **It reads a menu file and cannot write one.** `MenuSpecLoader` and the whole `menu/property`
-  package are here; `MenuSpecWriter` is not, so a plugin that wants an in-game menu editor can open
-  a menu and cannot save one. Closing it means lifting the writer and its round trip test together,
-  because every key a writer does not know is a key it deletes, and this loader's grammar grows with
-  the library.
+- **A saved menu keeps its model and loses its file.** `MenuSpecWriter` writes every shape
+  `MenuSpecLoader` reads, and its round trip test proves it key by key. What it cannot keep is the
+  file the operator typed: a comment is dropped, key order is the writer's own, and a shorthand
+  (`fill-item`, `update-interval`, a `pattern` template) comes back as the canonical form of the
+  model it produced. A plugin that offers an in-game editor tells its operators to keep their own
+  notes somewhere the editor does not rewrite.
 
 ## Versioning & stability
 
