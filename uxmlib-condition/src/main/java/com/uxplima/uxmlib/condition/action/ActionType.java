@@ -34,7 +34,13 @@ public enum ActionType {
     PLAYER("player", true),
 
     /** Close the target player's open inventory. Takes no payload. */
-    CLOSE("close", false);
+    CLOSE("close", false),
+
+    /** Take money from the target through the context's wallet. Payload: {@code [currency] <amount>}. */
+    TAKE_MONEY("take-money", true),
+
+    /** Take items from the target through the context's item store. Payload: {@code <item> [amount]}. */
+    TAKE_ITEM("take-item", true);
 
     private final String prefix;
     private final boolean payloadRequired;

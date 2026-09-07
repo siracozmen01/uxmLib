@@ -38,6 +38,8 @@ public final class ConditionRequest {
     private final @Nullable Player player;
     private final @Nullable Object actor;
     private final OperandResolver resolver;
+    private final Wallet wallet;
+    private final ItemStore itemStore;
     private final List<Component> errors;
     private final CommandSink consoleSink;
     private final CommandSink playerSink;
@@ -47,6 +49,8 @@ public final class ConditionRequest {
         this.player = builder.player;
         this.actor = builder.actor;
         this.resolver = builder.resolver;
+        this.wallet = builder.wallet;
+        this.itemStore = builder.itemStore;
         this.errors = builder.errors;
         this.consoleSink = builder.consoleSink;
         this.playerSink = builder.playerSink;
@@ -76,6 +80,16 @@ public final class ConditionRequest {
     /** The injected resolver for operand templates. */
     public OperandResolver resolver() {
         return resolver;
+    }
+
+    /** The injected wallet a {@link MoneyCondition} reads its balance from; {@link Wallet#empty()} by default. */
+    public Wallet wallet() {
+        return wallet;
+    }
+
+    /** The injected store an {@link ItemCondition} counts through; {@link ItemStore#empty()} by default. */
+    public ItemStore itemStore() {
+        return itemStore;
     }
 
     /** The sink a {@link FailurePolicy#RUN_COMMANDS} entry's {@code [console]} commands dispatch through. */
@@ -114,6 +128,8 @@ public final class ConditionRequest {
 
         private final OperandResolver resolver;
         private final List<Component> errors = new ArrayList<>();
+        private Wallet wallet = Wallet.empty();
+        private ItemStore itemStore = ItemStore.empty();
         private @Nullable Player player;
         private @Nullable Object actor;
         private CommandSink consoleSink = CommandSink.noop();
@@ -126,6 +142,18 @@ public final class ConditionRequest {
         /** Set the subject player. */
         public Builder player(Player player) {
             this.player = Objects.requireNonNull(player, "player");
+            return this;
+        }
+
+        /** Set the wallet a {@link MoneyCondition} reads through. */
+        public Builder wallet(Wallet wallet) {
+            this.wallet = Objects.requireNonNull(wallet, "wallet");
+            return this;
+        }
+
+        /** Set the store an {@link ItemCondition} counts through. */
+        public Builder itemStore(ItemStore itemStore) {
+            this.itemStore = Objects.requireNonNull(itemStore, "itemStore");
             return this;
         }
 

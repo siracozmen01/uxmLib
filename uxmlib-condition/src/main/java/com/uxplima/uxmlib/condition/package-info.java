@@ -8,7 +8,12 @@
  * is a plain function, never a dependency on the integration/PAPI module. {@link
  * com.uxplima.uxmlib.condition.ConditionList} AND-combines conditions, honours each condition's {@link
  * com.uxplima.uxmlib.condition.FailurePolicy}, and flushes collected failure messages to the request's error
- * sink. The module depends only on {@code uxmlib-common} (its {@code Text} seam for rendering messages).
+ * sink. {@link com.uxplima.uxmlib.condition.MoneyCondition} and {@link
+ * com.uxplima.uxmlib.condition.ItemCondition} ask the same shape of question about money and items, each
+ * through its own injected seam ({@link com.uxplima.uxmlib.condition.Wallet}, {@link
+ * com.uxplima.uxmlib.condition.ItemStore}) for the same reason the operand resolver is one: the engine names
+ * no economy plugin and fixes no price. The module depends only on {@code uxmlib-common} (its {@code Text}
+ * seam for rendering messages).
  */
 @NullMarked
 package com.uxplima.uxmlib.condition;

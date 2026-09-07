@@ -58,7 +58,64 @@ public final class ActionParser {
             case PLAYER -> Actions.playerCommand(payload);
             case CLOSE -> Actions.close();
             case SOUND -> Actions.sound(parseSound(payload));
+            case TAKE_MONEY -> Actions.takeMoney(parseMoneyCost(payload));
+            case TAKE_ITEM -> Actions.takeItem(parseItemCost(payload));
         };
+    }
+
+    /**
+     * Split a {@code [take-money]} payload into its currency and amount. One token is the amount alone, which
+     * spends the wallet's default currency; two tokens name the currency first. A literal amount is checked
+     * now so a typo is a load error rather than a run-time refusal an operator meets in production.
+     */
+    private static Actions.MoneyCost parseMoneyCost(String payload) {
+        List<String> parts = tokenize(payload);
+        Actions.MoneyCost cost =
+                switch (parts.size()) {
+                    case 1 -> new Actions.MoneyCost("", parts.get(0));
+                    case 2 -> new Actions.MoneyCost(parts.get(0), parts.get(1));
+                    default ->
+                        throw new IllegalArgumentException(
+                                "action [take-money] takes <amount> or <currency> <amount>, got: " + payload);
+                };
+        requirePositiveLiteral(cost.amountTemplate(), "take-money", payload);
+        return cost;
+    }
+
+    /**
+     * Split a {@code [take-item]} payload into its item and amount. One token is the item alone and costs
+     * one; two tokens name the amount second. A literal amount is checked now for the same reason.
+     */
+    private static Actions.ItemCost parseItemCost(String payload) {
+        List<String> parts = tokenize(payload);
+        Actions.ItemCost cost =
+                switch (parts.size()) {
+                    case 1 -> new Actions.ItemCost(parts.get(0), "1");
+                    case 2 -> new Actions.ItemCost(parts.get(0), parts.get(1));
+                    default ->
+                        throw new IllegalArgumentException(
+                                "action [take-item] takes <item> or <item> <amount>, got: " + payload);
+                };
+        requirePositiveLiteral(cost.amountTemplate(), "take-item", payload);
+        return cost;
+    }
+
+    // A template holding a placeholder can only be checked once it resolves, so only a literal is validated
+    // here. A zero or negative literal cost is always a mistake: it reads as a price and charges nothing.
+    private static void requirePositiveLiteral(String amountTemplate, String prefix, String payload) {
+        if (amountTemplate.indexOf('%') >= 0) {
+            return;
+        }
+        double amount;
+        try {
+            amount = Double.parseDouble(amountTemplate);
+        } catch (NumberFormatException notANumber) {
+            throw new IllegalArgumentException(
+                    "action [" + prefix + "] amount is not a number in: " + payload, notANumber);
+        }
+        if (!(amount > 0)) {
+            throw new IllegalArgumentException("action [" + prefix + "] amount must be above zero in: " + payload);
+        }
     }
 
     /**

@@ -7,7 +7,9 @@ import org.bukkit.entity.Player;
 
 import net.kyori.adventure.audience.Audience;
 
+import com.uxplima.uxmlib.condition.ItemStore;
 import com.uxplima.uxmlib.condition.OperandResolver;
+import com.uxplima.uxmlib.condition.Wallet;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -36,6 +38,8 @@ public final class ActionContext {
     private final CommandSink consoleSink;
     private final CommandSink playerSink;
     private final OperandResolver resolver;
+    private final Wallet wallet;
+    private final ItemStore itemStore;
 
     private ActionContext(Builder builder) {
         this.target = builder.target;
@@ -44,6 +48,8 @@ public final class ActionContext {
         this.consoleSink = builder.consoleSink;
         this.playerSink = builder.playerSink;
         this.resolver = builder.resolver;
+        this.wallet = builder.wallet;
+        this.itemStore = builder.itemStore;
     }
 
     /** Start a context builder with the resolver seam every placeholder action needs. */
@@ -76,6 +82,16 @@ public final class ActionContext {
         return playerSink;
     }
 
+    /** The wallet a {@code [take-money]} action spends through; {@link Wallet#empty()} by default. */
+    public Wallet wallet() {
+        return wallet;
+    }
+
+    /** The store a {@code [take-item]} action consumes through; {@link ItemStore#empty()} by default. */
+    public ItemStore itemStore() {
+        return itemStore;
+    }
+
     /**
      * Resolve a template string against the subject player through the injected resolver. Unlike the
      * condition module's single-operand use, an action template is a whole line, so the wired resolver is
@@ -96,6 +112,8 @@ public final class ActionContext {
         private @Nullable Player player;
         private CommandSink consoleSink = CommandSink.noop();
         private CommandSink playerSink = CommandSink.noop();
+        private Wallet wallet = Wallet.empty();
+        private ItemStore itemStore = ItemStore.empty();
 
         private Builder(OperandResolver resolver) {
             this.resolver = Objects.requireNonNull(resolver, "resolver");
@@ -132,6 +150,18 @@ public final class ActionContext {
         /** Set the player command sink. */
         public Builder playerSink(CommandSink playerSink) {
             this.playerSink = Objects.requireNonNull(playerSink, "playerSink");
+            return this;
+        }
+
+        /** Set the wallet a {@code [take-money]} action spends through. */
+        public Builder wallet(Wallet wallet) {
+            this.wallet = Objects.requireNonNull(wallet, "wallet");
+            return this;
+        }
+
+        /** Set the store a {@code [take-item]} action consumes through. */
+        public Builder itemStore(ItemStore itemStore) {
+            this.itemStore = Objects.requireNonNull(itemStore, "itemStore");
             return this;
         }
 

@@ -16,6 +16,11 @@ import java.util.Objects;
  * #syncActions()} (run on the owning thread) and {@link #asyncActions()} (may hop), each of which preserves
  * declaration order within its lane. Running everything in order on the calling thread keeps the engine pure
  * and unit-testable; production wiring routes the call through the library {@code Scheduler}.
+ *
+ * <p>A list that holds a {@link CostAction} ({@code [take-money]}, {@code [take-item]}) is charged before it
+ * is run: {@link #run(ActionContext)} asks every cost whether it can be met and throws {@link
+ * ActionCostException} before taking anything when one cannot. So a reward never fires behind a cost that was
+ * not paid, and a player is never left half-charged.
  */
 public final class ActionList {
 
@@ -65,11 +70,53 @@ public final class ActionList {
         return actions.stream().filter(Action::async).toList();
     }
 
-    /** Run every action in declaration order against the context. */
-    public void run(ActionContext context) {
+    /** The {@link CostAction}s in this list, in declaration order. */
+    public List<CostAction> costActions() {
+        return actions.stream()
+                .filter(CostAction.class::isInstance)
+                .map(CostAction.class::cast)
+                .toList();
+    }
+
+    /**
+     * Whether every {@link CostAction} in this list can be met right now. Reads only: nothing is taken.
+     *
+     * <p>Each cost is asked on its own, so two lines that spend the same pool are each measured against the
+     * full balance rather than against the remainder. Write one line per pool and the answer is exact; write
+     * two and this can say yes where the second take will still refuse, at which point {@link
+     * #run(ActionContext)} throws and the first take stands. That is the one case this pre-flight does not
+     * cover, and it is a config shape rather than a state of the world.
+     */
+    public boolean affordable(ActionContext context) {
         Objects.requireNonNull(context, "context");
         for (Action action : actions) {
+            if (action instanceof CostAction cost && !cost.affordable(context)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Run every action in declaration order against the context.
+     *
+     * <p>Every cost in the list is checked before any action runs, so a list that takes money and then takes
+     * an item the player does not have takes neither: the money is not spent and the reward behind it does
+     * not fire. An unmet cost raises {@link ActionCostException} and stops the list where it stands.
+     */
+    public void run(ActionContext context) {
+        Objects.requireNonNull(context, "context");
+        requireAffordable(context);
+        for (Action action : actions) {
             action.run(context);
+        }
+    }
+
+    private void requireAffordable(ActionContext context) {
+        for (Action action : actions) {
+            if (action instanceof CostAction cost && !cost.affordable(context)) {
+                throw new ActionCostException("cannot pay " + cost.describe(context));
+            }
         }
     }
 }

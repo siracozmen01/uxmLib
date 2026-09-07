@@ -79,12 +79,15 @@ public final class ConditionList {
     }
 
     // Build the action-side bundle a RUN_COMMANDS entry runs against from the condition-side request: the same
-    // resolver (so command placeholders resolve identically to operand templates), the subject player, and the
-    // request's command sinks: production wires those to route the dispatch through the library Scheduler.
+    // resolver (so command placeholders resolve identically to operand templates), the subject player, the
+    // request's command sinks (production wires those to route the dispatch through the library Scheduler),
+    // and the same wallet and item store, so a take in the entry's list spends what the conditions measured.
     private static ActionContext contextFor(ConditionRequest request) {
         ActionContext.Builder builder = ActionContext.builder(request.resolver())
                 .consoleSink(request.consoleSink())
-                .playerSink(request.playerSink());
+                .playerSink(request.playerSink())
+                .wallet(request.wallet())
+                .itemStore(request.itemStore());
         request.player().ifPresent(builder::player);
         return builder.build();
     }
