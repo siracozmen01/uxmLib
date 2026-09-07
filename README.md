@@ -113,7 +113,7 @@ what you use. Modules marked **experimental** are previews with unstable APIs (s
 | `uxmlib-integration` | Soft-dependency hooks reached only past a present-guard: PlaceholderAPI (read **and** expansion registration), Vault and VaultUnlocked economy, Vault permissions, LuckPerms, WorldGuard/Towny region queries, a transient advancement-toast API, an online-data lifecycle manager, a dependency-free Discord webhook, and native-`Display` [holograms](#holograms). |
 | `uxmlib-hud` | Adventure-native HUD overlays, all through the public player API: a flicker-free diffing sidebar, title/subtitle, a sticky action bar, boss bars with a mode enum (permanent/filling/countdown/dynamic), tablist header/footer, per-tick text animators, and a nametag registry that composes several plugins' prefixes, suffixes and colours onto the one team a player may belong to. |
 | `uxmlib-update` | A notify-only release update checker (GitHub / Modrinth providers) that compares a build-time version constant against the latest release and surfaces a permission-gated clickable join message. It never self-downloads. |
-| `uxmlib-condition` | A declarative condition engine (operand comparison + placeholder resolution + failure policy) and its natural pair, a config-driven action engine (`[message]`, `[console]`, `[title]`, … parsed once into closures). |
+| `uxmlib-condition` | A declarative condition engine (operand comparison + placeholder resolution + failure policy) and its natural pair, a config-driven action engine (`[message]`, `[console]`, `[title]`, … parsed once into closures). Its `Wallet` seam ships soft backends for Vault, VaultUnlocked, PlayerPoints, EcoBits, Treasury, and any economy reachable by a placeholder and a console line. |
 | `uxmlib-pipeline` | **Experimental.** A from-scratch, MIT-clean Netty pipeline: channel resolve, idempotent inject/eject, a self-healing reorder watchdog, and a fail-open listener seam. It builds no packet and knows no entity. Alone in the packet family it needs no Mojang-mapped server, so a plugin that wants a pipeline and no server internals can take it on its own. |
 | `uxmlib-packet` | **Experimental.** The shared Mojang-mapped packet helpers (Adventure→vanilla component conversion, bundling, the stream-codec buffer trick, guarded reflection, entity-id allocation) plus per-viewer tab-list, NPC, text-display, and inventory-item packet ports built on them. |
 | `uxmlib-nametags` | **Experimental.** A from-scratch per-viewer nametag renderer (different prefixes/colours/visibility per viewer) over scoreboard-team and metadata packets, without touching the server-side scoreboard. |
@@ -1035,6 +1035,33 @@ ActionList.parse(List.of(
         "[message] <green>Hi %player_name%",
         "[console] heal %player_name%")).run(context);
 ```
+
+`MoneyCondition` and `[take-money]` read through a `Wallet`, and `com.uxplima.uxmlib.condition.wallet`
+ships the backends. Each one is soft: the plugin manager is asked before any type of another plugin is
+named, the handle is resolved on first use and kept, and a missing or renamed API reads zero and refuses
+rather than throwing. A server with none of these plugins behaves as though the package were not there.
+
+```java
+// An economy described rather than compiled against. Vault, VaultUnlocked, PlayerPoints and EcoBits are
+// shipped descriptions; a fifth economy is one more EconomyBinding and needs nothing from this library.
+Wallet vault = BridgedWallet.ofServer(Economies.vault(), log);
+Wallet points = BridgedWallet.ofServer(Economies.playerPoints(), log);
+
+// Treasury answers a subscriber instead of returning, so it is written out with a bound on the wait.
+Wallet gems = TreasuryWallet.ofServer(Duration.ofSeconds(2), log);
+
+// The last resort: a balance behind a placeholder, taken by a console line.
+Wallet tokens = PlaceholderWallet.ofServer(
+        PlaceholderWallet.Pool.of("%tokens_balance%", "tokens take {player} {amount}"));
+```
+
+A backend answers what the balance is and whether a whole amount can be taken, and nothing else. It fixes
+no price, no cost table and no currency name: those are the game a plugin plays. Which currency name maps
+to which backend is the plugin's choice too, so routing between several is the plugin's own `Wallet`.
+
+Every take is all or nothing. Where the economy refuses an overdraft itself, its refusal is read straight
+back; where it cannot (EcoBits adjusts a balance and answers nothing, a console line answers nothing at
+all), the balance is read first and the take is refused before anything moves.
 
 ### Cross-server messaging
 

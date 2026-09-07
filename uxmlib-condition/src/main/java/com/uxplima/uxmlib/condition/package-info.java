@@ -12,8 +12,13 @@
  * com.uxplima.uxmlib.condition.ItemCondition} ask the same shape of question about money and items, each
  * through its own injected seam ({@link com.uxplima.uxmlib.condition.Wallet}, {@link
  * com.uxplima.uxmlib.condition.ItemStore}) for the same reason the operand resolver is one: the engine names
- * no economy plugin and fixes no price. The module depends only on {@code uxmlib-common} (its {@code Text}
- * seam for rendering messages).
+ * no economy plugin and fixes no price. {@link com.uxplima.uxmlib.condition.wallet} then ships the backends
+ * that fill the wallet seam, each one soft behind a plugin-present guard, so a consumer wires an economy
+ * without writing the reflection for it and a server without that economy loads none of its code.
+ *
+ * <p>The module depends only on {@code uxmlib-common} (its {@code Text} seam for rendering messages).
+ * Treasury and PlaceholderAPI are {@code compileOnly}: they reach neither the published POM nor the jar,
+ * and nothing outside a guarded method names either of them.
  */
 @NullMarked
 package com.uxplima.uxmlib.condition;
