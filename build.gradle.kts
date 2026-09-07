@@ -15,6 +15,15 @@ allprojects {
         maven("https://repo.extendedclip.com/releases/") // PlaceholderAPI
         maven("https://jitpack.io")                       // Vault API
         maven("https://repo.codemc.io/repository/creatorfromhell/") // VaultUnlocked API
+        // Treasury, and only Treasury. It is declared exclusively so that no other repository is asked for
+        // it: JitPack sits above this line, JitPack answers 429 while it decides whether to build a tag,
+        // and a build of this library must never wait on that. me.lokka30 is not a JitPack coordinate, so
+        // pinning the group here means JitPack is never asked about it at all and a cold build cannot
+        // stall on it.
+        exclusiveContent {
+            forRepository { maven("https://repo.codemc.org/repository/maven-public/") }
+            filter { includeGroup("me.lokka30") }
+        }
         maven("https://maven.enginehub.org/repo/")        // WorldGuard / WorldEdit
         maven("https://repo.glaremasters.me/repository/towny/") // Towny
         maven("https://repo.opencollab.dev/main/")        // Floodgate and Cumulus

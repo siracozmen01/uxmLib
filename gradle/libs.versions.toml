@@ -37,6 +37,10 @@ vaultunlocked  = "2.16"         # net.milkbowl.vault:VaultUnlockedAPI, codemc re
 placeholderapi = "2.11.6"       # me.clip:placeholderapi, extendedclip repo
 worldguard     = "7.0.13"       # com.sk89q.worldguard:worldguard-bukkit, enginehub repo
 towny          = "0.100.4.0"    # com.palmergames.bukkit.towny:towny, glaremasters repo
+# me.lokka30:treasury-api, on the CodeMC public repo and not on Maven Central. The one economy the wallet
+# seam is written out for: Treasury answers a subscriber instead of returning, so no description of methods
+# reaches it. It is not on JitPack, so a cold build never waits on a tag JitPack has yet to build.
+treasury       = "1.2.0"        # me.lokka30:treasury-api, repo.codemc.org
 # Claim-plugin APIs for the claim-lookup seam. All four resolve through JitPack, which serves an already-built
 # tag from its cache and only stalls (429) on a tag it has never built; these four are long-published, so a
 # cold build downloads them once like any other dependency. The other fifteen providers in that package name
@@ -103,6 +107,7 @@ vaultunlocked-api = { module = "net.milkbowl.vault:VaultUnlockedAPI",   version.
 placeholderapi    = { module = "me.clip:placeholderapi",               version.ref = "placeholderapi" }
 worldguard-bukkit = { module = "com.sk89q.worldguard:worldguard-bukkit", version.ref = "worldguard" }
 towny             = { module = "com.palmergames.bukkit.towny:towny",     version.ref = "towny" }
+treasury-api      = { module = "me.lokka30:treasury-api",               version.ref = "treasury" }
 claim-lands       = { module = "com.github.angeschossen:LandsAPI",       version.ref = "lands" }
 claim-griefprevention = { module = "com.github.TechFortress:GriefPrevention", version.ref = "griefprevention" }
 claim-simpleclaimsystem = { module = "com.github.Xyness:SimpleClaimSystem", version.ref = "simpleclaimsystem" }
