@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.spongepowered.configurate.objectmapping.ConfigSerializable;
@@ -125,6 +126,36 @@ class HoconConfigTest {
 
         assertThat(Files.exists(file)).isTrue();
         assertThat(HoconConfig.load(file).getBoolean("created", false)).isTrue();
+    }
+
+    @Test
+    @DisplayName("a read leaves the tree alone, so a fallback never lands in an operator's file")
+    void areadDoesNotWriteTheFallbackIntoTheTree(@TempDir Path dir) throws Exception {
+        Path file = dir.resolve("config.conf");
+        Files.writeString(file, "commands { example { subcommands { buy = false } } }\n");
+        HoconConfig config = HoconConfig.load(file);
+
+        // Configurate copies a default into the tree as it hands it back, unless it is told not to. With it
+        // on, this first read replaces the operator's `buy = false` with a map, and the second then replaces
+        // that map with `true`: the answer they wrote is gone before anybody asks for it.
+        config.getString("commands.example.subcommands.buy.name", "buy");
+
+        assertThat(config.getBoolean("commands.example.subcommands.buy", true)).isFalse();
+        assertThat(config.root().raw().toString()).doesNotContain("name=buy");
+    }
+
+    @Test
+    @DisplayName("a save after a read writes back what the file said, and nothing the reader defaulted")
+    void asaveAfterAReadWritesNoDefault(@TempDir Path dir) throws Exception {
+        Path file = dir.resolve("config.conf");
+        Files.writeString(file, "kept = 1\n");
+        HoconConfig config = HoconConfig.load(file);
+        config.getString("never-written", "default");
+        config.getInt("also-never", 7);
+
+        config.save();
+
+        assertThat(Files.readString(file)).doesNotContain("never-written").doesNotContain("also-never");
     }
 
     @ConfigSerializable

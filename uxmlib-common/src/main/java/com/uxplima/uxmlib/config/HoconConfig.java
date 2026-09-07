@@ -26,6 +26,10 @@ import org.spongepowered.configurate.serialize.TypeSerializerCollection;
  * whole on {@link #reload()}, so a reader sees the entire old tree or the entire new one: never half.
  * Dotted paths address nested nodes; subtrees map onto {@code @ConfigSerializable} types via
  * {@link #get(Class)} / {@link #getNode(String, Class, Object)}. A missing file loads empty.
+ *
+ * <p>A read never writes. Configurate copies a default into the tree as it hands it back, and this turns that
+ * off: see {@link #loader}. {@link #mergeDefaults(ConfigurationNode)} is how a default is put into a file, and
+ * it is the only way.
  */
 public final class HoconConfig {
 
@@ -69,11 +73,26 @@ public final class HoconConfig {
         return load(file);
     }
 
+    /**
+     * The loader, with default-copying switched off.
+     *
+     * <p>Configurate turns it on for HOCON, and with it on every {@code getX(path, fallback)} <em>writes</em>
+     * the fallback into the tree it just read from. A read is then not a read: {@code getString("a.b.name",
+     * "b")} on a file that says {@code b = false} replaces that {@code false} with a map, and the next read of
+     * {@code a.b} as a boolean replaces the map with {@code true}. An operator's own value is gone, in memory,
+     * and {@link #save()} would then write the wreckage back to their file.
+     *
+     * <p>It was found by a subcommand switch that could not be read: the command layer reads a branch's name,
+     * aliases and enabled flag first, so by the time anything asked whether the branch was on, the answer the
+     * operator wrote had been overwritten by the library's own defaults.
+     */
     private static HoconConfigurationLoader loader(Path file, @Nullable TypeSerializerCollection serializers) {
-        HoconConfigurationLoader.Builder builder =
-                HoconConfigurationLoader.builder().path(file).emitComments(true);
+        HoconConfigurationLoader.Builder builder = HoconConfigurationLoader.builder()
+                .path(file)
+                .emitComments(true)
+                .defaultOptions(options -> options.shouldCopyDefaults(false));
         if (serializers != null) {
-            builder.defaultOptions(options -> options.serializers(serializers));
+            builder.defaultOptions(options -> options.serializers(serializers).shouldCopyDefaults(false));
         }
         return builder.build();
     }
