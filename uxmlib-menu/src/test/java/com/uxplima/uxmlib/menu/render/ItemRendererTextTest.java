@@ -80,6 +80,17 @@ class ItemRendererTextTest {
         return displayed == null ? "" : PlainTextComponentSerializer.plainText().serialize(displayed);
     }
 
+    /**
+     * The one rendered lore line of an item whose single lore entry is {@code raw}, as plain text. A lore line takes
+     * its own path through the renderer rather than the name's, so a rule proved on a name is not proved here.
+     */
+    private String loreLine(String raw) {
+        List<Component> lines = renderer.lore(
+                item("material = STONE, name = \"n\", lore = [\"" + raw + "\"]"), MenuContext.of(viewer, null, 0));
+        assertThat(lines).hasSize(1);
+        return PlainTextComponentSerializer.plainText().serialize(lines.get(0));
+    }
+
     // -- the math pass ----------------------------------------------------------------------------------------
 
     @Test
@@ -156,6 +167,54 @@ class ItemRendererTextTest {
         placeholders.register("blank", ctx -> "");
 
         assertThat(name("total: {math: %blank% + 1}")).isEqualTo("total: ");
+    }
+
+    /**
+     * A handler that answers a space has answered nothing: the space is not a number in any position, and after the
+     * token pass it leaves the same anonymous hole an empty answer leaves. Whitespace is what a handler reading a
+     * padded column, a trimmed-to-nothing config value or a formatted blank returns, so the check asks whether the
+     * answer is blank rather than whether it is empty.
+     */
+    @Test
+    void aHandlerAnsweringOnlyWhitespaceIsAMissingOperandTooAndNotAZero() {
+        placeholders.register("padded", ctx -> " ");
+
+        assertThat(name("total: {math: %padded% + 1}")).isEqualTo("total: ");
+    }
+
+    // -- the same two passes, on a lore line ------------------------------------------------------------------
+
+    /**
+     * The lore path is the commonest one an operator writes a price on, and it ran the math pass without the guard
+     * the name path runs. A missing operand therefore left {@code " + 1"}, plus parsed as a unary prefix, and the
+     * player was shown the number 1: a price that nothing computed, on the line that is meant to say what a thing
+     * costs. The whole block goes instead.
+     */
+    @Test
+    void aLoreLineDropsABlockWhoseOperandIsMissingRatherThanShowingAFabricatedNumber() {
+        assertThat(loreLine("cost: {math: %missing% + 1}")).isEqualTo("cost: ");
+        assertThat(loreLine("cost: {math: %missing% - 1}")).isEqualTo("cost: ");
+    }
+
+    @Test
+    void aLoreLineWithEveryOperandPresentStillEvaluates() {
+        placeholders.register("coins", ctx -> "7");
+
+        assertThat(loreLine("cost: {math: %coins% + 1}")).isEqualTo("cost: 8");
+    }
+
+    @Test
+    void aLoreLineDropsOnlyTheBlockWithTheHoleAndNotTheOneBesideIt() {
+        placeholders.register("coins", ctx -> "7");
+
+        assertThat(loreLine("{math: %missing% + 1} then {math: %coins% * 2}")).isEqualTo(" then 14");
+    }
+
+    @Test
+    void aLoreLineTreatsAWhitespaceAnswerAsAMissingOperandToo() {
+        placeholders.register("padded", ctx -> " ");
+
+        assertThat(loreLine("cost: {math: %padded% + 1}")).isEqualTo("cost: ");
     }
 
     // -- the token pass ---------------------------------------------------------------------------------------

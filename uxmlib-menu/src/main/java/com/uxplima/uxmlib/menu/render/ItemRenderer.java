@@ -294,10 +294,14 @@ public final class ItemRenderer {
     /**
      * Append the component(s) for one lore spec line to {@code out}. A blank spec stays one blank line, and a {@code
      * @key} catalog line stays a single component (the catalog owns its own layout, so its output is never split here).
-     * Any other line is an inline/placeholder literal: its {@code %token%}s are substituted, then the result is split
-     * on {@code \n} so a multi-line placeholder value becomes one lore component per segment. The {@code -1} split
-     * limit keeps trailing empty segments, and a value with no newline yields exactly one component: identical to a
-     * plain literal line.
+     * Any other line is an inline/placeholder literal: any {@code {math:}} block whose operand is missing is dropped
+     * off the written line first, then its {@code %token%}s are substituted, then the result is split on {@code \n} so
+     * a multi-line placeholder value becomes one lore component per segment. The {@code -1} split limit keeps trailing
+     * empty segments, and a value with no newline yields exactly one component: identical to a plain literal line.
+     *
+     * <p>The missing-operand guard runs here and not only in {@link #resolveText}, because this is the path a price is
+     * written on. Without it a lore {@code {math: %missing% + 1}} left {@code " + 1"} after the token pass, plus parsed
+     * as a unary prefix, and the player read the number 1 on the line that says what a thing costs.
      */
     private void appendLore(String spec, MenuContext ctx, List<Component> out) {
         if (spec.isEmpty()) {
@@ -308,7 +312,7 @@ public final class ItemRenderer {
             out.add(resolveText(spec, ctx));
             return;
         }
-        String substituted = applyMath(substitutePlaceholders(spec, ctx));
+        String substituted = applyMath(substitutePlaceholders(dropMathWithMissingOperand(spec, ctx), ctx));
         for (String segment : substituted.split("\n", -1)) {
             out.add(guiText.render(segment));
         }
@@ -425,11 +429,15 @@ public final class ItemRenderer {
         return out.toString();
     }
 
-    /** Whether any {@code %token%} in {@code expression} resolves to nothing, which is not a number in any position. */
+    /**
+     * Whether any {@code %token%} in {@code expression} resolves to nothing, which is not a number in any position.
+     * Blank rather than empty: a handler reading a padded column, a config value trimmed to nothing, or a formatter
+     * given no value answers a space, and a space is exactly as absent from an expression as the empty string is.
+     */
     private boolean hasMissingOperand(String expression, MenuContext ctx) {
         Matcher matcher = PLACEHOLDER.matcher(expression);
         while (matcher.find()) {
-            if (resolveToken(matcher.group(1), ctx).isEmpty()) {
+            if (resolveToken(matcher.group(1), ctx).isBlank()) {
                 return true;
             }
         }
