@@ -115,7 +115,7 @@ what you use. Modules marked **experimental** are previews with unstable APIs (s
 | `uxmlib-update` | A notify-only release update checker (GitHub / Modrinth providers) that compares a build-time version constant against the latest release and surfaces a permission-gated clickable join message. It never self-downloads. |
 | `uxmlib-condition` | A declarative condition engine (operand comparison + placeholder resolution + failure policy) and its natural pair, a config-driven action engine (`[message]`, `[console]`, `[title]`, … parsed once into closures). |
 | `uxmlib-pipeline` | **Experimental.** A from-scratch, MIT-clean Netty pipeline: channel resolve, idempotent inject/eject, a self-healing reorder watchdog, and a fail-open listener seam. It builds no packet and knows no entity. Alone in the packet family it needs no Mojang-mapped server, so a plugin that wants a pipeline and no server internals can take it on its own. |
-| `uxmlib-packet` | **Experimental.** The shared Mojang-mapped packet helpers (Adventure→vanilla component conversion, bundling, the stream-codec buffer trick, guarded reflection, entity-id allocation) plus per-viewer tab-list, NPC, and text-display packet ports built on them. |
+| `uxmlib-packet` | **Experimental.** The shared Mojang-mapped packet helpers (Adventure→vanilla component conversion, bundling, the stream-codec buffer trick, guarded reflection, entity-id allocation) plus per-viewer tab-list, NPC, text-display, and inventory-item packet ports built on them. |
 | `uxmlib-nametags` | **Experimental.** A from-scratch per-viewer nametag renderer (different prefixes/colours/visibility per viewer) over scoreboard-team and metadata packets, without touching the server-side scoreboard. |
 | `uxmlib-bom` | A bill of materials so a consumer can align every `uxmlib-*` artifact to one version with a single platform import. |
 | `uxmlib-all` | The aggregate of every module on the API surface. The same module also builds the standalone server-side plugin jar, published beside it under the `standalone` classifier. |
@@ -1101,6 +1101,14 @@ Those classes are compiled against the Mojang-mapped server they run on, so ever
 checked fact rather than a reflected guess. There is no adapter layer and no per-line seam: one server line
 means the compiler covers the whole surface, and a server internal that moves fails the build rather than
 someone's server.
+
+One of them is worth calling out on its own, because every plugin that writes something onto an item wants
+it. `com.uxplima.uxmlib.packet.item` rewrites the item a *client* is shown and never the item the server
+holds. A plugin implements `ItemView`, hands it to `ItemViews`, and the five clientbound packets that carry a
+tooltip (the container slot, the container contents, the cursor item, the player-inventory slot, the trade
+list) go through it on the way out. The stack in the chest is untouched, so no save can catch a decorated
+copy and no second plugin can read one back. The package holds the mechanism only: what the view writes,
+lore or a name or nothing at all, is the plugin's.
 
 These modules have **unstable APIs** and parts are still landing. Treat them as a preview; the stable
 toolkit above does not depend on them.

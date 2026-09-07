@@ -16,6 +16,10 @@
  *   <li>{@link com.uxplima.uxmlib.packet.EntityIds}: allocate a fake-entity id from the shared server counter.
  * </ul>
  *
+ * <p>Beside the helpers sit the feature packages built on them: {@code display}, {@code npc}, {@code
+ * scoreboard}, {@code tablist}, and {@code item}, which is the one that rewrites an item on its way to a
+ * client while leaving the item the server holds exactly as it was.
+ *
  * <p>Built against the Mojang-mapped 1.21.11 dev bundle; Paper's runtime remapper maps these back to the
  * server's own mappings at load.
  */
