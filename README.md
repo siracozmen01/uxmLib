@@ -907,7 +907,7 @@ by anything that reaches entities, and a chunk unload takes it away. `PacketHolo
 the other shape. It is sent and never spawned, so the server holds no entity at all.
 
 ```java
-HologramPackets packets = new NmsHologramPackets(new PacketSender());
+HologramPackets packets = new NmsHologramPackets(new PacketSender(new ChannelResolver()));
 
 PacketHologram hologram = PacketHologram.show(
         packets,
