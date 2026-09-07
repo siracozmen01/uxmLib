@@ -845,6 +845,30 @@ On top of that base the module adds a distance-driven visibility `HologramPool`,
 (paged, switchable, live leaderboard), entity-following holograms, text animation (typewriter / scroll),
 a Mojang skin resolver for player-head displays, and holograms defined in HOCON.
 
+A real entity is the right answer when an operator has to walk into the hologram and click it. It is the
+wrong answer for decoration: it is in the entity count, it is written to the region file, it can be reached
+by anything that reaches entities, and a chunk unload takes it away. `PacketHologram` in `uxmlib-packet` is
+the other shape. It is sent and never spawned, so the server holds no entity at all.
+
+```java
+HologramPackets packets = new NmsHologramPackets(new PacketSender());
+
+PacketHologram hologram = PacketHologram.show(
+        packets,
+        scheduler,
+        location,
+        HologramAppearance.defaults().withBillboard(Display.Billboard.CENTER),
+        viewer -> List.of(Text.mini("<yellow>Market"), Text.mini("<gray>right-click the chest")),
+        32.0,                          // how near a viewer must stand
+        Duration.ofMillis(500));       // how often the audience and the text are recomputed
+
+hologram.remove();                     // takes it off every client and stops the loop
+```
+
+Every frame runs on the anchor's region thread and asks the world who is within the view distance. A player
+who arrives is sent the spawn frame, a player who leaves is sent a remove, and a player who stays is sent
+fresh text, so a per-viewer line stays current. While nobody is near, no packet is written at all.
+
 ### HUD overlays
 
 Adventure-native overlays delivered through Paper's own player API: no packets, no NMS.
