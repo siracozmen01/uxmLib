@@ -96,16 +96,24 @@ public record GridSpec(
      * turn. That only happens on a canvas tall enough to paginate, which is the one a caller is least likely to open
      * while testing, so the guard is uniform rather than page-count aware.
      *
-     * @param column the control-row column the button is drawn in: any column of the row that is not a page button
+     * @param column the control-row column the button is drawn in: any column of the row that is not a page button.
+     *     A column the row does not have is refused with the range the row has; a column a page button holds is
+     *     refused as reserved.
      * @param icon the prepared icon to place (name/lore already applied by the caller)
      * @param onClick invoked with the live viewer when the button is clicked
      */
     public record Control(int column, ItemStack icon, Consumer<Player> onClick) {
 
         public Control {
-            if (column < 0 || column >= COLUMNS || column == PREV_COLUMN || column == NEXT_COLUMN) {
-                throw new IllegalArgumentException("column must be a control-row column other than the page buttons "
-                        + PREV_COLUMN + " and " + NEXT_COLUMN + ", was " + column);
+            // Two refusals, not one. A column the row does not have and a column a page button holds are different
+            // mistakes, and the operator who made the second one needs to read the word reserved rather than a range.
+            if (column < 0 || column >= COLUMNS) {
+                throw new IllegalArgumentException("column must be 0.." + (COLUMNS - 1) + ", was " + column);
+            }
+            if (column == PREV_COLUMN || column == NEXT_COLUMN) {
+                throw new IllegalArgumentException("column " + column
+                        + " is reserved for the pagination buttons, a control uses "
+                        + (PREV_COLUMN + 1) + ".." + (NEXT_COLUMN - 1));
             }
             Objects.requireNonNull(icon, "icon");
             Objects.requireNonNull(onClick, "onClick");

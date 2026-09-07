@@ -112,6 +112,36 @@ class GridSpecTest {
     }
 
     /**
+     * A column the row does not have and a column the row reserves are two different mistakes, so they get two
+     * different sentences. This one is the column that does not exist: the message names the range the row has and
+     * the value it was handed, and it says nothing about the page buttons, because the page buttons are not why this
+     * column was refused.
+     */
+    @Test
+    void aColumnTheRowDoesNotHaveIsRefusedWithTheRangeTheRowHas() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new GridSpec.Control(9, icon(), viewer -> {}))
+                .withMessage("column must be 0..8, was 9");
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new GridSpec.Control(-1, icon(), viewer -> {}))
+                .withMessage("column must be 0..8, was -1");
+    }
+
+    /**
+     * The other mistake: a column the row has, held by a pagination button. The operator who put a control on a
+     * navigation button reads the word that tells them why, and the range of columns a control may still use.
+     */
+    @Test
+    void aColumnAPaginationButtonHoldsIsRefusedWithTheWordReserved() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new GridSpec.Control(0, icon(), viewer -> {}))
+                .withMessage("column 0 is reserved for the pagination buttons, a control uses 1..7");
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new GridSpec.Control(8, icon(), viewer -> {}))
+                .withMessage("column 8 is reserved for the pagination buttons, a control uses 1..7");
+    }
+
+    /**
      * The renderer paints the caller's controls after the pagination buttons, so a control in one of their columns
      * covers the nav icon, while the click router asks about a page flip before it asks about a control. The viewer
      * would see this button and get a page turn. It only bites on a canvas tall enough to paginate, so the guard is
@@ -121,10 +151,10 @@ class GridSpecTest {
     void aControlInAPaginationColumnIsRefusedRatherThanCollidingWithThePageButtons() {
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> new GridSpec.Control(0, icon(), viewer -> {}))
-                .withMessageContaining("page buttons");
+                .withMessageContaining("reserved for the pagination buttons");
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> new GridSpec.Control(8, icon(), viewer -> {}))
-                .withMessageContaining("page buttons");
+                .withMessageContaining("reserved for the pagination buttons");
     }
 
     @Test
@@ -147,7 +177,7 @@ class GridSpecTest {
             if (column == GridSpec.PREV_COLUMN || column == GridSpec.NEXT_COLUMN) {
                 assertThatIllegalArgumentException()
                         .isThrownBy(() -> new GridSpec.Control(here, icon(), viewer -> {}))
-                        .withMessageContaining("page buttons");
+                        .withMessageContaining("reserved for the pagination buttons");
             } else {
                 assertThat(new GridSpec.Control(here, icon(), viewer -> {}).column())
                         .isEqualTo(here);
