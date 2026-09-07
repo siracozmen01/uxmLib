@@ -1,9 +1,12 @@
 package com.uxplima.uxmlib.menu.render;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -369,6 +372,13 @@ public final class ItemRenderer {
      * that originally began with {@code @} is looked up in the locale catalog (the rest is the message key),
      * while any other line is rendered as an inline MiniMessage literal. An empty spec yields an empty component
      * so the item simply has no name/lore line rather than a stray blank.
+     *
+     * <p>The two branches are handed different placeholder maps, and the difference is deliberate. A literal line
+     * carries its own words, so what it may ask to be resolved is exactly what it spells: see {@link
+     * #namedPlaceholders}. A {@code @key} line does not carry its words at all, so nothing here can read which
+     * {@code {token}} arguments the catalog entry under that key spells, and the whole registry is offered. That is
+     * a limit of the seam rather than a choice: a catalog is the consumer's file, and asking it which arguments a
+     * key takes is a question this interface does not have.
      */
     private Component resolveText(String s, MenuContext ctx) {
         if (s.isEmpty()) {
@@ -383,7 +393,41 @@ public final class ItemRenderer {
         }
         // Not a key, so the words are in the line. The viewer goes with it anyway: a consumer whose files
         // carry a per-viewer shorthand answers here, and one that does not is handed straight to render.
-        return guiText.renderFor(ctx.viewer(), applyMath(substituted), placeholders.resolveAll(ctx));
+        return guiText.renderFor(ctx.viewer(), applyMath(substituted), namedPlaceholders(s, ctx));
+    }
+
+    /**
+     * The placeholder values one written line asks for, keyed by token id: only the {@code %token%}s the line
+     * actually spells, and among those only the ones a resolver answers.
+     *
+     * <p>This used to be {@code resolveAll}, which runs every registered handler. A handler is a consumer's code and
+     * it does something as well as answering: a PlaceholderAPI bridge parses, a permissions lookup reads a context, a
+     * player-data reader touches a store, an economy handler asks a provider. Running all of them for a line that
+     * names none of them fires work nobody asked for, on every lore line of every item of every render, and the
+     * default {@link GuiText#renderFor} then throws the answer away. That is a correctness problem before it is a
+     * cost: a handler with a side effect ran because a menu drew, not because anything named it.
+     *
+     * <p>A line spelling no token at all resolves nothing and allocates nothing, which is most lines. Each distinct
+     * id is resolved once however many times the line spells it, and a handler that throws costs its own token and
+     * is named on the console rather than escaping into the render.
+     */
+    private Map<String, String> namedPlaceholders(String line, MenuContext ctx) {
+        if (line.indexOf('%') < 0) {
+            return Map.of();
+        }
+        Set<String> named = new LinkedHashSet<>();
+        Matcher matcher = PLACEHOLDER.matcher(line);
+        while (matcher.find()) {
+            named.add(matcher.group(1));
+        }
+        if (named.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, String> resolved = new HashMap<>();
+        for (String id : named) {
+            placeholders.resolveOrReport(id, ctx).ifPresent(value -> resolved.put(id, value));
+        }
+        return resolved;
     }
 
     /**

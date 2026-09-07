@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Handler;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
@@ -45,6 +46,33 @@ class ItemRendererTextTest {
 
         @Override
         public Component render(String raw) {
+            return Component.text(raw);
+        }
+    }
+
+    /**
+     * A catalogue that keeps every {@code placeholders} map it was handed, so what the renderer asked to be resolved
+     * for one line is visible rather than inferred. {@link GuiText#renderFor}'s default throws its map away, which is
+     * exactly how the cost of building one went unnoticed, so this overrides it.
+     */
+    private static final class RecordingText implements GuiText {
+
+        private final List<Map<String, String>> handed = new ArrayList<>();
+
+        @Override
+        public Component text(Player viewer, String key, Map<String, String> placeholders) {
+            handed.add(Map.copyOf(placeholders));
+            return Component.text("catalogue(" + key + ")");
+        }
+
+        @Override
+        public Component render(String raw) {
+            return Component.text(raw);
+        }
+
+        @Override
+        public Component renderFor(Player viewer, String raw, Map<String, String> placeholders) {
+            handed.add(Map.copyOf(placeholders));
             return Component.text(raw);
         }
     }
@@ -283,6 +311,69 @@ class ItemRendererTextTest {
         });
 
         assertThat(name("total: {math: %boom% * 2}")).isEqualTo("total: ");
+    }
+
+    // -- which handlers a line is allowed to run ---------------------------------------------------------------
+
+    /**
+     * A handler is somebody else's code and it may do something as well as answer. A PlaceholderAPI bridge, a
+     * LuckPerms lookup, a player-data read and an economy balance all fire when they are run, so running every one
+     * of them for a line that names none is wrong before it is slow. Nothing asked for this token, so nothing runs
+     * it.
+     */
+    @Test
+    void aHandlerTheLineDoesNotNameIsNotRunAtAll() {
+        AtomicInteger runs = new AtomicInteger();
+        placeholders.register("balance", ctx -> {
+            runs.incrementAndGet();
+            return "100";
+        });
+
+        assertThat(name("a line that names no token")).isEqualTo("a line that names no token");
+        assertThat(runs).hasValue(0);
+    }
+
+    @Test
+    void aLineIsHandedTheTokensItNamesAndNoOthers() {
+        RecordingText words = new RecordingText();
+        ItemRenderer recording = new ItemRenderer(words, Theme::defaults, placeholders);
+        placeholders.register("who", ctx -> "Sirac");
+        placeholders.register("balance", ctx -> "100");
+
+        recording.render(item("material = STONE, name = \"hello %who%\""), MenuContext.of(viewer, null, 0));
+
+        assertThat(words.handed).singleElement().isEqualTo(Map.of("who", "Sirac"));
+    }
+
+    @Test
+    void aLineThatNamesNoTokenIsHandedNothing() {
+        RecordingText words = new RecordingText();
+        ItemRenderer recording = new ItemRenderer(words, Theme::defaults, placeholders);
+        placeholders.register("balance", ctx -> "100");
+
+        recording.render(item("material = STONE, name = \"plain words\""), MenuContext.of(viewer, null, 0));
+
+        assertThat(words.handed)
+                .singleElement()
+                .satisfies(handed -> assertThat(handed).isEmpty());
+    }
+
+    /**
+     * A {@code @key} line is the one exception, and it is a limit rather than an oversight. The words live in the
+     * consumer's catalogue, so nothing here can read which {@code {token}} arguments the entry under that key
+     * spells, and the renderer has to offer what it has. This is pinned so the difference between the two paths is
+     * a stated fact rather than a surprise.
+     */
+    @Test
+    void aCatalogueLineIsStillHandedEveryTokenBecauseItsWordsAreNotHereToRead() {
+        RecordingText words = new RecordingText();
+        ItemRenderer recording = new ItemRenderer(words, Theme::defaults, placeholders);
+        placeholders.register("who", ctx -> "Sirac");
+        placeholders.register("balance", ctx -> "100");
+
+        recording.render(item("material = STONE, name = \"@menu.title\""), MenuContext.of(viewer, null, 0));
+
+        assertThat(words.handed).singleElement().isEqualTo(Map.of("who", "Sirac", "balance", "100"));
     }
 
     /**
