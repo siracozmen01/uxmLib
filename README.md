@@ -531,6 +531,12 @@ are in a message catalogue: a key is looked up in the language of the viewer, a 
 the roles of the theme, and a line that starts with `tile:` is drawn as the whole tooltip through
 `MenuTiles`. The library parses no text of its own, so it decides no look and holds no language.
 
+A tile line takes its closing sentence from `<key>.action` under the block it names, and a word written as
+`action:@<key>` on that line takes it from the key named there instead. A tile whose click answers a
+different thing in each state is then one line and one block of words rather than one whole block per
+state, and the sentence stays a catalogue line, so it keeps the colour it is written in. The state may be a
+`%token%` inside the key, because the engine fills a token in before the line is read as a tile.
+
 > **Removed in 0.46.0.** `com.uxplima.uxmlib.gui.config` shipped in 49 of this library's 50 tags, so it is
 > the largest published surface any release has removed. It is gone: `MenuConfig.load`, `MenuSpec.read`,
 > `MenuDraw`, `MenuActions`, `MenuConditions`, `MenuLists`, `MenuFiles`, `MenuAction`,

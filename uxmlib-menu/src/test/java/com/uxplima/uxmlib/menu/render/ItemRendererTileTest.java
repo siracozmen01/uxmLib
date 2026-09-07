@@ -49,6 +49,7 @@ class ItemRendererTileTest {
     private static final String CATALOGUE = """
             menu {
               lore { description = "About", details = "Facts" }
+              action { buy = "<gold>Click</gold> to buy it", gone = "<red>Sold already" }
               offer {
                 title = "<coins> coins"
                 crumb = "Player shop"
@@ -70,6 +71,7 @@ class ItemRendererTileTest {
         MockBukkit.mock();
         viewer = MockBukkit.getMock().addPlayer();
         placeholders.register("coins", ctx -> "12");
+        placeholders.register("deal", ctx -> "buy");
         Messages messages = new Messages(
                 MessageCatalogLoader.fromNodes(Map.of(Locale.ENGLISH, parse(CATALOGUE)), Locale.ENGLISH),
                 LocaleSource.ofDefault(Locale.ENGLISH));
@@ -140,6 +142,33 @@ class ItemRendererTileTest {
     @DisplayName("a value the catalogue asks for by name reaches a @key line")
     void aKeyLineReadsAValueTheCatalogueNames() {
         assertThat(lore("@menu.offer.title")).isEqualTo("12 coins");
+    }
+
+    /**
+     * The closing sentence a tile names for itself, with the state written into the key as a {@code %token%}.
+     * That is the shape a plugin with one tile and six answers writes: one block of words in the catalogue, one
+     * line in the menu file, and a sentence per state that keeps the colour it is written in.
+     *
+     * <p>It goes through the renderer because that is where the token is filled in. The tile is read after the
+     * substitution, so what reaches the catalogue is a path and never a token.
+     */
+    @Test
+    @DisplayName("a tile names its closing sentence with a token in the key")
+    void aTileNamesItsActionWithAToken() {
+        String drawn = lore("tile:5 @menu.offer stock action:@menu.action.%deal%");
+
+        assertThat(drawn).contains("Click to buy it").doesNotContain("Click to buy one.");
+        assertThat(drawn).doesNotContain("%deal%").doesNotContain("menu.action");
+        assertThat(drawn).contains("Player shop").contains("Stock");
+    }
+
+    /** The line that names none of it still reads the sentence under its own block. */
+    @Test
+    @DisplayName("a tile that names no closing sentence reads the one under its own block")
+    void aTileWithoutANamedActionIsUnchanged() {
+        assertThat(lore("tile:5 @menu.offer stock"))
+                .contains("Click to buy one.")
+                .doesNotContain("Click to buy it");
     }
 
     /** A line that is neither is untouched by any of this. */

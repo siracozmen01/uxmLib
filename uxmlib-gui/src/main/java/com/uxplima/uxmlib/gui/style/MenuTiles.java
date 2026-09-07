@@ -30,6 +30,21 @@ import com.uxplima.uxmlib.text.style.Styler;
  * no click without a second block of words for it. That is what a tab of a window needs, which says the same
  * thing about itself whether or not you can click it.
  *
+ * <p>A word written as {@code action:@<key>} takes the closing sentence from the key it names instead of from
+ * {@code <key>.action} under the block. It reads like the mark that opens the line, a name and then what it is
+ * set to, and it can sit anywhere after the block key. The sentence stays a line of the catalogue, so it keeps
+ * the colour it is written in and the translator keeps the words:
+ *
+ * <pre>
+ *  lore = ["tile:%lobby_colour% @menu.lobby %lobby_players% action:@menu.action.%lobby_state%"]
+ * </pre>
+ *
+ * <p>That is for a tile which says one thing about itself and a different thing about the click, state by
+ * state. Without it a file has to write the whole block again for each state, title and crumb and facts and
+ * all, in every language it ships. A {@code %token%} inside the key is filled in before the line is read as a
+ * tile, so the state can be a placeholder. A key nobody translated leaves the sentence off, exactly as a
+ * missing {@code .action} does, and {@code -action} still leaves the block out whether or not a key is named.
+ *
  * <p>The shape is the library's and the look is not. {@link Lore} holds the glyphs, the columns and the air
  * between the blocks, and reads all three from the theme, so a server that renames a glyph or a colour
  * changes every tile of every window at once.
@@ -38,6 +53,15 @@ public final class MenuTiles {
 
     /** What a lore line starts with to draw a tile rather than a line. */
     public static final String MARK = "tile:";
+
+    /**
+     * What a word of a tile line starts with to name the catalogue line the closing sentence comes from.
+     *
+     * <p>It carries a colon, so it can never be read as a fact: a fact is one bare word and the row it draws is
+     * {@code <key>.<fact>.label}, which a colon has no place in. A tile whose facts include one called
+     * {@code action} is untouched by this.
+     */
+    public static final String ACTION_MARK = "action:";
 
     /** The word over the description block, and the word over the facts. Both are the same in every window. */
     private static final String DESCRIPTION = "menu.lore.description";
@@ -98,8 +122,9 @@ public final class MenuTiles {
                         words(viewer, spec.key + "." + fact + VALUE, resolvers));
             }
         }
-        if (spec.draws(ACTION) && has(viewer, spec.key + ACTION)) {
-            lore.action(words(viewer, spec.key + ACTION, resolvers));
+        String action = spec.action();
+        if (spec.draws(ACTION) && has(viewer, action)) {
+            lore.action(words(viewer, action, resolvers));
         }
         return Tiles.titled(styler.theme(), words(viewer, spec.key + TITLE, resolvers), lore.build(), spec.colour);
     }
@@ -122,10 +147,10 @@ public final class MenuTiles {
     }
 
     /**
-     * What one {@code tile:} line names: the colour of the title, the block of words, the facts, and what it
-     * leaves out.
+     * What one {@code tile:} line names: the colour of the title, the block of words, the facts, the closing
+     * sentence when the line names one of its own, and what it leaves out.
      */
-    private record Spec(String colour, String key, List<String> facts, Set<String> without) {
+    private record Spec(String colour, String key, List<String> facts, Set<String> without, String named) {
 
         private static final Pattern WORDS = Pattern.compile("\\s+");
 
@@ -135,14 +160,25 @@ public final class MenuTiles {
             String key = words.length > 1 ? name(words[1]) : "";
             List<String> facts = new ArrayList<>();
             Set<String> without = new LinkedHashSet<>();
+            String named = "";
             for (int at = 2; at < words.length; at++) {
                 if (words[at].startsWith("-")) {
                     without.add("." + words[at].substring(1));
+                } else if (words[at].startsWith(ACTION_MARK)) {
+                    named = name(words[at].substring(ACTION_MARK.length()));
                 } else {
                     facts.add(words[at]);
                 }
             }
-            return new Spec(colour, key, List.copyOf(facts), Set.copyOf(without));
+            return new Spec(colour, key, List.copyOf(facts), Set.copyOf(without), named);
+        }
+
+        /**
+         * The catalogue line the closing sentence comes from: the one this line names, or the one under the
+         * block's own key when it names none. A line that writes the mark and nothing after it names none.
+         */
+        String action() {
+            return named.isEmpty() ? key + ACTION : named;
         }
 
         /** Whether the tile draws the block this line does not ask to leave out. */

@@ -10,6 +10,9 @@ import java.util.Map;
 import java.util.Set;
 
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 import com.uxplima.uxmlib.text.message.LocaleSource;
@@ -33,6 +36,7 @@ class CatalogueWordsTest {
             menu {
               lore { description = "About", details = "Facts" }
               named = "<coins> coins"
+              action { join = "<gold>Click</gold> to go there" }
               tile {
                 title = "English"
                 crumb = "Language"
@@ -72,6 +76,71 @@ class CatalogueWordsTest {
                 .contains("State")
                 .contains("On");
         assertThat(drawn).contains("Click to read in it.");
+    }
+
+    /**
+     * The closing sentence of a tile that answers a different click in each state. The line names the
+     * catalogue entry the sentence comes from, so each state is one line of the catalogue with its own
+     * colour, and the tile itself is written once.
+     *
+     * <p>The colour is the whole of the point. A plugin that could not name the key rendered one of its
+     * state sentences, stripped the markup off it and handed the bare words in as a value, because a value
+     * reaches a catalogue line as text and never as markup. The sentence then arrived with no colour at all
+     * and the word a player is meant to click on was painted like the words around it. So this asserts the
+     * colour of that word and not only the words: an assertion on the words alone passes on the flat reading
+     * too.
+     */
+    @Test
+    @DisplayName("a tile line that names its own action key keeps that line's colour")
+    void aNamedActionKeepsItsColour() {
+        Component drawn = words.renderFor(viewer, "tile:5 @menu.tile state action:@menu.action.join", Map.of());
+
+        assertThat(plain(drawn)).contains("Click to go there").doesNotContain("Click to read in it.");
+        assertThat(colourOf(drawn, "Click")).isEqualTo(NamedTextColor.GOLD);
+        assertThat(plain(drawn)).contains("English").contains("State").contains("On");
+    }
+
+    /**
+     * The tile the estate already writes. A line that names no action key reads the one under its own block,
+     * which is what keeps every menu file shipped so far drawing the tile it drew yesterday.
+     */
+    @Test
+    @DisplayName("a tile line that names no action key reads the one under its own block")
+    void anUnnamedActionReadsTheBlocksOwn() {
+        String drawn = plain(words.renderFor(viewer, "tile:5 @menu.tile state", Map.of()));
+
+        assertThat(drawn).contains("Click to read in it.").doesNotContain("Click to go there");
+    }
+
+    /** Leaving the block out wins over naming a key for it: a line that says both draws no sentence. */
+    @Test
+    @DisplayName("a line that names an action key and takes the block out draws no sentence")
+    void takingTheBlockOutWinsOverNamingIt() {
+        String drawn = plain(words.renderFor(viewer, "tile:5 @menu.tile -action action:@menu.action.join", Map.of()));
+
+        assertThat(drawn).doesNotContain("Click to go there").doesNotContain("Click to read in it.");
+        assertThat(drawn).contains("English");
+    }
+
+    /**
+     * A key nobody translated leaves the sentence off rather than printing the path onto the tile. That is
+     * what the block's own action key already does, and a named one answers the same way.
+     */
+    @Test
+    @DisplayName("an action key the catalogue does not hold draws no sentence")
+    void anUnknownActionKeyDrawsNothing() {
+        String drawn = plain(words.renderFor(viewer, "tile:5 @menu.tile action:@menu.action.nothing", Map.of()));
+
+        assertThat(drawn).doesNotContain("menu.action.nothing").doesNotContain("Click to read in it.");
+        assertThat(drawn).contains("English");
+    }
+
+    /** The {@code @} is the estate's mark for a key and the tile key already takes it either way. So does this. */
+    @Test
+    @DisplayName("an action key reads the same with the key mark and without it")
+    void theKeyMarkIsOptional() {
+        assertThat(plain(words.renderFor(viewer, "tile:5 @menu.tile action:menu.action.join", Map.of())))
+                .contains("Click to go there");
     }
 
     @Test
@@ -159,6 +228,29 @@ class CatalogueWordsTest {
                 return Set.of();
             }
         };
+    }
+
+    /**
+     * The colour the viewer reads {@code word} in, with the colours of the blocks above it inherited the way
+     * a client inherits them. A word with no colour of its own therefore answers with the colour the tile
+     * paints the sentence in, which is the flat reading this test set exists to tell apart from a coloured one.
+     */
+    private static @Nullable TextColor colourOf(Component text, String word) {
+        return colourOf(text, word, null);
+    }
+
+    private static @Nullable TextColor colourOf(Component text, String word, @Nullable TextColor inherited) {
+        TextColor colour = text.color() != null ? text.color() : inherited;
+        if (text instanceof TextComponent written && written.content().contains(word)) {
+            return colour;
+        }
+        for (Component child : text.children()) {
+            TextColor found = colourOf(child, word, colour);
+            if (found != null) {
+                return found;
+            }
+        }
+        return null;
     }
 
     private static String plain(Component text) {
